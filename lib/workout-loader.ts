@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { youtubeVideoId, youtubeEmbedUrl, youtubeThumbnailUrl } from "@/lib/utils";
+import { normaliseVideoForClient } from "@/lib/video-utils";
 import type {
   WorkoutTemplate,
   WorkoutTemplateExercise,
@@ -33,21 +33,6 @@ export interface LoadedExercise extends WorkoutTemplateExercise {
 export interface LoadedWorkout {
   template: WorkoutTemplate;
   exercises: LoadedExercise[];
-}
-
-function normaliseVideo(v: ExerciseVideo | null): LoadedVideo | null {
-  if (!v) return null;
-  const vid = v.provider_video_id ?? (v.source_url ? youtubeVideoId(v.source_url) : null);
-  return {
-    id: v.id,
-    videoId: vid,
-    embedUrl: v.embed_url ?? (vid ? youtubeEmbedUrl(vid) : null),
-    thumbnailUrl: v.thumbnail_url ?? (vid ? youtubeThumbnailUrl(vid) : null),
-    sourceUrl: v.source_url,
-    title: v.title,
-    creatorName: v.creator_name,
-    verificationStatus: v.verification_status,
-  };
 }
 
 export async function loadWorkoutTemplate(
@@ -145,7 +130,7 @@ export async function loadWorkoutTemplate(
 
   const exercises: LoadedExercise[] = templateExercises.map((te) => ({
     ...te,
-    video: normaliseVideo(videoByExercise.get(te.exercise_id) ?? null),
+    video: normaliseVideoForClient(videoByExercise.get(te.exercise_id) ?? null),
     alternatives: altsByExercise.get(te.exercise_id) ?? [],
     previous: previousByExercise.get(te.exercise_id) ?? [],
   }));
