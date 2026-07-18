@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { AuthForm } from "@/components/auth-form";
 
 export const metadata = { title: "Sign in" };
@@ -14,7 +15,9 @@ export default function LoginPage() {
           Train Smarter. Build Stronger.
         </p>
       </div>
-      <AuthForm mode="login" />
+      <Suspense fallback={<div className="skeleton h-64 w-full" />}>
+        <AuthForm mode="login" />
+      </Suspense>
       <p className="mt-6 text-center text-sm text-[var(--text-secondary)]">
         New here?{" "}
         <Link href="/signup" className="text-[var(--accent-primary)] font-medium">

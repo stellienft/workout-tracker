@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
@@ -26,9 +27,9 @@ export default async function SavedProgramsPage() {
       {programs.length === 0 ? (
         <p className="mt-8 text-[var(--text-secondary)]">
           You haven&apos;t saved any programs yet. Browse the{" "}
-          <a href="/programs" className="text-[var(--accent-primary)]">
+          <Link href="/programs" className="text-[var(--accent-primary)]">
             program library
-          </a>{" "}
+          </Link>{" "}
           and tap the bookmark.
         </p>
       ) : (

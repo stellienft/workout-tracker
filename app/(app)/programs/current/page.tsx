@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { getActiveEnrolment } from "@/lib/queries";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
