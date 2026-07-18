@@ -1,0 +1,46 @@
+# Stellio Fit — Supabase CLI config.
+# Run `supabase link --project-ref <your-ref>` once, then use the npm
+# scripts (db:setup / db:push / db:reset). See README.
+
+project_id = "stellio-fit"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+# Applied by `supabase db reset` (local) and `supabase db reset --linked`
+# (remote). The seed is idempotent (fixed UUIDs + ON CONFLICT DO NOTHING),
+# so re-running it is safe.
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[studio]
+enabled = true
+port = 54323
+
+[storage]
+enabled = true
+# Cover images live in the `media` bucket (created by the RLS migration).
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+# Local dev convenience: sign-ups are usable immediately. Turn confirmations
+# on in your hosted project's Auth settings for production.
+enable_confirmations = false

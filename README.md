@@ -85,24 +85,53 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 ### 4. Set up the database
 
-Run the SQL files **in order** in the Supabase SQL editor
-(or via the Supabase CLI):
+The database is defined by, in order:
 
-1. `supabase/migrations/00001_schema.sql` — tables, functions, the
+1. `supabase/migrations/20260718120000_schema.sql` — tables, functions, the
    super-admin trigger, and `updated_at` triggers.
-2. `supabase/migrations/00002_rls.sql` — Row Level Security policies and the
-   `media` storage bucket.
+2. `supabase/migrations/20260718120100_rls.sql` — Row Level Security policies
+   and the `media` storage bucket.
 3. `supabase/seed.sql` — roles, 11 goals, 4 programs (incl. the detailed
    shoulder-safe beginner program), exercises + substitutions, placeholder
-   video records, featured content, and default settings.
+   video records, featured content, and default settings. The seed is
+   idempotent (fixed UUIDs + `ON CONFLICT DO NOTHING`).
 
-With the Supabase CLI:
+Pick **one** of the two setup paths below.
+
+#### Option A — Supabase CLI (recommended)
+
+The CLI ships as a dev dependency, so `npm run …` resolves it (no global
+install needed). One-time link to your hosted project:
 
 ```bash
-supabase db execute --file supabase/migrations/00001_schema.sql
-supabase db execute --file supabase/migrations/00002_rls.sql
-supabase db execute --file supabase/seed.sql
+npm run db:link -- --project-ref <your-project-ref>
 ```
+
+Then apply schema + RLS + seed to your **hosted** project:
+
+```bash
+npm run db:setup      # supabase db reset --linked  (applies migrations + seed)
+```
+
+> `db:setup` wraps `supabase db reset --linked`, which rebuilds the linked
+> database from the migrations and runs the seed. It's ideal for a brand-new
+> project. It is **destructive**, so never point it at a database with real
+> data — use `npm run db:push` (migrations only) after the first setup.
+
+Everyday commands:
+
+| Script                 | Does                                                        |
+| ---------------------- | ---------------------------------------------------------- |
+| `npm run supabase:start` | Start the full local Supabase stack (Docker)             |
+| `npm run db:reset`     | Reset the **local** db (migrations + seed)                 |
+| `npm run db:push`      | Push new migrations to the linked **remote** project       |
+| `npm run db:new -- <name>` | Scaffold a new timestamped migration                   |
+| `npm run db:diff -- <name>` | Write a migration from local schema changes           |
+
+#### Option B — SQL editor (no CLI)
+
+In the Supabase Dashboard → SQL editor, paste and run each file in order:
+the two migration files, then `supabase/seed.sql`.
 
 ### 5. Run
 
@@ -222,8 +251,16 @@ public/              manifest, service worker, icons
 npm run dev        # start dev server
 npm run build      # production build (also type-checks)
 npm run start      # start production server
+npm run lint       # eslint
 npm run test       # run vitest once
 npm run test:watch # watch mode
+
+# Supabase (CLI ships as a dev dependency)
+npm run db:link -- --project-ref <ref>  # link a hosted project (once)
+npm run db:setup   # apply migrations + seed to the linked project (destructive)
+npm run db:push    # push new migrations to the linked project
+npm run db:reset   # reset the LOCAL db (migrations + seed)
+npm run supabase:start / supabase:stop  # local Supabase stack (Docker)
 ```
 
 ---
@@ -236,7 +273,8 @@ Deploy to any platform that supports Next.js (Vercel recommended):
 2. Point `NEXT_PUBLIC_SITE_URL` at your deployed URL and add
    `<site>/auth/callback` to Supabase → Authentication → URL Configuration →
    Redirect URLs.
-3. Run the three SQL files against your Supabase project (once).
+3. Apply the database once — `npm run db:link -- --project-ref <ref>` then
+   `npm run db:setup` (or paste the SQL files via the dashboard, Option B).
 4. Build & deploy.
 
 ---

@@ -8,7 +8,16 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:status": "supabase status",
+    "db:link": "supabase link",
+    "db:setup": "supabase db reset --linked",
+    "db:push": "supabase db push",
+    "db:reset": "supabase db reset",
+    "db:diff": "supabase db diff -f",
+    "db:new": "supabase migration new"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
@@ -28,6 +37,7 @@
     "@types/react-dom": "^19.1.2",
     "eslint": "^9.39.5",
     "eslint-config-next": "^15.5.20",
+    "supabase": "^2.109.1",
     "tailwindcss": "^4.1.4",
     "typescript": "^5.8.3",
     "vitest": "^3.1.1"
