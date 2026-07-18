@@ -1,0 +1,118 @@
+@import "tailwindcss";
+
+@theme {
+  /* Stellio Fit palette */
+  --color-bg: #0d0d0d;
+  --color-bg-2: #141414;
+  --color-surface: #1a1a1a;
+  --color-surface-2: #222222;
+  --color-elevated: #292929;
+  --color-accent: #ccff30;
+  --color-accent-hover: #b8eb24;
+  --color-accent-muted: rgba(204, 255, 48, 0.14);
+  --color-text-2: #a9a9a9;
+  --color-text-3: #737373;
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-border-active: rgba(204, 255, 48, 0.55);
+  --color-warning: #f5b942;
+  --color-danger: #ff5c5c;
+  --color-success: #ccff30;
+
+  --radius-card: 20px;
+  --radius-card-sm: 16px;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+:root {
+  /* Spec-named tokens for reference/interop */
+  --background-primary: #0d0d0d;
+  --background-secondary: #141414;
+  --surface-primary: #1a1a1a;
+  --surface-secondary: #222222;
+  --surface-elevated: #292929;
+  --accent-primary: #ccff30;
+  --accent-hover: #b8eb24;
+  --accent-muted: rgba(204, 255, 48, 0.14);
+  --text-primary: #ffffff;
+  --text-secondary: #a9a9a9;
+  --text-muted: #737373;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-active: rgba(204, 255, 48, 0.55);
+  --warning: #f5b942;
+  --danger: #ff5c5c;
+  --success: #ccff30;
+
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: var(--background-primary);
+  color: var(--text-primary);
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+/* Safe-area helpers for installed PWA / notched devices */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Card primitive */
+.card {
+  background: var(--surface-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+.skeleton {
+  border-radius: 12px;
+  background: linear-gradient(
+    90deg,
+    #1a1a1a 25%,
+    #222222 50%,
+    #1a1a1a 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+/* Hide scrollbars on horizontal card rails */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Focus visibility in brand colour */
+:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Reduce motion respect */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
