@@ -29,10 +29,10 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "https://images.pexels.com/photos/4164761/pexels-photo-4164761.jpeg?auto=compress&cs=tinysrgb&w=1200",
+        url: "/OG-Share-StellioFit.png",
         width: 1200,
         height: 630,
-        alt: "Stellio Fit — Train Smarter. Build Stronger.",
+        alt: "Stellio Fit — Personalised Workout Plans, Strength Training & Fitness Tracking",
       },
     ],
   },
@@ -41,9 +41,7 @@ export const metadata: Metadata = {
     title: "Stellio Fit | Personalised Workout Plans, Strength Training & Fitness Tracking",
     description:
       "Stellio Fit helps you build strength, lose weight and stay consistent with personalised workout programs, YouTube exercise guides, progress tracking and goal-based training plans.",
-    images: [
-      "https://images.pexels.com/photos/4164761/pexels-photo-4164761.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    ],
+    images: ["/OG-Share-StellioFit.png"],
   },
 };
 
