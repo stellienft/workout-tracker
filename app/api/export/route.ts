@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 
+export const preferredRegion = ["syd1"];
+
 // Exports the signed-in user's own data as JSON (RLS guarantees scoping).
 export async function GET(request: Request) {
   const supabase = await createClient();

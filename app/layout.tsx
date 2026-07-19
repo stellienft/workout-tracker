@@ -22,6 +22,10 @@ export const metadata: Metadata = {
   },
 };
 
+// Co-locate server rendering with the Supabase project (Sydney) so per-page
+// auth + data queries don't cross the Pacific on every navigation.
+export const preferredRegion = ["syd1"];
+
 export const viewport: Viewport = {
   themeColor: "#0D0D0D",
   width: "device-width",
