@@ -22,9 +22,14 @@ export function repDisplay(ex: {
   return "—";
 }
 
-/** Public URL for an image stored in the Supabase `media` bucket. */
+/**
+ * Resolve a cover image reference to a URL. Supports two forms:
+ *  - a full http(s) URL (e.g. a curated Pexels/Unsplash image) — returned as-is
+ *  - a storage path inside the Supabase `media` bucket — expanded to its public URL
+ */
 export function mediaUrl(path: string | null | undefined): string | null {
   if (!path) return null;
+  if (/^https?:\/\//i.test(path)) return path;
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!base) return null;
   return `${base}/storage/v1/object/public/media/${path}`;

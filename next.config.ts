@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
         : []),
       { protocol: "https" as const, hostname: "img.youtube.com" },
       { protocol: "https" as const, hostname: "i.ytimg.com" },
+      // Curated free-licence cover imagery
+      { protocol: "https" as const, hostname: "images.pexels.com" },
+      { protocol: "https" as const, hostname: "images.unsplash.com" },
     ],
   },
 };
