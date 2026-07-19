@@ -12,17 +12,35 @@ async function auth() {
   return { supabase, user };
 }
 
-/** Enable a catalog metric for the current user (idempotent). */
+/**
+ * Enable a catalog metric for the current user (idempotent).
+ *
+ * Uses select-then-insert/update rather than upsert: the (user_id, metric_id)
+ * uniqueness is a *partial* index (metric_id may be null for custom trackers),
+ * which Postgres cannot use as an ON CONFLICT arbiter.
+ */
 export async function enableTracker(metricId: string) {
   const { supabase, user } = await auth();
   if (!user) return { ok: false, error: "Not authenticated" };
   if (!z.string().uuid().safeParse(metricId).success)
     return { ok: false, error: "Invalid metric" };
 
-  const { error } = await supabase.from("user_health_metrics").upsert(
-    { user_id: user.id, metric_id: metricId, enabled: true },
-    { onConflict: "user_id,metric_id" }
-  );
+  const { data: existing } = await supabase
+    .from("user_health_metrics")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("metric_id", metricId)
+    .maybeSingle();
+
+  const { error } = existing
+    ? await supabase
+        .from("user_health_metrics")
+        .update({ enabled: true })
+        .eq("id", existing.id)
+    : await supabase
+        .from("user_health_metrics")
+        .insert({ user_id: user.id, metric_id: metricId, enabled: true });
+
   if (error) return { ok: false, error: error.message };
   revalidatePath("/health");
   return { ok: true };
