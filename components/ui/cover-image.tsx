@@ -1,12 +1,15 @@
+"use client";
+
 import Image from "next/image";
-import { mediaUrl } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { mediaUrl, cn } from "@/lib/utils";
 import { Dumbbell } from "lucide-react";
 
 /**
  * Cover image driven by a Supabase storage path. Falls back to a branded
- * placeholder tile when no image has been uploaded yet (so seeded
- * placeholder paths never render a broken image).
+ * placeholder tile when no image has been set OR when the image fails to
+ * load (e.g. a seeded path whose asset hasn't been uploaded yet), so the
+ * UI never shows a broken image.
  */
 export function CoverImage({
   path,
@@ -26,11 +29,13 @@ export function CoverImage({
   priority?: boolean;
 }) {
   const url = mediaUrl(path);
-  if (!url) {
+  const [failed, setFailed] = useState(false);
+
+  if (!url || failed) {
     return (
       <div
         className={cn(
-          "flex items-center justify-center bg-gradient-to-br from-[var(--surface-secondary)] to-[var(--surface-elevated)]",
+          "absolute inset-0 flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--surface-secondary)] to-[var(--surface-elevated)]",
           className
         )}
         aria-label={alt}
@@ -40,6 +45,7 @@ export function CoverImage({
       </div>
     );
   }
+
   return (
     <Image
       src={url}
@@ -47,6 +53,7 @@ export function CoverImage({
       fill
       sizes={sizes}
       priority={priority}
+      onError={() => setFailed(true)}
       className={cn("object-cover", className)}
       style={{ objectPosition: `${focalX * 100}% ${focalY * 100}%` }}
     />
