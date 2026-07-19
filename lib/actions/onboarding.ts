@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { notifyAdminNewMember } from "@/lib/email";
 
 const onboardingSchema = z.object({
   goalId: z.string().uuid(),
@@ -62,6 +63,24 @@ export async function completeOnboarding(raw: OnboardingInput) {
     { onConflict: "user_id,fitness_goal_id" }
   );
   if (goalError) return { ok: false, error: goalError.message };
+
+  // Notify the admin that a new member has joined. Best-effort: a failure
+  // here must never block the member from finishing onboarding.
+  try {
+    const [{ data: goal }, { data: profile }] = await Promise.all([
+      supabase.from("fitness_goals").select("name").eq("id", data.goalId).maybeSingle(),
+      supabase.from("profiles").select("full_name, email").eq("id", user.id).maybeSingle(),
+    ]);
+    await notifyAdminNewMember({
+      email: profile?.email ?? user.email ?? "unknown",
+      name: profile?.full_name,
+      goal: goal?.name,
+      experience: data.experience,
+      weeklyFrequency: data.weeklyFrequency,
+    });
+  } catch (err) {
+    console.error("[onboarding] admin notification failed", err);
+  }
 
   revalidatePath("/", "layout");
   return { ok: true };
