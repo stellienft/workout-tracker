@@ -81,8 +81,8 @@ export function SettingsForm({
         onChange={setHaptics}
       />
       <Toggle
-        label="Medication & wellbeing tracking"
-        hint="Show the Medication tab for tracking Mounjaro."
+        label="Health & symptom tracking"
+        hint="Show the Health tab to track symptoms, vitals and medications."
         checked={medication}
         onChange={setMedication}
       />

@@ -8,7 +8,7 @@ import {
   Library,
   Target,
   ClipboardCheck,
-  Pill,
+  HeartPulse,
   Settings,
   ShieldCheck,
   Bookmark,
@@ -33,7 +33,7 @@ export default async function ProfilePage() {
     { href: "/goals", label: "Goals", icon: Target },
     { href: "/check-ins", label: "Check-ins", icon: ClipboardCheck },
     ...(profile?.medication_tracking_enabled
-      ? [{ href: "/medication", label: "Medication", icon: Pill }]
+      ? [{ href: "/health", label: "Health", icon: HeartPulse }]
       : []),
     { href: "/settings", label: "Settings", icon: Settings },
     ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: ShieldCheck }] : []),
