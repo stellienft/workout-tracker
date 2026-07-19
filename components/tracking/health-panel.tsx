@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -44,6 +44,22 @@ export function HealthPanel({
     )
   );
 
+  // Seed entries for trackers that appear after a refresh (e.g. just enabled),
+  // so rows never read from an undefined value.
+  useEffect(() => {
+    setValues((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const t of trackers) {
+        if (!(t.id in next)) {
+          next[t.id] = { v: t.todayValue, b: t.todayBool };
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [trackers]);
+
   const enabledSet = useMemo(() => new Set(enabledMetricIds), [enabledMetricIds]);
   const trackerByMetric = useMemo(
     () => new Map(trackers.filter((t) => t.metricId).map((t) => [t.metricId!, t.id])),
@@ -81,7 +97,7 @@ export function HealthPanel({
               <TrackerRow
                 key={t.id}
                 tracker={t}
-                value={values[t.id]}
+                value={values[t.id] ?? { v: t.todayValue, b: t.todayBool }}
                 onChange={(patch) => save(t.id, patch)}
               />
             ))}
