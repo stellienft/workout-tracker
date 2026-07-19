@@ -7,7 +7,7 @@ import {
   TrendingUp,
   ClipboardCheck,
   Target,
-  Pill,
+  HeartPulse,
   Settings,
   ShieldCheck,
   Home,
@@ -31,7 +31,7 @@ export const sidebarItems: NavItem[] = [
   { label: "Progress", href: "/progress", icon: TrendingUp },
   { label: "Check-ins", href: "/check-ins", icon: ClipboardCheck },
   { label: "Goals", href: "/goals", icon: Target },
-  { label: "Medication", href: "/medication", icon: Pill },
+  { label: "Health", href: "/health", icon: HeartPulse },
   { label: "Settings", href: "/settings", icon: Settings },
   { label: "Admin", href: "/admin", icon: ShieldCheck, adminOnly: true },
 ];

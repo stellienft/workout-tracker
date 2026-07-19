@@ -191,15 +191,15 @@ export function OnboardingWizard({
         {step === 7 && (
           <div>
             <h2 className="text-2xl font-bold">
-              Enable medication &amp; wellbeing tracking?
+              Enable health &amp; symptom tracking?
             </h2>
             <p className="mt-1 text-[var(--text-secondary)]">
-              Track Mounjaro doses, side effects and recovery alongside your
-              training. You can change this any time in Settings.
+              Track the symptoms, vitals and medications that matter to you —
+              you choose which ones. You can change this any time in Settings.
             </p>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {[
-                { value: true, label: "Yes, enable it", hint: "Adds the Medication tab" },
+                { value: true, label: "Yes, enable it", hint: "Adds the Health tab" },
                 { value: false, label: "Not now", hint: "Keep it simple" },
               ].map((o) => (
                 <button

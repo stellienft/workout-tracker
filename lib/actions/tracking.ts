@@ -123,7 +123,7 @@ export async function saveMedicationLog(input: Record<string, unknown>) {
     notes: d.notes ?? null,
   });
   if (error) return { ok: false, error: error.message };
-  revalidatePath("/medication");
+  revalidatePath("/health");
   return { ok: true };
 }
 
