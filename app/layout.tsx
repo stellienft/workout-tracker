@@ -3,12 +3,13 @@ import "./globals.css";
 import { SwRegister } from "@/components/sw-register";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://stellio.fit"),
   title: {
-    default: "Stellio Fit — Train Smarter. Build Stronger.",
+    default: "Stellio Fit | Personalised Workout Plans, Strength Training & Fitness Tracking",
     template: "%s · Stellio Fit",
   },
   description:
-    "Stellio Fit is a premium, mobile-first fitness platform. Choose a goal, follow a program, log every set, and build stronger.",
+    "Stellio Fit helps you build strength, lose weight and stay consistent with personalised workout programs, YouTube exercise guides, progress tracking and goal-based training plans.",
   applicationName: "Stellio Fit",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -19,6 +20,30 @@ export const metadata: Metadata = {
   icons: {
     icon: "/icons/icon-192.png",
     apple: "/icons/apple-touch-icon.png",
+  },
+  openGraph: {
+    title: "Stellio Fit | Personalised Workout Plans, Strength Training & Fitness Tracking",
+    description:
+      "Stellio Fit helps you build strength, lose weight and stay consistent with personalised workout programs, YouTube exercise guides, progress tracking and goal-based training plans.",
+    siteName: "Stellio Fit",
+    type: "website",
+    images: [
+      {
+        url: "https://images.pexels.com/photos/4164761/pexels-photo-4164761.jpeg?auto=compress&cs=tinysrgb&w=1200",
+        width: 1200,
+        height: 630,
+        alt: "Stellio Fit — Train Smarter. Build Stronger.",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Stellio Fit | Personalised Workout Plans, Strength Training & Fitness Tracking",
+    description:
+      "Stellio Fit helps you build strength, lose weight and stay consistent with personalised workout programs, YouTube exercise guides, progress tracking and goal-based training plans.",
+    images: [
+      "https://images.pexels.com/photos/4164761/pexels-photo-4164761.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    ],
   },
 };
 
