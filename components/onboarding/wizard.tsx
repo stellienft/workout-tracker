@@ -18,6 +18,7 @@ const EQUIPMENT = [
   "bodyweight",
   "bench",
   "resistance_band",
+  "cardio",
 ];
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
