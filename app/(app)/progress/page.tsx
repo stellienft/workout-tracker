@@ -5,6 +5,10 @@ import { LineChart } from "@/components/ui/line-chart";
 import { StatCard } from "@/components/ui/card";
 import { BodyMetricsForm } from "@/components/tracking/body-metrics-form";
 import { WeightProgress } from "@/components/progress/weight-progress";
+import {
+  ProgressPhotos,
+  type ProgressPhoto,
+} from "@/components/progress/progress-photos";
 import Link from "next/link";
 
 export const metadata = { title: "Progress" };
@@ -13,34 +17,73 @@ export default async function ProgressPage() {
   const { user } = await requireUser();
   const supabase = await createClient();
 
-  const [{ data: metrics }, { data: sessions }, { data: checkins }, { count }] =
-    await Promise.all([
-      supabase
-        .from("body_metrics")
-        .select("recorded_on, weight_kg, waist_cm")
-        .eq("user_id", user.id)
-        .order("recorded_on", { ascending: true })
-        .limit(1000),
-      supabase
-        .from("workout_sessions")
-        .select("completed_at, total_seconds, status")
-        .eq("user_id", user.id)
-        .eq("status", "completed")
-        .order("completed_at", { ascending: true })
-        .limit(120),
-      supabase
-        .from("checkins")
-        .select("checked_on, shoulder_pain")
-        .eq("user_id", user.id)
-        .not("shoulder_pain", "is", null)
-        .order("checked_on", { ascending: true })
-        .limit(60),
-      supabase
-        .from("workout_sessions")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("status", "completed"),
-    ]);
+  const [
+    { data: metrics },
+    { data: sessions },
+    { data: checkins },
+    { count },
+    { data: photoRows },
+  ] = await Promise.all([
+    supabase
+      .from("body_metrics")
+      .select("recorded_on, weight_kg, waist_cm")
+      .eq("user_id", user.id)
+      .order("recorded_on", { ascending: true })
+      .limit(1000),
+    supabase
+      .from("workout_sessions")
+      .select("completed_at, total_seconds, status")
+      .eq("user_id", user.id)
+      .eq("status", "completed")
+      .order("completed_at", { ascending: true })
+      .limit(120),
+    supabase
+      .from("checkins")
+      .select("checked_on, shoulder_pain")
+      .eq("user_id", user.id)
+      .not("shoulder_pain", "is", null)
+      .order("checked_on", { ascending: true })
+      .limit(60),
+    supabase
+      .from("workout_sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "completed"),
+    supabase
+      .from("progress_photos")
+      .select("id, storage_path, pose, taken_on, weight_kg, note")
+      .eq("user_id", user.id)
+      .order("taken_on", { ascending: false })
+      .limit(200),
+  ]);
+
+  // Progress photos live in a private bucket — mint short-lived signed URLs.
+  const photos: ProgressPhoto[] = [];
+  if (photoRows && photoRows.length > 0) {
+    const { data: signed } = await supabase.storage
+      .from("progress-photos")
+      .createSignedUrls(
+        photoRows.map((p) => p.storage_path),
+        60 * 60 // 1 hour
+      );
+    const urlByPath = new Map(
+      (signed ?? [])
+        .filter((s) => s.signedUrl && s.path)
+        .map((s) => [s.path as string, s.signedUrl])
+    );
+    for (const p of photoRows) {
+      const url = urlByPath.get(p.storage_path);
+      if (!url) continue;
+      photos.push({
+        id: p.id,
+        url,
+        pose: p.pose,
+        takenOn: p.taken_on,
+        weightKg: p.weight_kg != null ? Number(p.weight_kg) : null,
+        note: p.note,
+      });
+    }
+  }
 
   const weightData = (metrics ?? [])
     .filter((m) => m.weight_kg != null)
@@ -91,6 +134,10 @@ export default async function ProgressPage() {
 
       <div className="mt-6">
         <WeightProgress data={weightData} />
+      </div>
+
+      <div className="mt-4">
+        <ProgressPhotos photos={photos} />
       </div>
 
       <div className="mt-4 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
