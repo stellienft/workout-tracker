@@ -45,7 +45,7 @@ export function AdminNav({ mobile }: { mobile?: boolean }) {
                   : "bg-[var(--accent-muted)] text-[var(--accent-primary)] font-semibold"
                 : mobile
                   ? "border-[var(--border-subtle)] text-[var(--text-secondary)]"
-                  : "text-[var(--text-secondary)] hover:bg-[var(--surface-primary)] hover:text-white"
+                  : "text-[var(--text-secondary)] hover:bg-[var(--surface-primary)] hover:text-[var(--text-primary)]"
             )}
           >
             {item.label}

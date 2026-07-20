@@ -30,12 +30,16 @@ export default async function WorkoutSessionPage({
   const loaded = await loadWorkoutTemplate(session.workout_template_id, user.id);
   if (!loaded) notFound();
 
-  // Existing set logs so a resumed session restores its state.
-  const { data: existingLogs } = await supabase
-    .from("set_logs")
-    .select("*")
-    .eq("session_id", sessionId)
-    .order("set_number");
+  // Existing set logs so a resumed session restores its state, plus the
+  // member's injury/considerations note to surface during the workout.
+  const [{ data: existingLogs }, { data: profile }] = await Promise.all([
+    supabase
+      .from("set_logs")
+      .select("*")
+      .eq("session_id", sessionId)
+      .order("set_number"),
+    supabase.from("profiles").select("considerations").eq("id", user.id).maybeSingle(),
+  ]);
 
   return (
     <WorkoutMode
@@ -49,6 +53,7 @@ export default async function WorkoutSessionPage({
         loaded.template.name
       }
       preShoulderPain={session.pre_shoulder_pain}
+      considerations={profile?.considerations ?? null}
       exercises={loaded.exercises.map((ex) => ({
         templateExerciseId: ex.id,
         exerciseId: ex.exercise_id,

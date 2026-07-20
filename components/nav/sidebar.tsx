@@ -40,7 +40,7 @@ export function Sidebar({
                     "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-colors",
                     active
                       ? "bg-[var(--accent-muted)] text-[var(--accent-primary)] font-semibold"
-                      : "text-[var(--text-secondary)] hover:bg-[var(--surface-primary)] hover:text-white"
+                      : "text-[var(--text-secondary)] hover:bg-[var(--surface-primary)] hover:text-[var(--text-primary)]"
                   )}
                 >
                   <Icon className="h-5 w-5 shrink-0" />
@@ -64,7 +64,7 @@ export function Sidebar({
             <button
               type="submit"
               aria-label="Sign out"
-              className="rounded-xl p-2 text-[var(--text-secondary)] hover:bg-[var(--surface-primary)] hover:text-white"
+              className="rounded-xl p-2 text-[var(--text-secondary)] hover:bg-[var(--surface-primary)] hover:text-[var(--text-primary)]"
             >
               <LogOut className="h-4 w-4" />
             </button>

@@ -241,7 +241,7 @@ function ScaleRow({
     <div>
       <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
         <span>{min}</span>
-        <span className="text-sm font-bold text-white">{value ?? "—"}</span>
+        <span className="text-sm font-bold text-[var(--text-primary)]">{value ?? "—"}</span>
         <span>{max}</span>
       </div>
       <input
@@ -321,7 +321,7 @@ function ManageTrackers({
                     "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
                     on
                       ? "border-[var(--border-active)] bg-[var(--accent-muted)] text-[var(--accent-primary)]"
-                      : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-white"
+                      : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   )}
                 >
                   {on ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}

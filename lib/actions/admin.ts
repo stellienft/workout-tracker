@@ -310,6 +310,33 @@ export async function setUserRole(targetUserId: string, roleKey: string) {
   return { ok: true };
 }
 
+/**
+ * Send a password-reset email to a user (admin-initiated). Uses the standard
+ * recovery flow — the user clicks the emailed link and sets their own new
+ * password — so no service-role key or plaintext handling is involved.
+ */
+export async function sendUserPasswordReset(targetUserId: string) {
+  const { supabase, isAdmin } = await requireAdminAction();
+  if (!isAdmin) return { ok: false, error: "Forbidden" };
+  const parsed = z.string().uuid().safeParse(targetUserId);
+  if (!parsed.success) return { ok: false, error: "Invalid user" };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("email")
+    .eq("id", parsed.data)
+    .maybeSingle();
+  if (!profile?.email) return { ok: false, error: "User has no email on file" };
+
+  const base =
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://stellio.fit";
+  const { error } = await supabase.auth.resetPasswordForEmail(profile.email, {
+    redirectTo: `${base}/auth/callback?next=/reset-password`,
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, email: profile.email };
+}
+
 export async function removeUserRole(targetUserId: string, roleKey: string) {
   const { supabase, isSuperAdmin } = await requireAdminAction();
   if (!isSuperAdmin) return { ok: false, error: "Only a super admin can change roles" };

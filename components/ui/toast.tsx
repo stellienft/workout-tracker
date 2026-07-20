@@ -37,7 +37,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                   ? "text-[var(--accent-primary)]"
                   : t.kind === "error"
                     ? "text-[var(--danger)]"
-                    : "text-white"
+                    : "text-[var(--text-primary)]"
               }
             >
               {t.message}

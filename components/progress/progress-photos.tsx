@@ -73,7 +73,7 @@ export function ProgressPhotos({ photos }: { photos: ProgressPhoto[] }) {
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-colors",
                 compare
-                  ? "border-[var(--border-active)] bg-[var(--accent-muted)] text-white"
+                  ? "border-[var(--border-active)] bg-[var(--accent-muted)] text-[var(--text-primary)]"
                   : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
               )}
             >

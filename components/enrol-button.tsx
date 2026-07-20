@@ -70,7 +70,7 @@ export function EnrolButton({
             <select
               value={days}
               onChange={(e) => setDays(Number(e.target.value))}
-              className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-2 py-1.5 text-white"
+              className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-2 py-1.5 text-[var(--text-primary)]"
             >
               {Array.from({ length: maxDays - minDays + 1 }, (_, i) => minDays + i).map(
                 (d) => (
@@ -93,7 +93,7 @@ export function EnrolButton({
             })
           }
           aria-label={saved ? "Remove from saved" : "Save program"}
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[var(--border-subtle)] text-white hover:border-[var(--border-active)]"
+          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[var(--border-subtle)] text-[var(--text-primary)] hover:border-[var(--border-active)]"
         >
           {saved ? (
             <BookmarkCheck className="h-5 w-5 text-[var(--accent-primary)]" />
@@ -109,7 +109,7 @@ export function EnrolButton({
             <h3 className="text-lg font-bold">Switch programs?</h3>
             <p className="mt-1 text-sm text-[var(--text-secondary)]">
               You&apos;re currently on{" "}
-              <span className="text-white">{otherProgramName ?? "another program"}</span>
+              <span className="text-[var(--text-primary)]">{otherProgramName ?? "another program"}</span>
               . Your history is always kept. What would you like to do?
             </p>
             <div className="mt-5 flex flex-col gap-2">

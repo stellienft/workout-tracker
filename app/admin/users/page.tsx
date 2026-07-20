@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext } from "@/lib/auth";
 import { UserRoleControls } from "@/components/admin/user-role-controls";
+import { UserResetPassword } from "@/components/admin/user-reset-password";
 
 export default async function AdminUsersPage() {
   const supabase = await createClient();
@@ -41,6 +42,7 @@ export default async function AdminUsersPage() {
             <tr>
               <th className="p-3">User</th>
               <th className="p-3">Roles</th>
+              <th className="p-3">Account</th>
               {isSuperAdmin && <th className="p-3">Manage</th>}
             </tr>
           </thead>
@@ -70,6 +72,9 @@ export default async function AdminUsersPage() {
                         </span>
                       ))}
                     </div>
+                  </td>
+                  <td className="p-3">
+                    <UserResetPassword userId={p.id} email={p.email} />
                   </td>
                   {isSuperAdmin && (
                     <td className="p-3">

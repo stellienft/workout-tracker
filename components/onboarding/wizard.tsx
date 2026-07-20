@@ -197,17 +197,18 @@ export function OnboardingWizard({
         {step === 7 && (
           <div>
             <h2 className="text-2xl font-bold">
-              Any movements or areas to consider?
+              Any injuries or areas to consider?
             </h2>
             <p className="mt-1 text-[var(--text-secondary)]">
-              For example a sore left shoulder. We&apos;ll adapt your program and
-              suggest safe substitutes.
+              Tell us about any sore or injured areas — a knee, shoulder, back,
+              wrist, anything. We&apos;ll keep these front of mind and you can
+              swap any exercise that doesn&apos;t feel right.
             </p>
             <textarea
               value={considerations}
               onChange={(e) => setConsiderations(e.target.value)}
               rows={4}
-              placeholder="e.g. Sore left shoulder — avoid overhead pressing."
+              placeholder="e.g. Sore left knee — avoid deep lunges and high-impact jumps."
               className="mt-4 w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4 text-white placeholder:text-[var(--text-muted)] focus:border-[var(--border-active)] focus:outline-none"
             />
           </div>

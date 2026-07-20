@@ -8,10 +8,11 @@ const variants: Record<Variant, string> = {
   primary:
     "bg-[var(--accent-primary)] text-black hover:bg-[var(--accent-hover)] font-semibold",
   secondary:
-    "bg-[var(--surface-secondary)] text-white hover:bg-[var(--surface-elevated)] border border-[var(--border-subtle)]",
-  ghost: "bg-transparent text-white hover:bg-[var(--surface-secondary)]",
+    "bg-[var(--surface-secondary)] text-[var(--text-primary)] hover:bg-[var(--surface-elevated)] border border-[var(--border-subtle)]",
+  ghost:
+    "bg-transparent text-[var(--text-primary)] hover:bg-[var(--surface-secondary)]",
   outline:
-    "bg-transparent text-white border border-[var(--border-subtle)] hover:border-[var(--border-active)]",
+    "bg-transparent text-[var(--text-primary)] border border-[var(--border-subtle)] hover:border-[var(--border-active)]",
   danger: "bg-[var(--danger)] text-white hover:opacity-90 font-semibold",
 };
 

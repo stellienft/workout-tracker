@@ -71,6 +71,7 @@ export function WorkoutMode({
   programName,
   workoutName,
   preShoulderPain,
+  considerations,
   exercises,
   initialLogs,
 }: {
@@ -79,6 +80,7 @@ export function WorkoutMode({
   programName: string;
   workoutName: string;
   preShoulderPain: number | null;
+  considerations?: string | null;
   exercises: WorkoutExerciseVM[];
   initialLogs: {
     exerciseId: string;
@@ -97,6 +99,7 @@ export function WorkoutMode({
   );
   const [showRest, setShowRest] = useState(false);
   const [restSeconds, setRestSeconds] = useState(90);
+  const [showInjuryNote, setShowInjuryNote] = useState(true);
   const [videoOpen, setVideoOpen] = useState(false);
   const [showCues, setShowCues] = useState(false);
   const [showReplace, setShowReplace] = useState(false);
@@ -424,6 +427,26 @@ export function WorkoutMode({
             </p>
           )}
 
+          {considerations?.trim() && showInjuryNote && (
+            <div className="mt-3 flex items-start gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-primary)]" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold">Your injury notes</p>
+                <p className="text-xs text-[var(--text-secondary)]">
+                  {considerations.trim()} — tap Replace on any exercise that
+                  doesn&apos;t feel right.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowInjuryNote(false)}
+                aria-label="Dismiss"
+                className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
           {shoulderRisk && (
             <div className="mt-3 flex gap-2 rounded-2xl border border-[var(--warning)]/40 bg-[var(--surface-secondary)] p-3">
               <ShieldAlert className="h-5 w-5 shrink-0 text-[var(--warning)]" />
@@ -598,7 +621,7 @@ export function WorkoutMode({
 
             <button
               onClick={() => addSet(current)}
-              className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-[var(--border-subtle)] py-2.5 text-sm text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-white"
+              className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-[var(--border-subtle)] py-2.5 text-sm text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)]"
             >
               <Plus className="h-4 w-4" /> Add set
             </button>
