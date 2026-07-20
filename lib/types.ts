@@ -21,6 +21,15 @@ export interface Profile {
   full_name: string | null;
   avatar_url: string | null;
   onboarding_completed: boolean;
+  age: number | null;
+  training_history:
+    | "never"
+    | "lt_6m"
+    | "6_12m"
+    | "1_3y"
+    | "3y_plus"
+    | "returning"
+    | null;
   experience_level: "beginner" | "intermediate" | "advanced" | null;
   weekly_frequency: number | null;
   session_minutes: number | null;
