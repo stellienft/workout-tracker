@@ -39,6 +39,7 @@ export interface Profile {
   medication_tracking_enabled: boolean;
   haptics_enabled: boolean;
   unit_preference: "metric" | "imperial";
+  timezone: string;
 }
 
 export interface FitnessGoal {

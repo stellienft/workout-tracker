@@ -15,7 +15,17 @@
  *                  in the training week; the next workout is the first
  *                  position not yet completed this week.
  *  - calendar:     workouts are pinned to weekdays via `day_of_week`.
+ *
+ * Week boundaries and weekdays are computed in the member's timezone
+ * (default Brisbane) so a Sunday-night session isn't pushed into the wrong
+ * week by the server's UTC clock.
  */
+
+import {
+  DEFAULT_TZ,
+  startOfWeekInTz,
+  zonedWeekday,
+} from "@/lib/timezone";
 
 export interface EngineTemplate {
   id: string;
@@ -71,14 +81,14 @@ export function nextSequentialWorkout(
   return rotation[((idx % rotation.length) + rotation.length) % rotation.length];
 }
 
-/** Sessions completed within the week containing `now` (Monday-start). */
+/** Sessions completed within the week containing `now` (Monday-start, in tz). */
 export function completedThisWeek(
   sessions: EngineSession[],
-  now: Date
+  now: Date,
+  tz: string = DEFAULT_TZ
 ): EngineSession[] {
-  const start = startOfWeek(now);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 7);
+  const start = startOfWeekInTz(now, tz);
+  const end = new Date(start.getTime() + 7 * 86_400_000);
   return sessions.filter((s) => {
     if (s.status !== "completed" || !s.completed_at) return false;
     const t = new Date(s.completed_at);
@@ -94,12 +104,13 @@ export function completedThisWeek(
 export function nextWeeklySplitWorkout(
   templates: EngineTemplate[],
   sessions: EngineSession[],
-  now: Date
+  now: Date,
+  tz: string = DEFAULT_TZ
 ): EngineTemplate | null {
   const slots = weeklySlots(templates);
   if (slots.length === 0) return null;
   const doneIds = new Set(
-    completedThisWeek(sessions, now).map((s) => s.workout_template_id)
+    completedThisWeek(sessions, now, tz).map((s) => s.workout_template_id)
   );
   return slots.find((t) => !doneIds.has(t.id)) ?? null;
 }
@@ -108,14 +119,15 @@ export function nextWeeklySplitWorkout(
 export function nextCalendarWorkout(
   templates: EngineTemplate[],
   sessions: EngineSession[],
-  now: Date
+  now: Date,
+  tz: string = DEFAULT_TZ
 ): EngineTemplate | null {
   const scheduled = templates.filter((t) => t.day_of_week != null);
   if (scheduled.length === 0) return null;
   const doneIds = new Set(
-    completedThisWeek(sessions, now).map((s) => s.workout_template_id)
+    completedThisWeek(sessions, now, tz).map((s) => s.workout_template_id)
   );
-  const today = now.getDay();
+  const today = zonedWeekday(now, tz);
   // Order by distance from today (today first), skip completed.
   const ordered = [...scheduled].sort(
     (a, b) =>
@@ -129,15 +141,16 @@ export function nextWorkout(
   templates: EngineTemplate[],
   enrolment: EngineEnrolment,
   sessions: EngineSession[],
-  now: Date
+  now: Date,
+  tz: string = DEFAULT_TZ
 ): EngineTemplate | null {
   switch (mode) {
     case "sequential":
       return nextSequentialWorkout(templates, enrolment);
     case "weekly_split":
-      return nextWeeklySplitWorkout(templates, sessions, now);
+      return nextWeeklySplitWorkout(templates, sessions, now, tz);
     case "calendar":
-      return nextCalendarWorkout(templates, sessions, now);
+      return nextCalendarWorkout(templates, sessions, now, tz);
   }
 }
 
@@ -195,20 +208,13 @@ export function weeklyProgress(
   templates: EngineTemplate[],
   enrolment: EngineEnrolment,
   sessions: EngineSession[],
-  now: Date
+  now: Date,
+  tz: string = DEFAULT_TZ
 ): WeeklyProgress {
   const target = weeklyTargetFor(mode, templates, enrolment);
-  const done = completedThisWeek(sessions, now).length;
+  const done = completedThisWeek(sessions, now, tz).length;
   const completed = Math.min(done, Math.max(target, done));
   const remaining = Math.max(target - done, 0);
   const percent = target === 0 ? 0 : Math.min(Math.round((done / target) * 100), 100);
   return { target, completed, remaining, percent };
-}
-
-function startOfWeek(date: Date): Date {
-  const d = new Date(date);
-  const day = (d.getDay() + 6) % 7; // Monday = 0
-  d.setDate(d.getDate() - day);
-  d.setHours(0, 0, 0, 0);
-  return d;
 }

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { updateSettings } from "@/lib/actions/tracking";
+import { TIMEZONE_OPTIONS } from "@/lib/timezone";
+import { MapPin } from "lucide-react";
 
 export function SettingsForm({
   initial,
@@ -15,6 +17,7 @@ export function SettingsForm({
     hapticsEnabled: boolean;
     medicationTracking: boolean;
     considerations: string;
+    timezone: string;
   };
 }) {
   const router = useRouter();
@@ -25,6 +28,25 @@ export function SettingsForm({
   const [haptics, setHaptics] = useState(initial.hapticsEnabled);
   const [medication, setMedication] = useState(initial.medicationTracking);
   const [considerations, setConsiderations] = useState(initial.considerations);
+  const [timezone, setTimezone] = useState(initial.timezone);
+
+  // Ensure the current value is always selectable, even if it isn't one of
+  // the curated options (e.g. detected from an unusual device timezone).
+  const tzOptions = TIMEZONE_OPTIONS.some((o) => o.value === timezone)
+    ? TIMEZONE_OPTIONS
+    : [{ value: timezone, label: timezone }, ...TIMEZONE_OPTIONS];
+
+  function detectTimezone() {
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz) {
+        setTimezone(tz);
+        toast(`Detected ${tz}. Don't forget to save.`, "success");
+      }
+    } catch {
+      toast("Couldn't detect your timezone.", "error");
+    }
+  }
 
   function save() {
     startTransition(async () => {
@@ -34,6 +56,7 @@ export function SettingsForm({
         hapticsEnabled: haptics,
         medicationTracking: medication,
         considerations,
+        timezone,
       });
       if (res.ok) {
         toast("Settings saved.", "success");
@@ -72,6 +95,34 @@ export function SettingsForm({
             </button>
           ))}
         </div>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-medium">Timezone</span>
+          <button
+            type="button"
+            onClick={detectTimezone}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:border-[var(--border-active)]"
+          >
+            <MapPin className="h-3.5 w-3.5" /> Use my device
+          </button>
+        </div>
+        <select
+          value={timezone}
+          onChange={(e) => setTimezone(e.target.value)}
+          className="mt-2 h-11 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
+        >
+          {tzOptions.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-xs text-[var(--text-muted)]">
+          Used for your training week, streaks and daily logs. Defaults to
+          Brisbane.
+        </p>
       </div>
 
       <Toggle

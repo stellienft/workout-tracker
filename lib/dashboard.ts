@@ -8,6 +8,7 @@ import {
   type EngineSession,
   type SchedulingMode,
 } from "@/lib/engine";
+import { DEFAULT_TZ } from "@/lib/timezone";
 import type { Program, ProgramEnrolment, WorkoutTemplate } from "@/lib/types";
 
 export interface DashboardData {
@@ -37,6 +38,13 @@ function toEngineTemplate(t: WorkoutTemplate): EngineTemplate {
 export async function getDashboardData(userId: string): Promise<DashboardData> {
   const supabase = await createClient();
   const enrolment = await getActiveEnrolment(userId);
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("timezone")
+    .eq("id", userId)
+    .maybeSingle();
+  const tz = profile?.timezone || DEFAULT_TZ;
 
   if (!enrolment) {
     return {
@@ -77,7 +85,8 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       start_date: enrolment.start_date,
     },
     sessions,
-    now
+    now,
+    tz
   );
 
   const nextTemplate = next
@@ -96,10 +105,11 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       start_date: enrolment.start_date,
     },
     sessions,
-    now
+    now,
+    tz
   );
 
-  const completedTemplateIdsThisWeek = completedThisWeek(sessions, now)
+  const completedTemplateIdsThisWeek = completedThisWeek(sessions, now, tz)
     .map((s) => s.workout_template_id)
     .filter(Boolean) as string[];
 

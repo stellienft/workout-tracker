@@ -143,6 +143,25 @@ describe("weekly progress + week advancement", () => {
     expect(completedThisWeek(sessions, now)).toHaveLength(1);
   });
 
+  it("buckets a Sunday-night-UTC session into the Brisbane week it belongs to", () => {
+    // Completed 2026-07-19 23:40 UTC == Mon 2026-07-20 09:40 in Brisbane.
+    const session: EngineSession[] = [
+      {
+        workout_template_id: "A",
+        status: "completed",
+        completed_at: "2026-07-19T23:40:00Z",
+        week_number: 1,
+      },
+    ];
+    const viewedOn = new Date("2026-07-20T02:00:00Z"); // Mon 12:00 Brisbane
+    // In UTC this session falls in the previous week (the original bug);
+    // in Brisbane it is this week.
+    expect(completedThisWeek(session, viewedOn, "UTC")).toHaveLength(0);
+    expect(completedThisWeek(session, viewedOn, "Australia/Brisbane")).toHaveLength(1);
+    // Default timezone is Brisbane, so the default call also counts it.
+    expect(completedThisWeek(session, viewedOn)).toHaveLength(1);
+  });
+
   it("advances the week once the weekly target is met", () => {
     const state = advanceAfterCompletion(
       "sequential",

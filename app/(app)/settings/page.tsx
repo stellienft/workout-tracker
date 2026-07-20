@@ -19,6 +19,7 @@ export default async function SettingsPage() {
             hapticsEnabled: profile?.haptics_enabled ?? true,
             medicationTracking: profile?.medication_tracking_enabled ?? false,
             considerations: profile?.considerations ?? "",
+            timezone: profile?.timezone ?? "Australia/Brisbane",
           }}
         />
       </div>
