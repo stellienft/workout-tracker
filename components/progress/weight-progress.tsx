@@ -103,8 +103,18 @@ export function WeightProgress({ data }: { data: Point[] }) {
       </div>
 
       <div className="p-5 pt-3">
-        {hasData ? (
+        {data.length >= 2 ? (
           <LineChart data={data} height={200} unit="kg" />
+        ) : data.length === 1 ? (
+          <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--border-subtle)] text-center">
+            <span className="text-3xl font-extrabold text-[var(--accent-primary)]">
+              {data[0].y} kg
+            </span>
+            <p className="max-w-xs text-sm text-[var(--text-secondary)]">
+              First weigh-in logged — nice start. Log your weight again (even a
+              day later) and your trend line will appear here.
+            </p>
+          </div>
         ) : (
           <div className="flex h-40 flex-col items-center justify-center gap-1 text-center text-sm text-[var(--text-muted)]">
             <p>No weigh-ins yet.</p>
