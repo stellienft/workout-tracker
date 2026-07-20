@@ -101,6 +101,7 @@ export function WorkoutMode({
   const [showCues, setShowCues] = useState(false);
   const [showReplace, setShowReplace] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [finishError, setFinishError] = useState<string | null>(null);
   const [pending, setPending] = useState(0);
   const [removed, setRemoved] = useState<Set<string>>(new Set());
 
@@ -287,14 +288,36 @@ export function WorkoutMode({
 
   async function onFinish() {
     setFinishing(true);
-    await flush(logSet);
-    const res = await completeWorkout({ sessionId, totalSeconds: elapsed });
-    if (res.ok) {
-      router.push(`/workout/${sessionId}/summary`);
-      router.refresh();
-    } else {
-      setFinishing(false);
+    setFinishError(null);
+    try {
+      // Make sure every logged set has synced before we complete. If some
+      // stay queued (offline), warn instead of losing them silently.
+      const flushed = await flush(logSet);
+      setPending(flushed.remaining);
+      if (flushed.remaining > 0) {
+        setFinishError(
+          `${flushed.remaining} set${flushed.remaining === 1 ? "" : "s"} haven't synced yet — reconnect and tap again so nothing is lost.`
+        );
+        setFinishing(false);
+        return;
+      }
+
+      // completeWorkout is idempotent: if the session already flipped to
+      // completed on a previous attempt, it returns ok, so a retry after a
+      // dropped response still lands on the summary instead of dead-ending.
+      const res = await completeWorkout({ sessionId, totalSeconds: elapsed });
+      if (res.ok) {
+        router.push(`/workout/${sessionId}/summary`);
+        router.refresh();
+        return;
+      }
+      setFinishError(res.error ?? "Couldn't finish — please try again.");
+    } catch {
+      setFinishError(
+        "Network hiccup. Your sets are saved — tap Complete again to finish."
+      );
     }
+    setFinishing(false);
   }
 
   async function onSaveExit() {
@@ -311,6 +334,9 @@ export function WorkoutMode({
         <p className="text-[var(--text-secondary)]">
           All exercises removed from this workout.
         </p>
+        {finishError && (
+          <p className="max-w-xs text-sm text-[var(--warning)]">{finishError}</p>
+        )}
         <div className="flex gap-2">
           <button
             onClick={onSaveExit}
@@ -593,6 +619,11 @@ export function WorkoutMode({
         )}
       </div>
       <footer className="border-t border-[var(--border-subtle)] px-4 py-3 pb-safe">
+        {finishError && (
+          <p className="mx-auto mb-2 flex w-full max-w-xl items-center gap-1.5 rounded-xl bg-[var(--surface-secondary)] px-3 py-2 text-xs text-[var(--warning)]">
+            {finishError}
+          </p>
+        )}
         <div className="mx-auto flex w-full max-w-xl items-center gap-2">
           <button
             onClick={() => setIndex((i) => Math.max(0, i - 1))}
