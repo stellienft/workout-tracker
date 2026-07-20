@@ -4,6 +4,7 @@ import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { LineChart } from "@/components/ui/line-chart";
 import { StatCard } from "@/components/ui/card";
 import { BodyMetricsForm } from "@/components/tracking/body-metrics-form";
+import { WeightProgress } from "@/components/progress/weight-progress";
 import Link from "next/link";
 
 export const metadata = { title: "Progress" };
@@ -19,7 +20,7 @@ export default async function ProgressPage() {
         .select("recorded_on, weight_kg, waist_cm")
         .eq("user_id", user.id)
         .order("recorded_on", { ascending: true })
-        .limit(60),
+        .limit(1000),
       supabase
         .from("workout_sessions")
         .select("completed_at, total_seconds, status")
@@ -88,13 +89,12 @@ export default async function ProgressPage() {
         />
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
-          <LineChart data={weightData} label="Body weight" unit="kg" />
-        </div>
-        <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
-          <LineChart data={shoulderData} label="Left shoulder pain" unit="/10" />
-        </div>
+      <div className="mt-6">
+        <WeightProgress data={weightData} />
+      </div>
+
+      <div className="mt-4 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
+        <LineChart data={shoulderData} label="Left shoulder pain" unit="/10" />
       </div>
 
       <div className="mt-4 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
