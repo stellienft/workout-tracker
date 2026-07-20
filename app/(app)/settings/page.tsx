@@ -1,6 +1,7 @@
 import { requireUser, getAuthContext } from "@/lib/auth";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { SettingsForm } from "@/components/settings-form";
+import { ThemeControls } from "@/components/theme-controls";
 
 export const metadata = { title: "Settings" };
 
@@ -11,6 +12,12 @@ export default async function SettingsPage() {
   return (
     <PageShell>
       <PageHeader title="Settings" subtitle="Preferences and account." />
+
+      <div className="mt-6">
+        <h2 className="mb-3 text-lg font-bold">Appearance</h2>
+        <ThemeControls />
+      </div>
+
       <div className="mt-6">
         <SettingsForm
           initial={{

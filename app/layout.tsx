@@ -56,11 +56,17 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+// Applies the saved theme + accent before first paint to avoid a flash.
+const themeInit = `(function(){try{var r=document.documentElement;var t=localStorage.getItem('stellio-theme')||'system';var d=t==='system'?(window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):t;r.dataset.theme=d;var a=localStorage.getItem('stellio-accent');if(a){r.style.setProperty('--accent-primary',a);r.style.setProperty('--color-accent',a);}}catch(e){}})();`;
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" data-theme="dark" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+      </head>
       <body className="font-sans">
         {children}
         <SwRegister />

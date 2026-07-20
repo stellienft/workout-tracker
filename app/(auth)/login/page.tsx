@@ -18,7 +18,15 @@ export default function LoginPage() {
       <Suspense fallback={<div className="skeleton h-64 w-full" />}>
         <AuthForm mode="login" />
       </Suspense>
-      <p className="mt-6 text-center text-sm text-[var(--text-secondary)]">
+      <p className="mt-4 text-center text-sm">
+        <Link
+          href="/forgot-password"
+          className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+        >
+          Forgot your password?
+        </Link>
+      </p>
+      <p className="mt-2 text-center text-sm text-[var(--text-secondary)]">
         New here?{" "}
         <Link href="/signup" className="text-[var(--accent-primary)] font-medium">
           Create an account

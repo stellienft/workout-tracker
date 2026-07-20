@@ -127,7 +127,7 @@ function Chip({
         "shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm capitalize transition-colors",
         active
           ? "border-[var(--border-active)] bg-[var(--accent-muted)] text-[var(--accent-primary)]"
-          : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-white"
+          : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
       )}
     >
       {children}

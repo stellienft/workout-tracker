@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -11,6 +12,7 @@ import {
   Dumbbell,
   ShieldAlert,
   Layers,
+  ArrowLeft,
 } from "lucide-react";
 import type {
   Program,
@@ -107,6 +109,12 @@ export default async function ProgramDetailPage({
           className=""
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--background-primary)] via-black/40 to-transparent" />
+        <Link
+          href="/programs"
+          className="absolute left-4 top-4 z-10 inline-flex items-center gap-1.5 rounded-full bg-black/55 px-3.5 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-black/70 sm:left-6"
+        >
+          <ArrowLeft className="h-4 w-4" /> Programs
+        </Link>
         <div className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-5xl px-4 pb-6 sm:px-6">
           {p.fitness_goal && (
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--accent-primary)]">

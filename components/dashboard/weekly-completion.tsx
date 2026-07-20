@@ -46,7 +46,7 @@ export function WeeklyCompletionCard({
               ) : (
                 <Circle className="h-4 w-4 text-[var(--text-muted)]" />
               )}
-              <span className={done ? "text-white" : "text-[var(--text-secondary)]"}>
+              <span className={done ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)]"}>
                 {t.name}
               </span>
             </li>

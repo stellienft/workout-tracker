@@ -32,19 +32,43 @@
   --surface-primary: #1a1a1a;
   --surface-secondary: #222222;
   --surface-elevated: #292929;
+  /* Accent is user-customisable at runtime; the rest derive from it so a
+     single --accent-primary override recolours the whole UI. */
   --accent-primary: #ccff30;
-  --accent-hover: #b8eb24;
-  --accent-muted: rgba(204, 255, 48, 0.14);
+  --accent-hover: color-mix(in srgb, var(--accent-primary) 88%, #000);
+  --accent-muted: color-mix(in srgb, var(--accent-primary) 14%, transparent);
   --text-primary: #ffffff;
   --text-secondary: #a9a9a9;
   --text-muted: #737373;
   --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-active: rgba(204, 255, 48, 0.55);
+  --border-active: color-mix(in srgb, var(--accent-primary) 55%, transparent);
   --warning: #f5b942;
   --danger: #ff5c5c;
-  --success: #ccff30;
+  --success: var(--accent-primary);
 
   color-scheme: dark;
+}
+
+/* Light theme — activated by data-theme="light" on the root element. */
+:root[data-theme="light"] {
+  --background-primary: #f7f7f8;
+  --background-secondary: #ffffff;
+  --surface-primary: #ffffff;
+  --surface-secondary: #f1f1f3;
+  --surface-elevated: #e7e7ea;
+  --text-primary: #101012;
+  --text-secondary: #52525b;
+  --text-muted: #8a8a93;
+  --border-subtle: rgba(0, 0, 0, 0.1);
+  color-scheme: light;
+}
+
+/* Inputs hardcode a light-on-dark colour; in light mode they must read dark.
+   Scoped to form fields so image/overlay text keeps its intended colour. */
+:root[data-theme="light"] input,
+:root[data-theme="light"] textarea,
+:root[data-theme="light"] select {
+  color: var(--text-primary);
 }
 
 html,

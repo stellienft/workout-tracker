@@ -34,7 +34,7 @@ export function StatCard({
       <p
         className={cn(
           "mt-2 text-2xl font-bold",
-          accent ? "text-[var(--accent-primary)]" : "text-white"
+          accent ? "text-[var(--accent-primary)]" : "text-[var(--text-primary)]"
         )}
       >
         {value}

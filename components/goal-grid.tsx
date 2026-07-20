@@ -72,7 +72,7 @@ export function GoalGrid({
                   "flex w-full items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium transition-colors",
                   isPrimary
                     ? "bg-[var(--accent-muted)] text-[var(--accent-primary)]"
-                    : "bg-[var(--surface-secondary)] text-white hover:bg-[var(--surface-elevated)]"
+                    : "bg-[var(--surface-secondary)] text-[var(--text-primary)] hover:bg-[var(--surface-elevated)]"
                 )}
               >
                 {isPrimary ? (
