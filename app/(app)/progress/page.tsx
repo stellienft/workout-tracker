@@ -9,6 +9,7 @@ import {
   ProgressPhotos,
   type ProgressPhoto,
 } from "@/components/progress/progress-photos";
+import { DEFAULT_TZ, startOfWeekInTz, zonedParts } from "@/lib/timezone";
 import Link from "next/link";
 
 export const metadata = { title: "Progress" };
@@ -16,6 +17,13 @@ export const metadata = { title: "Progress" };
 export default async function ProgressPage() {
   const { user } = await requireUser();
   const supabase = await createClient();
+
+  const { data: prof } = await supabase
+    .from("profiles")
+    .select("timezone")
+    .eq("id", user.id)
+    .maybeSingle();
+  const tz = prof?.timezone || DEFAULT_TZ;
 
   const [
     { data: metrics },
@@ -94,7 +102,7 @@ export default async function ProgressPage() {
   }));
 
   // Weekly workout counts (last 8 weeks).
-  const weeklyCounts = buildWeeklyCounts(sessions ?? []);
+  const weeklyCounts = buildWeeklyCounts(sessions ?? [], tz);
 
   const latestWeight = weightData.at(-1)?.y ?? null;
 
@@ -122,7 +130,7 @@ export default async function ProgressPage() {
         <StatCard label="Workouts" value={String(count ?? 0)} sub="completed" />
         <StatCard
           label="This month"
-          value={String(countThisMonth(sessions ?? []))}
+          value={String(countThisMonth(sessions ?? [], tz))}
           sub="sessions"
         />
         <StatCard
@@ -178,33 +186,34 @@ export default async function ProgressPage() {
   );
 }
 
-function buildWeeklyCounts(sessions: { completed_at: string | null }[]) {
+function buildWeeklyCounts(
+  sessions: { completed_at: string | null }[],
+  tz: string
+) {
   const weeks: { label: string; count: number }[] = [];
-  const now = new Date();
+  const thisWeekStart = startOfWeekInTz(new Date(), tz);
   for (let i = 7; i >= 0; i--) {
-    const start = new Date(now);
-    start.setDate(now.getDate() - now.getDay() + 1 - i * 7);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setDate(start.getDate() + 7);
+    const start = new Date(thisWeekStart.getTime() - i * 7 * 86_400_000);
+    const end = new Date(start.getTime() + 7 * 86_400_000);
     const count = sessions.filter((s) => {
       if (!s.completed_at) return false;
       const t = new Date(s.completed_at);
       return t >= start && t < end;
     }).length;
-    weeks.push({
-      label: `${start.getMonth() + 1}/${start.getDate()}`,
-      count,
-    });
+    const p = zonedParts(start, tz);
+    weeks.push({ label: `${p.month}/${p.day}`, count });
   }
   return weeks;
 }
 
-function countThisMonth(sessions: { completed_at: string | null }[]) {
-  const now = new Date();
+function countThisMonth(
+  sessions: { completed_at: string | null }[],
+  tz: string
+) {
+  const now = zonedParts(new Date(), tz);
   return sessions.filter((s) => {
     if (!s.completed_at) return false;
-    const t = new Date(s.completed_at);
-    return t.getMonth() === now.getMonth() && t.getFullYear() === now.getFullYear();
+    const t = zonedParts(new Date(s.completed_at), tz);
+    return t.month === now.month && t.year === now.year;
   }).length;
 }

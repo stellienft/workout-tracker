@@ -11,6 +11,7 @@ import {
   type EngineSession,
   type SchedulingMode,
 } from "@/lib/engine";
+import { DEFAULT_TZ } from "@/lib/timezone";
 
 async function auth() {
   const supabase = await createClient();
@@ -320,14 +321,18 @@ export async function completeWorkout(input: {
       const mode = program.scheduling_mode as SchedulingMode;
       const engineTemplates = templates as EngineTemplate[];
 
-      const { data: sessionRows } = await supabase
-        .from("workout_sessions")
-        .select("workout_template_id, status, completed_at, week_number")
-        .eq("user_id", user.id)
-        .eq("program_id", session.program_id);
+      const [{ data: sessionRows }, { data: prof }] = await Promise.all([
+        supabase
+          .from("workout_sessions")
+          .select("workout_template_id, status, completed_at, week_number")
+          .eq("user_id", user.id)
+          .eq("program_id", session.program_id),
+        supabase.from("profiles").select("timezone").eq("id", user.id).maybeSingle(),
+      ]);
 
+      const tz = prof?.timezone || DEFAULT_TZ;
       const sessions = (sessionRows ?? []) as EngineSession[];
-      const doneThisWeek = completedThisWeek(sessions, new Date()).length;
+      const doneThisWeek = completedThisWeek(sessions, new Date(), tz).length;
 
       const next = advanceAfterCompletion(
         mode,

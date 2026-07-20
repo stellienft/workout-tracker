@@ -3,6 +3,8 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { DEFAULT_TZ, isValidTimeZone, todayInTz } from "@/lib/timezone";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 async function auth() {
   const supabase = await createClient();
@@ -10,6 +12,16 @@ async function auth() {
     data: { user },
   } = await supabase.auth.getUser();
   return { supabase, user };
+}
+
+/** The member's local calendar date ("today"), honouring their timezone. */
+async function localToday(supabase: SupabaseClient, userId: string): Promise<string> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("timezone")
+    .eq("id", userId)
+    .maybeSingle();
+  return todayInTz(data?.timezone || DEFAULT_TZ);
 }
 
 const num = z.coerce.number().optional().nullable();
@@ -37,7 +49,7 @@ export async function saveBodyMetrics(input: Record<string, unknown>) {
   const { error } = await supabase.from("body_metrics").upsert(
     {
       user_id: user.id,
-      recorded_on: d.recordedOn ?? new Date().toISOString().slice(0, 10),
+      recorded_on: d.recordedOn ?? (await localToday(supabase, user.id)),
       weight_kg: d.weightKg ?? null,
       chest_cm: d.chestCm ?? null,
       waist_cm: d.waistCm ?? null,
@@ -77,7 +89,7 @@ export async function saveCheckin(input: Record<string, unknown>) {
   const { error } = await supabase.from("checkins").upsert(
     {
       user_id: user.id,
-      checked_on: new Date().toISOString().slice(0, 10),
+      checked_on: await localToday(supabase, user.id),
       checkin_type: d.checkinType,
       energy: d.energy ?? null,
       sleep_quality: d.sleepQuality ?? null,
@@ -116,7 +128,7 @@ export async function saveMedicationLog(input: Record<string, unknown>) {
     user_id: user.id,
     medication_name: d.medicationName,
     dose_mg: d.doseMg ?? null,
-    taken_on: d.takenOn ?? new Date().toISOString().slice(0, 10),
+    taken_on: d.takenOn ?? (await localToday(supabase, user.id)),
     injection_site: d.injectionSite ?? null,
     side_effects: d.sideEffects,
     side_effect_severity: d.sideEffectSeverity ?? null,
@@ -136,6 +148,7 @@ export async function updateSettings(input: Record<string, unknown>) {
     hapticsEnabled: z.boolean().optional(),
     medicationTracking: z.boolean().optional(),
     considerations: z.string().max(1000).optional(),
+    timezone: z.string().max(64).optional(),
   });
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -148,6 +161,11 @@ export async function updateSettings(input: Record<string, unknown>) {
   if (d.medicationTracking !== undefined)
     update.medication_tracking_enabled = d.medicationTracking;
   if (d.considerations !== undefined) update.considerations = d.considerations;
+  if (d.timezone !== undefined) {
+    if (!isValidTimeZone(d.timezone))
+      return { ok: false, error: "Unrecognised timezone" };
+    update.timezone = d.timezone;
+  }
 
   const { error } = await supabase
     .from("profiles")
