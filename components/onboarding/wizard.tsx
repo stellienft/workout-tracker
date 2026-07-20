@@ -34,6 +34,8 @@ export function OnboardingWizard({
   const [error, setError] = useState<string | null>(null);
 
   const [goalId, setGoalId] = useState<string | null>(null);
+  const [age, setAge] = useState<string>("");
+  const [trainingHistory, setTrainingHistory] = useState<string>("");
   const [experience, setExperience] = useState<
     "beginner" | "intermediate" | "advanced"
   >("beginner");
@@ -48,7 +50,7 @@ export function OnboardingWizard({
   ]);
   const [medicationTracking, setMedicationTracking] = useState(false);
 
-  const totalSteps = 8;
+  const totalSteps = 10;
 
   function toggle(list: string[], value: string, set: (v: string[]) => void) {
     set(list.includes(value) ? list.filter((x) => x !== value) : [...list, value]);
@@ -64,6 +66,16 @@ export function OnboardingWizard({
     setError(null);
     const res = await completeOnboarding({
       goalId,
+      age: age ? Number(age) : undefined,
+      trainingHistory: trainingHistory
+        ? (trainingHistory as
+            | "never"
+            | "lt_6m"
+            | "6_12m"
+            | "1_3y"
+            | "3y_plus"
+            | "returning")
+        : undefined,
       experience,
       weeklyFrequency,
       sessionMinutes,
@@ -81,10 +93,8 @@ export function OnboardingWizard({
     }
   }
 
-  const canNext =
-    (step === 0 && goalId) ||
-    (step === 5 ? true : true) ||
-    step !== 0;
+  // Goal is the only required step; everything else has a sensible default.
+  const canNext = step !== 0 || Boolean(goalId);
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-3xl flex-col px-4 py-8 sm:px-6">
@@ -111,6 +121,9 @@ export function OnboardingWizard({
           />
         )}
         {step === 1 && (
+          <StepAge value={age} onChange={setAge} />
+        )}
+        {step === 2 && (
           <StepChoice
             title="What's your training experience?"
             options={[
@@ -126,7 +139,26 @@ export function OnboardingWizard({
             onChange={(v) => setExperience(v as typeof experience)}
           />
         )}
-        {step === 2 && (
+        {step === 3 && (
+          <StepChoice
+            title="How long have you been training in the gym?"
+            options={[
+              { value: "never", label: "Never trained", hint: "Brand new to it" },
+              {
+                value: "returning",
+                label: "Returning",
+                hint: "Trained before, coming back",
+              },
+              { value: "lt_6m", label: "Under 6 months", hint: "Just getting started" },
+              { value: "6_12m", label: "6–12 months", hint: "Building the habit" },
+              { value: "1_3y", label: "1–3 years", hint: "Solid foundation" },
+              { value: "3y_plus", label: "3+ years", hint: "Experienced lifter" },
+            ]}
+            value={trainingHistory}
+            onChange={setTrainingHistory}
+          />
+        )}
+        {step === 4 && (
           <StepChoice
             title="How many days per week can you train?"
             options={[2, 3, 4, 5, 6].map((n) => ({
@@ -138,7 +170,7 @@ export function OnboardingWizard({
             onChange={(v) => setWeeklyFrequency(Number(v))}
           />
         )}
-        {step === 3 && (
+        {step === 5 && (
           <StepChoice
             title="How long can you train per session?"
             options={[30, 45, 60, 75].map((n) => ({
@@ -149,7 +181,7 @@ export function OnboardingWizard({
             onChange={(v) => setSessionMinutes(Number(v))}
           />
         )}
-        {step === 4 && (
+        {step === 6 && (
           <StepMulti
             title="What equipment can you access?"
             subtitle="Pick everything that applies."
@@ -161,7 +193,7 @@ export function OnboardingWizard({
             onToggle={(v) => toggle(equipment, v, setEquipment)}
           />
         )}
-        {step === 5 && (
+        {step === 7 && (
           <div>
             <h2 className="text-2xl font-bold">
               Any movements or areas to consider?
@@ -179,7 +211,7 @@ export function OnboardingWizard({
             />
           </div>
         )}
-        {step === 6 && (
+        {step === 8 && (
           <StepMulti
             title="Which days do you usually train?"
             options={DAYS.map((d) => ({ value: d, label: d }))}
@@ -188,7 +220,7 @@ export function OnboardingWizard({
             columns={4}
           />
         )}
-        {step === 7 && (
+        {step === 9 && (
           <div>
             <h2 className="text-2xl font-bold">
               Enable health &amp; symptom tracking?
@@ -311,6 +343,41 @@ function StepGoal({
             </button>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function StepAge({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <h2 className="text-2xl font-bold">How old are you?</h2>
+      <p className="mt-1 text-[var(--text-secondary)]">
+        We use this to tailor recovery, intensity and progression. Optional — you
+        can skip it.
+      </p>
+      <div className="mt-6 max-w-xs">
+        <div className="relative">
+          <input
+            type="number"
+            inputMode="numeric"
+            min={13}
+            max={100}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="e.g. 32"
+            className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4 pr-16 text-lg text-white placeholder:text-[var(--text-muted)] focus:border-[var(--border-active)] focus:outline-none"
+          />
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-[var(--text-muted)]">
+            years
+          </span>
+        </div>
       </div>
     </div>
   );

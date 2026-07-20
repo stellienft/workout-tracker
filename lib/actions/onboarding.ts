@@ -7,6 +7,10 @@ import { notifyAdminNewMember } from "@/lib/email";
 
 const onboardingSchema = z.object({
   goalId: z.string().uuid(),
+  age: z.coerce.number().int().min(13).max(100).optional(),
+  trainingHistory: z
+    .enum(["never", "lt_6m", "6_12m", "1_3y", "3y_plus", "returning"])
+    .optional(),
   experience: z.enum(["beginner", "intermediate", "advanced"]),
   weeklyFrequency: z.coerce.number().int().min(1).max(7),
   sessionMinutes: z.coerce.number().int().min(10).max(180),
@@ -36,6 +40,8 @@ export async function completeOnboarding(raw: OnboardingInput) {
     .from("profiles")
     .update({
       onboarding_completed: true,
+      age: data.age ?? null,
+      training_history: data.trainingHistory ?? null,
       experience_level: data.experience,
       weekly_frequency: data.weeklyFrequency,
       session_minutes: data.sessionMinutes,
