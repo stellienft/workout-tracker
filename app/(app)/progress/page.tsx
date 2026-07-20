@@ -141,7 +141,7 @@ export default async function ProgressPage() {
       </div>
 
       <div className="mt-6">
-        <WeightProgress data={weightData} />
+        <WeightProgress data={weightData} tz={tz} />
       </div>
 
       <div className="mt-4">
