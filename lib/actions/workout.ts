@@ -155,6 +155,56 @@ export async function logSet(input: z.input<typeof setLogSchema>) {
   return { ok: true as const };
 }
 
+/** Delete a single logged set (session + exercise + set number). */
+export async function deleteSetLog(input: {
+  sessionId: string;
+  exerciseId: string;
+  setNumber: number;
+}) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+  const parsed = z
+    .object({
+      sessionId: z.string().uuid(),
+      exerciseId: z.string().uuid(),
+      setNumber: z.number().int().min(1),
+    })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false as const, error: "Invalid input" };
+
+  const { error } = await supabase
+    .from("set_logs")
+    .delete()
+    .eq("session_id", parsed.data.sessionId)
+    .eq("user_id", user.id)
+    .eq("exercise_id", parsed.data.exerciseId)
+    .eq("set_number", parsed.data.setNumber);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const };
+}
+
+/** Remove an exercise from a session: delete all of its logged sets. */
+export async function deleteExerciseSets(input: {
+  sessionId: string;
+  exerciseId: string;
+}) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+  const parsed = z
+    .object({ sessionId: z.string().uuid(), exerciseId: z.string().uuid() })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false as const, error: "Invalid input" };
+
+  const { error } = await supabase
+    .from("set_logs")
+    .delete()
+    .eq("session_id", parsed.data.sessionId)
+    .eq("user_id", user.id)
+    .eq("exercise_id", parsed.data.exerciseId);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const };
+}
+
 export async function reportDiscomfort(input: {
   sessionId: string;
   exerciseId?: string | null;

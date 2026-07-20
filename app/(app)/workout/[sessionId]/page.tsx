@@ -72,6 +72,7 @@ export default async function WorkoutSessionPage({
         isOptional: ex.is_optional,
         video: ex.video,
         alternatives: ex.alternatives,
+        moreAlternatives: ex.moreAlternatives,
         previous: ex.previous,
       }))}
       initialLogs={(existingLogs ?? []).map((l) => ({

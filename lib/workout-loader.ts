@@ -18,10 +18,18 @@ export interface LoadedVideo {
   verificationStatus: string;
 }
 
+export interface AltOption {
+  id: string;
+  name: string;
+  slug: string;
+  shoulder_safe: boolean;
+}
+
 export interface LoadedExercise extends WorkoutTemplateExercise {
   exercise: Exercise;
   video: LoadedVideo | null;
-  alternatives: { id: string; name: string; slug: string; shoulder_safe: boolean }[];
+  alternatives: AltOption[];
+  moreAlternatives: AltOption[];
   previous: {
     set_number: number;
     weight_kg: number | null;
@@ -128,10 +136,39 @@ export async function loadWorkoutTemplate(
     for (const [, list] of previousByExercise) list.sort((a, b) => a.set_number - b.set_number);
   }
 
+  // Broader replacement pool: other published exercises that share a primary
+  // muscle, so the Replace picker offers real variety beyond the curated
+  // alternatives.
+  const { data: pool } = await supabase
+    .from("exercises")
+    .select("id, name, slug, shoulder_safe, primary_muscles")
+    .eq("status", "published")
+    .limit(500);
+  const poolRows = (pool ?? []) as (AltOption & { primary_muscles: string[] })[];
+  const primaryByExercise = new Map(
+    templateExercises.map((te) => [te.exercise_id, te.exercise?.primary_muscles ?? []])
+  );
+
+  function moreFor(exId: string): AltOption[] {
+    const muscles = new Set(primaryByExercise.get(exId) ?? []);
+    if (muscles.size === 0) return [];
+    const seeded = new Set((altsByExercise.get(exId) ?? []).map((a) => a.id));
+    return poolRows
+      .filter(
+        (p) =>
+          p.id !== exId &&
+          !seeded.has(p.id) &&
+          p.primary_muscles.some((m) => muscles.has(m))
+      )
+      .slice(0, 12)
+      .map(({ id, name, slug, shoulder_safe }) => ({ id, name, slug, shoulder_safe }));
+  }
+
   const exercises: LoadedExercise[] = templateExercises.map((te) => ({
     ...te,
     video: normaliseVideoForClient(videoByExercise.get(te.exercise_id) ?? null),
     alternatives: altsByExercise.get(te.exercise_id) ?? [],
+    moreAlternatives: moreFor(te.exercise_id),
     previous: previousByExercise.get(te.exercise_id) ?? [],
   }));
 
