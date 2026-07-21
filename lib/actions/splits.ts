@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getTemplate } from "@/lib/split-templates";
 
 async function auth() {
   const supabase = await createClient();
@@ -36,6 +37,80 @@ export async function createSplit(input: { name: string; description?: string })
   if (error) return { ok: false as const, error: error.message };
   revalidatePath("/splits");
   return { ok: true as const, id: data.id };
+}
+
+/**
+ * Clone a ready-made starter split into the member's own editable split.
+ * Exercise slugs are resolved to real rows; any that don't exist are skipped.
+ */
+export async function createSplitFromTemplate(templateKey: string) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+
+  const template = getTemplate(templateKey);
+  if (!template) return { ok: false as const, error: "Unknown template" };
+
+  // Resolve all referenced slugs to exercise ids in one query.
+  const slugs = Array.from(
+    new Set(template.days.flatMap((d) => d.exercises.map((e) => e.slug)))
+  );
+  const { data: exRows } = await supabase
+    .from("exercises")
+    .select("id, slug")
+    .in("slug", slugs);
+  const idBySlug = new Map(
+    (exRows ?? []).map((r) => [r.slug as string, r.id as string])
+  );
+
+  const { data: split, error: splitErr } = await supabase
+    .from("custom_splits")
+    .insert({
+      owner_user_id: user.id,
+      name: template.name,
+      description: template.summary,
+    })
+    .select("id")
+    .single();
+  if (splitErr || !split) {
+    return { ok: false as const, error: splitErr?.message ?? "Could not create split" };
+  }
+
+  let dayNumber = 0;
+  for (const day of template.days) {
+    dayNumber += 1;
+    const { data: dayRow, error: dayErr } = await supabase
+      .from("custom_split_days")
+      .insert({
+        split_id: split.id,
+        day_number: dayNumber,
+        name: day.name,
+        focus_muscles: day.focusMuscles,
+      })
+      .select("id")
+      .single();
+    if (dayErr || !dayRow) continue;
+
+    const rows = day.exercises.flatMap((e, i) => {
+      const exId = idBySlug.get(e.slug);
+      if (!exId) return [];
+      return [
+        {
+          split_day_id: dayRow.id,
+          exercise_id: exId,
+          position: i + 1,
+          sets: e.sets,
+          rep_target: e.repTarget,
+          rest_seconds: e.restSeconds,
+        },
+      ];
+    });
+    if (rows.length) {
+      await supabase.from("custom_split_day_exercises").insert(rows);
+    }
+  }
+
+  revalidatePath("/splits");
+  return { ok: true as const, id: split.id };
 }
 
 export async function deleteSplit(splitId: string) {

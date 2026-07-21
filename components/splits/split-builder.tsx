@@ -282,6 +282,9 @@ export function SplitBuilder({
       {pickerFor && (
         <ExercisePicker
           catalog={catalog}
+          suggestMuscle={
+            days.find((d) => d.id === pickerFor)?.focusMuscles[0] ?? null
+          }
           onClose={() => setPickerFor(null)}
           onAdd={(exerciseId, sets, repTarget, restSeconds) => {
             const dayId = pickerFor;
@@ -310,10 +313,12 @@ export function SplitBuilder({
 
 function ExercisePicker({
   catalog,
+  suggestMuscle,
   onClose,
   onAdd,
 }: {
   catalog: CatalogExercise[];
+  suggestMuscle?: string | null;
   onClose: () => void;
   onAdd: (
     exerciseId: string,
@@ -323,7 +328,9 @@ function ExercisePicker({
   ) => void;
 }) {
   const [q, setQ] = useState("");
-  const [muscle, setMuscle] = useState<string | null>(null);
+  const [muscle, setMuscle] = useState<string | null>(
+    suggestMuscle && MUSCLES.includes(suggestMuscle) ? suggestMuscle : null
+  );
   const [selected, setSelected] = useState<CatalogExercise | null>(null);
   const [sets, setSets] = useState(3);
   const [reps, setReps] = useState("8–12");

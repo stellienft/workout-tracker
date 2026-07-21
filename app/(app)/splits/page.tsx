@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { SplitManager } from "@/components/splits/split-manager";
+import { SplitTemplates } from "@/components/splits/split-templates";
 
 export const metadata = { title: "My Splits" };
 
@@ -29,6 +30,13 @@ export default async function SplitsPage() {
         subtitle="Build your own training splits and fill each day with the exercises you choose."
       />
       <div className="mt-6">
+        <SplitTemplates />
+      </div>
+
+      <div className="mt-8">
+        <h2 className="mb-3 text-lg font-bold">
+          {list.length > 0 ? "Your splits" : "Or build your own"}
+        </h2>
         <SplitManager splits={list} />
       </div>
     </PageShell>
