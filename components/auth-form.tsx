@@ -38,12 +38,18 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           },
         });
         if (error) throw error;
+        // Clear the form either way so credentials aren't left sitting in the
+        // fields after the account is created.
+        setEmail("");
+        setPassword("");
+        setFullName("");
         if (data.session) {
+          // Email confirmation is off — the account is signed in immediately.
           router.push("/onboarding");
           router.refresh();
         } else {
           setNotice(
-            "Check your email to confirm your account, then sign in."
+            "Account created! Check your email to confirm it, then sign in."
           );
         }
       } else {
