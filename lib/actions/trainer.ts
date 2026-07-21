@@ -14,7 +14,7 @@ async function auth() {
 }
 
 /** Get the trainer's tenant (auto-create if missing). */
-async function getOrCreateTenant(supabase: ReturnType<typeof createClient> extends Promise<infer T> ? T : any, userId: string) {
+async function getOrCreateTenant(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
   const { data: tenant } = await supabase
     .from("tenants")
     .select("*")

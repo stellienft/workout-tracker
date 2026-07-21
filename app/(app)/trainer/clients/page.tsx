@@ -38,11 +38,17 @@ export default async function TrainerClientsPage() {
     .eq("tenant_id", tenant.id)
     .order("assigned_at", { ascending: false });
 
+  // Supabase types a to-one join as an array; flatten it to a single object.
+  const clientList = (clients ?? []).map((c) => ({
+    ...c,
+    profiles: Array.isArray(c.profiles) ? (c.profiles[0] ?? null) : c.profiles,
+  }));
+
   return (
     <PageShell>
       <PageHeader title="Clients" subtitle="Manage your coaching clients." />
       <div className="mt-6">
-        <ClientList clients={clients ?? []} />
+        <ClientList clients={clientList} />
       </div>
     </PageShell>
   );
