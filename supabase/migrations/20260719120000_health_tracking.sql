@@ -6,7 +6,7 @@
 -- ============================================================
 -- Catalog of trackable metrics (seeded, admin-extendable)
 -- ============================================================
-create table public.health_metrics (
+create table if not exists public.health_metrics (
   id uuid primary key default gen_random_uuid(),
   key text not null unique,
   name text not null,
@@ -28,7 +28,7 @@ create table public.health_metrics (
 -- ============================================================
 -- A member's chosen trackers (catalog reference OR custom)
 -- ============================================================
-create table public.user_health_metrics (
+create table if not exists public.user_health_metrics (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
   metric_id uuid references public.health_metrics (id) on delete cascade,
@@ -47,17 +47,17 @@ create table public.user_health_metrics (
 );
 
 -- One tracker row per catalog metric per user
-create unique index user_health_metrics_unique_catalog
+create unique index if not exists user_health_metrics_unique_catalog
   on public.user_health_metrics (user_id, metric_id)
   where metric_id is not null;
 
-create index user_health_metrics_user_idx
+create index if not exists user_health_metrics_user_idx
   on public.user_health_metrics (user_id);
 
 -- ============================================================
 -- Daily log entries (one value per tracker per day)
 -- ============================================================
-create table public.health_logs (
+create table if not exists public.health_logs (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
   user_health_metric_id uuid not null
@@ -71,12 +71,12 @@ create table public.health_logs (
   unique (user_health_metric_id, logged_on)
 );
 
-create index health_logs_user_idx on public.health_logs (user_id, logged_on desc);
+create index if not exists health_logs_user_idx on public.health_logs (user_id, logged_on desc);
 
 -- updated_at maintenance (reuses existing public.set_updated_at)
-create trigger set_updated_at before update on public.user_health_metrics
+drop trigger if exists set_updated_at on public.user_health_metrics; create trigger set_updated_at before update on public.user_health_metrics
   for each row execute function public.set_updated_at();
-create trigger set_updated_at before update on public.health_logs
+drop trigger if exists set_updated_at on public.health_logs; create trigger set_updated_at before update on public.health_logs
   for each row execute function public.set_updated_at();
 
 -- ============================================================
@@ -86,18 +86,18 @@ alter table public.health_metrics enable row level security;
 alter table public.user_health_metrics enable row level security;
 alter table public.health_logs enable row level security;
 
-create policy "read active health metrics" on public.health_metrics
+drop policy if exists "read active health metrics" on public.health_metrics; create policy "read active health metrics" on public.health_metrics
   for select to authenticated using (active or public.is_admin(auth.uid()));
 
-create policy "admins manage health metrics" on public.health_metrics
+drop policy if exists "admins manage health metrics" on public.health_metrics; create policy "admins manage health metrics" on public.health_metrics
   for all to authenticated
   using (public.is_admin(auth.uid())) with check (public.is_admin(auth.uid()));
 
-create policy "own health trackers" on public.user_health_metrics
+drop policy if exists "own health trackers" on public.user_health_metrics; create policy "own health trackers" on public.user_health_metrics
   for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 
-create policy "own health logs" on public.health_logs
+drop policy if exists "own health logs" on public.health_logs; create policy "own health logs" on public.health_logs
   for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 
