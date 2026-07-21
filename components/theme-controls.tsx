@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Monitor, Moon, Sun, Check } from "lucide-react";
+import { saveThemePreference } from "@/lib/actions/theme";
 
 type Theme = "system" | "light" | "dark";
 
@@ -40,17 +41,25 @@ function apply(theme: Theme, accent: string) {
   r.style.setProperty("--color-accent", accent);
 }
 
-export function ThemeControls() {
-  const [theme, setTheme] = useState<Theme>("system");
-  const [accent, setAccent] = useState<string>(DEFAULT_ACCENT);
+export function ThemeControls({
+  initialTheme = "system",
+  initialAccent = DEFAULT_ACCENT,
+}: {
+  initialTheme?: Theme;
+  initialAccent?: string;
+}) {
+  const [theme, setTheme] = useState<Theme>(initialTheme);
+  const [accent, setAccent] = useState<string>(initialAccent);
 
-  // Hydrate from storage on mount.
+  // The profile is the source of truth (syncs across devices); reconcile it
+  // into localStorage + the live document so this device matches the account.
   useEffect(() => {
-    const t = (localStorage.getItem("stellio-theme") as Theme) || "system";
-    const a = localStorage.getItem("stellio-accent") || DEFAULT_ACCENT;
-    setTheme(t);
-    setAccent(a);
-  }, []);
+    localStorage.setItem("stellio-theme", initialTheme);
+    localStorage.setItem("stellio-accent", initialAccent);
+    apply(initialTheme, initialAccent);
+    setTheme(initialTheme);
+    setAccent(initialAccent);
+  }, [initialTheme, initialAccent]);
 
   // Re-resolve on system changes while in "system" mode.
   useEffect(() => {
@@ -65,12 +74,14 @@ export function ThemeControls() {
     setTheme(t);
     localStorage.setItem("stellio-theme", t);
     apply(t, accent);
+    void saveThemePreference({ theme: t });
   }
 
   function chooseAccent(a: string) {
     setAccent(a);
     localStorage.setItem("stellio-accent", a);
     apply(theme, a);
+    void saveThemePreference({ accentColor: a });
   }
 
   return (

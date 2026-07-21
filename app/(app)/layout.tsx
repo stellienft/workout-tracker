@@ -3,6 +3,7 @@ import { getAuthContext, isAdminRole, isTrainerRole } from "@/lib/auth";
 import { Sidebar } from "@/components/nav/sidebar";
 import { BottomNav } from "@/components/nav/bottom-nav";
 import { ToastProvider } from "@/components/ui/toast";
+import { ThemeSync } from "@/components/theme-sync";
 
 export default async function AppLayout({
   children,
@@ -24,6 +25,10 @@ export default async function AppLayout({
 
   return (
     <ToastProvider>
+      <ThemeSync
+        theme={profile?.theme_preference ?? "system"}
+        accent={profile?.accent_color ?? "#ccff30"}
+      />
       <div className="flex min-h-dvh">
         <Sidebar
           isAdmin={isAdmin}

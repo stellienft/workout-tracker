@@ -42,6 +42,7 @@ export interface Profile {
   timezone: string;
   account_type: "user" | "trainer";
   theme_preference: "light" | "dark" | "system";
+  accent_color: string;
 }
 
 export interface FitnessGoal {

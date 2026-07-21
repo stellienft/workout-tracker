@@ -18,7 +18,6 @@ export function SettingsForm({
     medicationTracking: boolean;
     considerations: string;
     timezone: string;
-    themePreference: "light" | "dark" | "system";
   };
 }) {
   const router = useRouter();
@@ -30,7 +29,6 @@ export function SettingsForm({
   const [medication, setMedication] = useState(initial.medicationTracking);
   const [considerations, setConsiderations] = useState(initial.considerations);
   const [timezone, setTimezone] = useState(initial.timezone);
-  const [theme, setTheme] = useState(initial.themePreference);
 
   // Ensure the current value is always selectable, even if it isn't one of
   // the curated options (e.g. detected from an unusual device timezone).
@@ -59,7 +57,6 @@ export function SettingsForm({
         medicationTracking: medication,
         considerations,
         timezone,
-        themePreference: theme,
       });
       if (res.ok) {
         toast("Settings saved.", "success");
@@ -95,28 +92,6 @@ export function SettingsForm({
               }`}
             >
               {u}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <span className="text-sm font-medium">Theme</span>
-        <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-          Saves to your account and syncs across all your devices.
-        </p>
-        <div className="mt-2 flex gap-2">
-          {(["light", "dark", "system"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTheme(t)}
-              className={`flex-1 rounded-xl border py-2.5 text-sm capitalize ${
-                theme === t
-                  ? "border-[var(--border-active)] bg-[var(--accent-muted)] text-[var(--accent-primary)]"
-                  : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
-              }`}
-            >
-              {t}
             </button>
           ))}
         </div>
