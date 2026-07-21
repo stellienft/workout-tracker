@@ -47,13 +47,31 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           );
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { data: signInData, error } =
+          await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        const next = params.get("next") || "/dashboard";
-        router.push(next);
+
+        // Route by the account's real type. If it doesn't match what they
+        // picked, tell them gently rather than bouncing them silently.
+        const explicitNext = params.get("next");
+        let dest = explicitNext;
+        if (!dest) {
+          const { data: prof } = await supabase
+            .from("profiles")
+            .select("account_type")
+            .eq("id", signInData.user.id)
+            .maybeSingle();
+          const realType = prof?.account_type === "trainer" ? "trainer" : "user";
+          if (realType !== accountType) {
+            setNotice(
+              realType === "trainer"
+                ? "This is a trainer account — taking you to your Trainer Portal."
+                : "This is a member account — taking you to your dashboard."
+            );
+          }
+          dest = realType === "trainer" ? "/trainer" : "/dashboard";
+        }
+        router.push(dest);
         router.refresh();
       }
     } catch (err) {
@@ -67,8 +85,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     setError(null);
     setOauthLoading(true);
     const supabase = createClient();
+    const loginNext = accountType === "trainer" ? "/trainer" : "/dashboard";
     const redirectTo = `${window.location.origin}/auth/callback?next=${
-      mode === "signup" ? "/onboarding" : "/dashboard"
+      mode === "signup" ? "/onboarding" : loginNext
     }`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -106,44 +125,46 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         <div className="h-px flex-1 bg-[var(--border-subtle)]" />
       </div>
 
-      {/* Account type selector (signup only) */}
-      {mode === "signup" && (
-        <div>
-          <span className="text-sm font-medium text-[var(--text-secondary)]">
-            I am a…
-          </span>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setAccountType("user")}
-              className={`rounded-xl border p-3 text-left transition-colors ${
-                accountType === "user"
-                  ? "border-[var(--border-active)] bg-[var(--accent-muted)]"
-                  : "border-[var(--border-subtle)]"
-              }`}
-            >
-              <span className="block text-sm font-medium">User</span>
-              <span className="block text-xs text-[var(--text-muted)]">
-                Train & track
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setAccountType("trainer")}
-              className={`rounded-xl border p-3 text-left transition-colors ${
-                accountType === "trainer"
-                  ? "border-[var(--border-active)] bg-[var(--accent-muted)]"
-                  : "border-[var(--border-subtle)]"
-              }`}
-            >
-              <span className="block text-sm font-medium">Personal Trainer</span>
-              <span className="block text-xs text-[var(--text-muted)]">
-                Coach & charge
-              </span>
-            </button>
-          </div>
+      {/* Account type selector — shown on signup and login */}
+      <div>
+        <span className="text-sm font-medium text-[var(--text-secondary)]">
+          {mode === "signup" ? "I am a…" : "Sign in as"}
+        </span>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setAccountType("user")}
+            className={`rounded-xl border p-3 text-left transition-colors ${
+              accountType === "user"
+                ? "border-[var(--border-active)] bg-[var(--accent-muted)]"
+                : "border-[var(--border-subtle)]"
+            }`}
+          >
+            <span className="block text-sm font-medium">
+              {mode === "signup" ? "User" : "Member"}
+            </span>
+            <span className="block text-xs text-[var(--text-muted)]">
+              Train &amp; track
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setAccountType("trainer")}
+            className={`rounded-xl border p-3 text-left transition-colors ${
+              accountType === "trainer"
+                ? "border-[var(--border-active)] bg-[var(--accent-muted)]"
+                : "border-[var(--border-subtle)]"
+            }`}
+          >
+            <span className="block text-sm font-medium">
+              {mode === "signup" ? "Personal Trainer" : "Trainer"}
+            </span>
+            <span className="block text-xs text-[var(--text-muted)]">
+              {mode === "signup" ? "Coach & charge" : "Coach clients"}
+            </span>
+          </button>
         </div>
-      )}
+      </div>
 
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         {mode === "signup" && (
@@ -187,7 +208,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             ? "Please wait…"
             : mode === "signup"
               ? "Create account"
-              : "Sign in"}
+              : accountType === "trainer"
+                ? "Sign in to Trainer Portal"
+                : "Sign in"}
         </Button>
       </form>
     </div>
