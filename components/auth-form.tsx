@@ -45,7 +45,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         setFullName("");
         if (data.session) {
           // Email confirmation is off — the account is signed in immediately.
-          router.push("/onboarding");
+          router.push(accountType === "trainer" ? "/trainer-setup" : "/onboarding");
           router.refresh();
         } else {
           setNotice(
@@ -91,9 +91,10 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     setError(null);
     setOauthLoading(true);
     const supabase = createClient();
+    const signupNext = accountType === "trainer" ? "/trainer-setup" : "/onboarding";
     const loginNext = accountType === "trainer" ? "/trainer" : "/dashboard";
     const redirectTo = `${window.location.origin}/auth/callback?next=${
-      mode === "signup" ? "/onboarding" : loginNext
+      mode === "signup" ? signupNext : loginNext
     }`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",

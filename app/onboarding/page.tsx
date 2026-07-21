@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getAuthContext } from "@/lib/auth";
+import { getAuthContext, isTrainerRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { OnboardingWizard } from "@/components/onboarding/wizard";
 import type { FitnessGoal } from "@/lib/types";
@@ -7,8 +7,12 @@ import type { FitnessGoal } from "@/lib/types";
 export const metadata = { title: "Welcome" };
 
 export default async function OnboardingPage() {
-  const { user, profile } = await getAuthContext();
+  const { user, profile, roles } = await getAuthContext();
   if (!user) redirect("/login");
+  // Trainers use the trainer setup flow, not the member goal onboarding.
+  if (isTrainerRole(roles)) {
+    redirect(profile?.onboarding_completed ? "/trainer" : "/trainer-setup");
+  }
   if (profile?.onboarding_completed) redirect("/dashboard");
 
   const supabase = await createClient();
