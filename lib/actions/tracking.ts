@@ -149,6 +149,7 @@ export async function updateSettings(input: Record<string, unknown>) {
     medicationTracking: z.boolean().optional(),
     considerations: z.string().max(1000).optional(),
     timezone: z.string().max(64).optional(),
+    themePreference: z.enum(["light", "dark", "system"]).optional(),
   });
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -161,6 +162,7 @@ export async function updateSettings(input: Record<string, unknown>) {
   if (d.medicationTracking !== undefined)
     update.medication_tracking_enabled = d.medicationTracking;
   if (d.considerations !== undefined) update.considerations = d.considerations;
+  if (d.themePreference !== undefined) update.theme_preference = d.themePreference;
   if (d.timezone !== undefined) {
     if (!isValidTimeZone(d.timezone))
       return { ok: false, error: "Unrecognised timezone" };
