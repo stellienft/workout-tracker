@@ -15,7 +15,10 @@ export default async function SettingsPage() {
 
       <div className="mt-6">
         <h2 className="mb-3 text-lg font-bold">Appearance</h2>
-        <ThemeControls />
+        <ThemeControls
+          initialTheme={profile?.theme_preference ?? "system"}
+          initialAccent={profile?.accent_color ?? "#ccff30"}
+        />
       </div>
 
       <div className="mt-6">
@@ -27,7 +30,6 @@ export default async function SettingsPage() {
             medicationTracking: profile?.medication_tracking_enabled ?? false,
             considerations: profile?.considerations ?? "",
             timezone: profile?.timezone ?? "Australia/Brisbane",
-            themePreference: profile?.theme_preference ?? "system",
           }}
         />
       </div>
