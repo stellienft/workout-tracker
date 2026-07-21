@@ -1,36 +1,75 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
+import { Youtube, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { addTrainerVideo } from "@/lib/actions/trainer";
+import { addTrainerVideo, uploadTrainerVideo } from "@/lib/actions/trainer";
 
 interface TrainerVideo {
   id: string;
   title: string;
   source_url: string | null;
   thumbnail_url: string | null;
+  provider?: string | null;
 }
 
-export function TrainerVideoList({ tenantId, videos }: { tenantId: string; videos?: TrainerVideo[] }) {
+type Mode = "link" | "upload";
+
+export function TrainerVideoList({
+  tenantId,
+  videos,
+}: {
+  tenantId: string;
+  videos?: TrainerVideo[];
+}) {
+  void tenantId;
   const toast = useToast();
   const [pending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
+  const [mode, setMode] = useState<Mode>("link");
   const [title, setTitle] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [notes, setNotes] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  function add() {
+  function reset() {
+    setTitle("");
+    setSourceUrl("");
+    setNotes("");
+    setFile(null);
+    setShowForm(false);
+  }
+
+  function submitLink() {
     startTransition(async () => {
       const res = await addTrainerVideo({ title, sourceUrl, notes });
       if (res.ok) {
         toast("Video added.", "success");
-        setTitle("");
-        setSourceUrl("");
-        setNotes("");
-        setShowForm(false);
+        reset();
       } else {
         toast(res.error ?? "Could not add", "error");
+      }
+    });
+  }
+
+  function submitUpload() {
+    if (!file) {
+      toast("Choose a video file.", "error");
+      return;
+    }
+    const fd = new FormData();
+    fd.set("title", title);
+    fd.set("notes", notes);
+    fd.set("file", file);
+    startTransition(async () => {
+      const res = await uploadTrainerVideo(fd);
+      if (res.ok) {
+        toast("Video uploaded.", "success");
+        reset();
+      } else {
+        toast(res.error ?? "Could not upload", "error");
       }
     });
   }
@@ -44,12 +83,28 @@ export function TrainerVideoList({ tenantId, videos }: { tenantId: string; video
               key={v.id}
               className="overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-primary)]"
             >
-              {v.thumbnail_url && (
-                <img src={v.thumbnail_url} alt={v.title} className="h-24 w-full object-cover" />
+              {v.provider === "upload" && v.source_url ? (
+                <video
+                  src={v.source_url}
+                  controls
+                  preload="metadata"
+                  className="aspect-video w-full bg-black"
+                />
+              ) : v.thumbnail_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={v.thumbnail_url}
+                  alt={v.title}
+                  className="aspect-video w-full object-cover"
+                />
+              ) : (
+                <div className="flex aspect-video w-full items-center justify-center bg-[var(--surface-secondary)]">
+                  <Youtube className="h-6 w-6 text-[var(--text-muted)]" />
+                </div>
               )}
               <div className="p-3">
                 <h3 className="text-sm font-medium">{v.title}</h3>
-                {v.source_url && (
+                {v.provider !== "upload" && v.source_url && (
                   <a
                     href={v.source_url}
                     target="_blank"
@@ -59,6 +114,11 @@ export function TrainerVideoList({ tenantId, videos }: { tenantId: string; video
                     View on YouTube →
                   </a>
                 )}
+                {v.provider === "upload" && (
+                  <span className="mt-1 block text-xs text-[var(--text-muted)]">
+                    Uploaded
+                  </span>
+                )}
               </div>
             </div>
           ))}
@@ -67,18 +127,70 @@ export function TrainerVideoList({ tenantId, videos }: { tenantId: string; video
 
       {showForm ? (
         <div className="space-y-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4">
+          {/* Source toggle */}
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                { key: "link", label: "YouTube link", icon: Youtube },
+                { key: "upload", label: "Upload file", icon: Upload },
+              ] as const
+            ).map((o) => {
+              const Icon = o.icon;
+              return (
+                <button
+                  key={o.key}
+                  type="button"
+                  onClick={() => setMode(o.key)}
+                  className={`inline-flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-sm font-medium transition-colors ${
+                    mode === o.key
+                      ? "border-[var(--border-active)] bg-[var(--accent-muted)] text-[var(--accent-primary)]"
+                      : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" /> {o.label}
+                </button>
+              );
+            })}
+          </div>
+
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Video title"
             className="h-11 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
           />
-          <input
-            value={sourceUrl}
-            onChange={(e) => setSourceUrl(e.target.value)}
-            placeholder="YouTube URL (https://youtube.com/watch?v=…)"
-            className="h-11 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
-          />
+
+          {mode === "link" ? (
+            <input
+              value={sourceUrl}
+              onChange={(e) => setSourceUrl(e.target.value)}
+              placeholder="YouTube URL (https://youtube.com/watch?v=…)"
+              className="h-11 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
+            />
+          ) : (
+            <div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime,video/ogg"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--border-subtle)] px-3 py-4 text-center text-sm text-[var(--text-secondary)] hover:border-[var(--border-active)]"
+              >
+                <Upload className="h-4 w-4 shrink-0" />
+                <span className="truncate">
+                  {file
+                    ? file.name
+                    : "Choose a video (MP4, WebM, MOV — up to 500 MB)"}
+                </span>
+              </button>
+            </div>
+          )}
+
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -86,11 +198,25 @@ export function TrainerVideoList({ tenantId, videos }: { tenantId: string; video
             rows={2}
             className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
           />
+
           <div className="flex gap-2">
-            <Button onClick={add} disabled={pending || !title || !sourceUrl} size="lg" className="flex-1">
-              {pending ? "Adding…" : "Add video"}
+            <Button
+              onClick={mode === "link" ? submitLink : submitUpload}
+              disabled={
+                pending || !title || (mode === "link" ? !sourceUrl : !file)
+              }
+              size="lg"
+              className="flex-1"
+            >
+              {pending
+                ? mode === "upload"
+                  ? "Uploading…"
+                  : "Adding…"
+                : mode === "upload"
+                  ? "Upload video"
+                  : "Add video"}
             </Button>
-            <Button onClick={() => setShowForm(false)} variant="secondary" size="lg">
+            <Button onClick={reset} variant="secondary" size="lg">
               Cancel
             </Button>
           </div>
@@ -98,7 +224,7 @@ export function TrainerVideoList({ tenantId, videos }: { tenantId: string; video
       ) : (
         <button
           onClick={() => setShowForm(true)}
-          className="w-full rounded-2xl border border-dashed border-[var(--border-subtle)] py-4 text-sm text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-white"
+          className="w-full rounded-2xl border border-dashed border-[var(--border-subtle)] py-4 text-sm text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)]"
         >
           + Add a video
         </button>

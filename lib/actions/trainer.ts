@@ -222,6 +222,68 @@ export async function addTrainerVideo(input: z.input<typeof videoSchema>) {
   return { ok: true };
 }
 
+const VIDEO_BUCKET = "trainer-videos";
+const MAX_VIDEO_BYTES = 500 * 1024 * 1024; // 500 MB
+const VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime", "video/ogg"];
+
+/** Upload a trainer's own video file to the platform. */
+export async function uploadTrainerVideo(formData: FormData) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const title = String(formData.get("title") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+  const file = formData.get("file");
+  if (title.length < 2) return { ok: false, error: "Add a title." };
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: "Choose a video file." };
+  }
+  if (file.size > MAX_VIDEO_BYTES) {
+    return { ok: false, error: "Video is too large (max 500 MB)." };
+  }
+  if (file.type && !VIDEO_TYPES.includes(file.type)) {
+    return { ok: false, error: "Unsupported format. Use MP4, WebM or MOV." };
+  }
+
+  const tenant = await getOrCreateTenant(supabase, user.id);
+  const ext =
+    file.type === "video/webm"
+      ? "webm"
+      : file.type === "video/quicktime"
+        ? "mov"
+        : file.type === "video/ogg"
+          ? "ogv"
+          : "mp4";
+  const path = `${tenant.id}/${randomUUID()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(VIDEO_BUCKET)
+    .upload(path, file, {
+      contentType: file.type || "video/mp4",
+      upsert: false,
+    });
+  if (uploadError) return { ok: false, error: uploadError.message };
+
+  const { data: pub } = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(path);
+
+  const { error } = await supabase.from("trainer_videos").insert({
+    tenant_id: tenant.id,
+    title,
+    source_url: pub.publicUrl,
+    storage_path: path,
+    provider: "upload",
+    notes: notes || null,
+  });
+  if (error) {
+    // Roll back the orphaned upload so storage and table stay consistent.
+    await supabase.storage.from(VIDEO_BUCKET).remove([path]);
+    return { ok: false, error: error.message };
+  }
+
+  revalidatePath("/trainer");
+  return { ok: true };
+}
+
 // ============================================================
 // Clients
 // ============================================================
