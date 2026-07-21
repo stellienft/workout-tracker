@@ -25,11 +25,34 @@ export default async function TrainerPage() {
     const name = user?.user_metadata?.full_name || "My Training Business";
     const slugBase = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     const slug = `${slugBase}-${Date.now().toString(36)}`;
-    const { data: newTenant } = await supabase
+    const { data: newTenant, error: createError } = await supabase
       .from("tenants")
       .insert({ owner_user_id: user!.id, name, slug })
       .select("*")
       .single();
+    if (createError || !newTenant) {
+      return (
+        <PageShell>
+          <PageHeader
+            title="Trainer Portal"
+            subtitle="Your white-label coaching business."
+          />
+          <div className="mt-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5 text-sm">
+            <p className="font-semibold">We couldn&apos;t set up your workspace</p>
+            <p className="mt-1 text-[var(--text-secondary)]">
+              Your trainer workspace couldn&apos;t be created. This usually means
+              the database setup for the trainer portal hasn&apos;t finished yet.
+              Please try again shortly.
+            </p>
+            {createError?.message && (
+              <p className="mt-2 text-xs text-[var(--text-muted)]">
+                Details: {createError.message}
+              </p>
+            )}
+          </div>
+        </PageShell>
+      );
+    }
     tenant = newTenant;
   }
 
