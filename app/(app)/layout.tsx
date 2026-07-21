@@ -13,13 +13,14 @@ export default async function AppLayout({
   const { user, profile, roles } = await getAuthContext();
   if (!user) redirect("/login");
 
-  // Gate the app behind onboarding, except the onboarding routes themselves.
-  if (!profile?.onboarding_completed) {
-    redirect("/onboarding");
-  }
-
   const isAdmin = isAdminRole(roles);
   const isTrainer = isTrainerRole(roles);
+
+  // Gate the app behind setup. Trainers get their own setup flow; members get
+  // the goal-based onboarding. Both routes live outside this layout.
+  if (!profile?.onboarding_completed) {
+    redirect(isTrainer ? "/trainer-setup" : "/onboarding");
+  }
   const name = profile?.full_name ?? "";
   const email = profile?.email ?? user.email ?? "";
 

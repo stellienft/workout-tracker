@@ -87,6 +87,55 @@ export async function updateTenant(input: z.input<typeof tenantSchema>) {
   return { ok: true };
 }
 
+/**
+ * Finish the trainer's initial setup: save their business branding and mark
+ * onboarding complete so they land in the portal (not the member flow).
+ */
+export async function completeTrainerSetup(input: {
+  name: string;
+  tagline?: string;
+  accentColor?: string;
+  logoUrl?: string;
+}) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const parsed = z
+    .object({
+      name: z.string().min(2, "Add a business name").max(120),
+      tagline: z.string().max(200).optional(),
+      accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+      logoUrl: z.string().url().optional().or(z.literal("")),
+    })
+    .safeParse(input);
+  if (!parsed.success)
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  const d = parsed.data;
+
+  const tenant = await getOrCreateTenant(supabase, user.id);
+
+  const update: Record<string, unknown> = { name: d.name };
+  if (d.tagline !== undefined) update.tagline = d.tagline || null;
+  if (d.accentColor) update.accent_color = d.accentColor;
+  if (d.logoUrl) update.logo_url = d.logoUrl;
+
+  const { error: tErr } = await supabase
+    .from("tenants")
+    .update(update)
+    .eq("id", tenant.id);
+  if (tErr) return { ok: false, error: tErr.message };
+
+  const { error: pErr } = await supabase
+    .from("profiles")
+    .update({ onboarding_completed: true })
+    .eq("id", user.id);
+  if (pErr) return { ok: false, error: pErr.message };
+
+  revalidatePath("/trainer");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 // ============================================================
 // Trainer programs
 // ============================================================
