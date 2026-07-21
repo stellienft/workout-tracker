@@ -8,11 +8,12 @@ export const metadata = { title: "Messages" };
 export default async function TrainerChatPage({
   searchParams,
 }: {
-  searchParams: { thread?: string };
+  searchParams: Promise<{ thread?: string }>;
 }) {
   await requireTrainer();
   const { user } = await getAuthContext();
   const supabase = await createClient();
+  const { thread: activeThreadId } = await searchParams;
 
   const { data: tenant } = await supabase
     .from("tenants")
@@ -42,7 +43,6 @@ export default async function TrainerChatPage({
     .order("last_message_at", { ascending: false, nullsFirst: false });
 
   let messages: any[] = [];
-  const activeThreadId = searchParams.thread;
 
   if (activeThreadId) {
     const { data: msgData } = await supabase

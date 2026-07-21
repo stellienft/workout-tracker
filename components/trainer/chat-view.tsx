@@ -4,7 +4,7 @@ import { useState, useTransition, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { sendMessage } from "@/lib/actions/trainer";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 interface Thread {
   id: string;
