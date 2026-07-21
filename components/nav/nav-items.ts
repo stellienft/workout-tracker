@@ -3,6 +3,7 @@ import {
   Dumbbell,
   BookOpen,
   Library,
+  Layers,
   Calendar,
   TrendingUp,
   ClipboardCheck,
@@ -29,6 +30,7 @@ export interface NavItem {
 export const sidebarItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Workouts", href: "/workouts", icon: Dumbbell },
+  { label: "My Splits", href: "/splits", icon: Layers },
   { label: "Programs", href: "/programs", icon: BookOpen },
   { label: "Exercises", href: "/exercises", icon: Library },
   { label: "Schedule", href: "/schedule", icon: Calendar },

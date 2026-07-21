@@ -31,7 +31,7 @@ import type { LoadedVideo, AltOption } from "@/lib/workout-loader";
 import { cn, formatDuration } from "@/lib/utils";
 
 export interface WorkoutExerciseVM {
-  templateExerciseId: string;
+  templateExerciseId: string | null;
   exerciseId: string;
   name: string;
   primaryMuscles: string[];
