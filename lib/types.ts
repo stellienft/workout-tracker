@@ -1,6 +1,6 @@
 // Shared domain types mirroring the Supabase schema (hand-maintained).
 
-export type RoleKey = "user" | "admin" | "super_admin";
+export type RoleKey = "user" | "admin" | "super_admin" | "trainer";
 
 export type SchedulingMode = "sequential" | "weekly_split" | "calendar";
 
@@ -40,6 +40,8 @@ export interface Profile {
   haptics_enabled: boolean;
   unit_preference: "metric" | "imperial";
   timezone: string;
+  account_type: "user" | "trainer";
+  theme_preference: "light" | "dark" | "system";
 }
 
 export interface FitnessGoal {

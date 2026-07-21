@@ -12,6 +12,9 @@ import {
   ShieldCheck,
   Home,
   User,
+  Users,
+  MessageSquare,
+  Briefcase,
   type LucideIcon,
 } from "lucide-react";
 
@@ -20,6 +23,7 @@ export interface NavItem {
   href: string;
   icon: LucideIcon;
   adminOnly?: boolean;
+  trainerOnly?: boolean;
 }
 
 export const sidebarItems: NavItem[] = [
@@ -32,6 +36,9 @@ export const sidebarItems: NavItem[] = [
   { label: "Check-ins", href: "/check-ins", icon: ClipboardCheck },
   { label: "Goals", href: "/goals", icon: Target },
   { label: "Health", href: "/health", icon: HeartPulse },
+  { label: "Trainer Portal", href: "/trainer", icon: Briefcase, trainerOnly: true },
+  { label: "Clients", href: "/trainer/clients", icon: Users, trainerOnly: true },
+  { label: "Messages", href: "/trainer/chat", icon: MessageSquare, trainerOnly: true },
   { label: "Settings", href: "/settings", icon: Settings },
   { label: "Admin", href: "/admin", icon: ShieldCheck, adminOnly: true },
 ];

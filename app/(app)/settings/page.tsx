@@ -20,6 +20,7 @@ export default async function SettingsPage() {
             medicationTracking: profile?.medication_tracking_enabled ?? false,
             considerations: profile?.considerations ?? "",
             timezone: profile?.timezone ?? "Australia/Brisbane",
+            themePreference: profile?.theme_preference ?? "system",
           }}
         />
       </div>

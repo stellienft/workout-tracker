@@ -39,9 +39,20 @@ export function isAdminRole(roles: RoleKey[]): boolean {
   return roles.includes("admin") || roles.includes("super_admin");
 }
 
+export function isTrainerRole(roles: RoleKey[]): boolean {
+  return roles.includes("trainer");
+}
+
 /** Server-side gate for /admin routes. */
 export async function requireAdmin() {
   const ctx = await requireUser();
   if (!isAdminRole(ctx.roles)) redirect("/dashboard");
+  return ctx;
+}
+
+/** Server-side gate for /trainer routes. */
+export async function requireTrainer() {
+  const ctx = await requireUser();
+  if (!isTrainerRole(ctx.roles)) redirect("/dashboard");
   return ctx;
 }

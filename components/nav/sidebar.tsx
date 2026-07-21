@@ -9,15 +9,19 @@ import { LogOut } from "lucide-react";
 
 export function Sidebar({
   isAdmin,
+  isTrainer,
   name,
   email,
 }: {
   isAdmin: boolean;
+  isTrainer: boolean;
   name: string;
   email: string;
 }) {
   const pathname = usePathname();
-  const items = sidebarItems.filter((i) => !i.adminOnly || isAdmin);
+  const items = sidebarItems.filter(
+    (i) => (!i.adminOnly || isAdmin) && (!i.trainerOnly || isTrainer)
+  );
 
   return (
     <aside className="hidden md:flex md:w-[248px] lg:w-[264px] shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--background-secondary)] h-dvh sticky top-0">
