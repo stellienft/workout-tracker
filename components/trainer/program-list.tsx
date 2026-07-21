@@ -70,11 +70,13 @@ export function TrainerProgramList({ tenantId, programs }: { tenantId: string; p
               key={p.id}
               className="overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-primary)]"
             >
-              <CoverImage
-                src={p.cover_image_path}
-                alt={p.name}
-                className="h-32 w-full object-cover"
-              />
+              <div className="relative h-32 w-full">
+                <CoverImage
+                  path={p.cover_image_path}
+                  alt={p.name}
+                  sizes="(max-width: 640px) 100vw, 50vw"
+                />
+              </div>
               <div className="p-3">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="font-semibold">{p.name}</h3>

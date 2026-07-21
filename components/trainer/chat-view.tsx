@@ -14,7 +14,7 @@ interface Thread {
   client: { email: string; full_name: string | null } | null;
 }
 
-interface Message {
+export interface Message {
   id: string;
   thread_id: string;
   sender_id: string;
