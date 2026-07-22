@@ -38,7 +38,7 @@ export function MobileTopBar({
 
   return (
     <>
-      <div className="pt-safe sticky top-0 z-40 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--background-secondary)]/95 px-4 py-2.5 backdrop-blur md:hidden">
+      <div className="pt-safe sticky top-0 z-40 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--background-secondary)] px-4 py-2.5 md:hidden">
         <button
           onClick={() => setOpen(true)}
           aria-label="Open menu"

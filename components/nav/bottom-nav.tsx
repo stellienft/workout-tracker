@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 export function BottomNav() {
   const pathname = usePathname();
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--border-subtle)] bg-[var(--background-secondary)]/95 backdrop-blur md:hidden pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--border-subtle)] bg-[var(--background-secondary)] md:hidden pb-safe">
       <ul className="flex items-stretch justify-around">
         {bottomNavItems.map((item) => {
           const active =
