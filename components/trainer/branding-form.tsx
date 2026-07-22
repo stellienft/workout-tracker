@@ -18,6 +18,7 @@ interface Tenant {
 export function TrainerBrandingForm({ tenant }: { tenant: Tenant }) {
   const toast = useToast();
   const [pending, startTransition] = useTransition();
+  const [editing, setEditing] = useState(false);
   const [name, setName] = useState(tenant.name);
   const [tagline, setTagline] = useState(tenant.tagline ?? "");
   const [logoUrl, setLogoUrl] = useState(tenant.logo_url ?? "");
@@ -35,10 +36,40 @@ export function TrainerBrandingForm({ tenant }: { tenant: Tenant }) {
       });
       if (res.ok) {
         toast("Branding saved.", "success");
+        setEditing(false);
       } else {
         toast(res.error ?? "Could not save", "error");
       }
     });
+  }
+
+  // Collapsed summary — the default resting state.
+  if (!editing) {
+    return (
+      <div className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <span
+            className="h-9 w-9 shrink-0 rounded-full border border-[var(--border-subtle)]"
+            style={{ backgroundColor: accentColor }}
+            aria-hidden
+          />
+          <div className="min-w-0">
+            <p className="truncate font-semibold">{name}</p>
+            <p className="truncate text-xs text-[var(--text-muted)]">
+              {tagline || "No tagline"} · /{tenant.slug}
+            </p>
+          </div>
+        </div>
+        <Button
+          onClick={() => setEditing(true)}
+          variant="secondary"
+          size="sm"
+          className="shrink-0"
+        >
+          Edit
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -110,9 +141,19 @@ export function TrainerBrandingForm({ tenant }: { tenant: Tenant }) {
         {tenant.slug}
       </div>
 
-      <Button onClick={save} disabled={pending} size="lg" className="w-full">
-        {pending ? "Saving…" : "Save branding"}
-      </Button>
+      <div className="flex gap-2">
+        <Button onClick={save} disabled={pending} size="lg" className="flex-1">
+          {pending ? "Saving…" : "Save branding"}
+        </Button>
+        <Button
+          onClick={() => setEditing(false)}
+          variant="secondary"
+          size="lg"
+          disabled={pending}
+        >
+          Cancel
+        </Button>
+      </div>
     </div>
   );
 }

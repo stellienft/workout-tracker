@@ -363,23 +363,22 @@ export async function inviteClient(input: { email: string; displayName?: string 
 
   const tenant = await getOrCreateTenant(supabase, user.id);
 
-  // Check if user exists by email
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("email", d.email.toLowerCase())
-    .maybeSingle();
+  // Resolve the user by email via a definer function — a trainer can't read
+  // other users' profile rows directly under RLS.
+  const { data: foundId } = await supabase.rpc("find_user_id_by_email", {
+    p_email: d.email,
+  });
 
-  if (!profile) {
+  if (!foundId) {
     return {
       ok: false,
-      error: "User not found. Ask them to sign up first, then add them.",
+      error: "No Stellio Fit account uses that email. Ask them to sign up first.",
     };
   }
 
   const { error } = await supabase.from("trainer_clients").upsert({
     tenant_id: tenant.id,
-    user_id: profile.id,
+    user_id: foundId as string,
     display_name: d.displayName || null,
     status: "active",
   }, { onConflict: "tenant_id,user_id" });
