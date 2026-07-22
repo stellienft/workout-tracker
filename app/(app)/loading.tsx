@@ -5,7 +5,7 @@ import { PageShell } from "@/components/ui/page-header";
 export default function Loading() {
   return (
     <PageShell>
-      <div className="pt-safe">
+      <div>
         <div className="skeleton h-8 w-48" />
         <div className="skeleton mt-2 h-4 w-72" />
       </div>
