@@ -389,6 +389,52 @@ export async function inviteClient(input: { email: string; displayName?: string 
   return { ok: true };
 }
 
+/** Assign a program to a client — clones it into a trainable client-owned split. */
+export async function assignProgramToClient(input: {
+  programId: string;
+  clientUserId: string;
+}) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const parsed = z
+    .object({ programId: z.string().uuid(), clientUserId: z.string().uuid() })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+
+  // A program with no exercises would assign an empty split.
+  const { count } = await supabase
+    .from("trainer_program_exercises")
+    .select("id", { count: "exact", head: true })
+    .eq("trainer_program_id", parsed.data.programId);
+  if (!count) {
+    return { ok: false, error: "Add exercises to this program before assigning it." };
+  }
+
+  const { error } = await supabase.rpc("assign_program_to_client", {
+    p_program_id: parsed.data.programId,
+    p_client_user_id: parsed.data.clientUserId,
+  });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/trainer/clients");
+  return { ok: true };
+}
+
+/** Revoke an assignment and remove the client's materialised split. */
+export async function unassignPlan(assignmentId: string) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false, error: "Not authenticated" };
+  const parsed = z.string().uuid().safeParse(assignmentId);
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+
+  const { error } = await supabase.rpc("unassign_plan", {
+    p_assignment_id: parsed.data,
+  });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/trainer/clients");
+  return { ok: true };
+}
+
 export async function updateClientStatus(clientId: string, status: "active" | "paused" | "removed") {
   const { supabase, user } = await auth();
   if (!user) return { ok: false, error: "Not authenticated" };
