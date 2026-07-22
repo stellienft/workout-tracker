@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAuthContext, isAdminRole, isTrainerRole } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/nav/sidebar";
 import { BottomNav } from "@/components/nav/bottom-nav";
 import { ToastProvider } from "@/components/ui/toast";
@@ -15,6 +16,15 @@ export default async function AppLayout({
 
   const isAdmin = isAdminRole(roles);
   const isTrainer = isTrainerRole(roles);
+
+  // Whether this member is an active client of any coach (drives "My Coach").
+  const supabase = await createClient();
+  const { count: clientCount } = await supabase
+    .from("trainer_clients")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("status", "active");
+  const isClient = (clientCount ?? 0) > 0;
 
   // Gate the app behind setup. Trainers get their own setup flow; members get
   // the goal-based onboarding. Both routes live outside this layout.
@@ -34,6 +44,7 @@ export default async function AppLayout({
         <Sidebar
           isAdmin={isAdmin}
           isTrainer={isTrainer}
+          isClient={isClient}
           name={name}
           email={email}
         />
