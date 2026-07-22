@@ -28,15 +28,9 @@ export default async function TrainerClientsPage() {
     await Promise.all([
       supabase
         .from("trainer_clients")
-        .select(`
-          id,
-          user_id,
-          display_name,
-          status,
-          subscription_active,
-          assigned_at,
-          profiles:user_id (email, full_name)
-        `)
+        .select(
+          "id, user_id, display_name, status, subscription_active, assigned_at"
+        )
         .eq("tenant_id", tenant.id)
         .order("assigned_at", { ascending: false }),
       supabase
@@ -50,11 +44,28 @@ export default async function TrainerClientsPage() {
         .eq("tenant_id", tenant.id),
     ]);
 
-  // Supabase types a to-one join as an array; flatten it to a single object.
-  const clientList = (clients ?? []).map((c) => ({
-    ...c,
-    profiles: Array.isArray(c.profiles) ? (c.profiles[0] ?? null) : c.profiles,
-  }));
+  // trainer_clients.user_id references auth.users (not profiles), so there's no
+  // FK for a PostgREST embed — fetch the client profiles separately and merge.
+  const clientUserIds = (clients ?? []).map((c) => c.user_id as string);
+  const { data: clientProfiles } = clientUserIds.length
+    ? await supabase
+        .from("profiles")
+        .select("id, email, full_name")
+        .in("id", clientUserIds)
+    : { data: [] };
+  const profileById = new Map(
+    (clientProfiles ?? []).map((p) => [p.id as string, p])
+  );
+
+  const clientList = (clients ?? []).map((c) => {
+    const p = profileById.get(c.user_id as string);
+    return {
+      ...c,
+      profiles: p
+        ? { email: p.email as string, full_name: p.full_name as string | null }
+        : null,
+    };
+  });
 
   const assignmentList = (assignments ?? []).map((a) => {
     const prog = Array.isArray(a.trainer_programs)

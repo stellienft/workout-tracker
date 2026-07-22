@@ -31,22 +31,33 @@ export default async function TrainerChatPage({
 
   const { data: threads } = await supabase
     .from("chat_threads")
-    .select(`
-      id,
-      client_id,
-      last_message_at,
-      created_at,
-      client:client_id (email, full_name)
-    `)
+    .select("id, client_id, last_message_at, created_at")
     .eq("tenant_id", tenant.id)
     .eq("trainer_id", user!.id)
     .order("last_message_at", { ascending: false, nullsFirst: false });
 
-  // Supabase types a to-one join as an array; flatten it to a single object.
-  const threadList = (threads ?? []).map((t) => ({
-    ...t,
-    client: Array.isArray(t.client) ? (t.client[0] ?? null) : t.client,
-  }));
+  // chat_threads.client_id references auth.users (not profiles), so fetch the
+  // client profiles separately and merge — an embed has no FK to resolve.
+  const clientIds = (threads ?? []).map((t) => t.client_id as string);
+  const { data: clientProfiles } = clientIds.length
+    ? await supabase
+        .from("profiles")
+        .select("id, email, full_name")
+        .in("id", clientIds)
+    : { data: [] };
+  const profileById = new Map(
+    (clientProfiles ?? []).map((p) => [p.id as string, p])
+  );
+
+  const threadList = (threads ?? []).map((t) => {
+    const p = profileById.get(t.client_id as string);
+    return {
+      ...t,
+      client: p
+        ? { email: p.email as string, full_name: p.full_name as string | null }
+        : null,
+    };
+  });
 
   let messages: Message[] = [];
 
