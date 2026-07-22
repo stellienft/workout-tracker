@@ -10,17 +10,22 @@ import { LogOut } from "lucide-react";
 export function Sidebar({
   isAdmin,
   isTrainer,
+  isClient,
   name,
   email,
 }: {
   isAdmin: boolean;
   isTrainer: boolean;
+  isClient: boolean;
   name: string;
   email: string;
 }) {
   const pathname = usePathname();
   const items = sidebarItems.filter(
-    (i) => (!i.adminOnly || isAdmin) && (!i.trainerOnly || isTrainer)
+    (i) =>
+      (!i.adminOnly || isAdmin) &&
+      (!i.trainerOnly || isTrainer) &&
+      (!i.clientOnly || isClient)
   );
 
   return (
