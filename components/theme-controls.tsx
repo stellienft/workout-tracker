@@ -37,12 +37,12 @@ function resolveTheme(theme: Theme): "light" | "dark" {
 function apply(theme: Theme, accent: string) {
   const r = document.documentElement;
   r.dataset.theme = resolveTheme(theme);
-  r.style.setProperty("--accent-primary", accent);
+  r.style.setProperty("--accent-base", accent);
   r.style.setProperty("--color-accent", accent);
 }
 
 export function ThemeControls({
-  initialTheme = "system",
+  initialTheme = "dark",
   initialAccent = DEFAULT_ACCENT,
 }: {
   initialTheme?: Theme;

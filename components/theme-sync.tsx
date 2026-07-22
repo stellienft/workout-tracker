@@ -27,7 +27,7 @@ export function ThemeSync({
             : "dark"
           : theme;
       root.dataset.theme = resolved;
-      root.style.setProperty("--accent-primary", accent);
+      root.style.setProperty("--accent-base", accent);
       root.style.setProperty("--color-accent", accent);
     } catch {
       // ignore storage/DOM access issues

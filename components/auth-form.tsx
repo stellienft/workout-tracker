@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
+
+  // Surface a failed sign-in bounce (e.g. Google) instead of silently landing
+  // back on the login screen with no explanation.
+  useEffect(() => {
+    if (params.get("error") === "auth") {
+      setError("We couldn't complete that sign-in. Please try again.");
+    }
+  }, [params]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
