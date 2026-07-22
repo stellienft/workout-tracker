@@ -8,15 +8,19 @@ import { RecipeLibrary } from "@/components/nutrition/recipe-library";
 export const metadata = { title: "Recipes" };
 
 export default async function RecipesPage() {
-  await requireUser();
+  const { user } = await requireUser();
   const supabase = await createClient();
 
-  const { data: recipes } = await supabase
-    .from("recipes")
-    .select(
-      "id, title, category, image_url, description, calories, protein_g, carbs_g, fat_g, servings, prep_minutes, tags, ingredients, steps"
-    )
-    .order("title");
+  const [{ data: recipes }, { data: favs }] = await Promise.all([
+    supabase
+      .from("recipes")
+      .select(
+        "id, title, category, image_url, description, calories, protein_g, carbs_g, fat_g, servings, prep_minutes, tags, ingredients, steps"
+      )
+      .order("title"),
+    supabase.from("recipe_favorites").select("recipe_id").eq("user_id", user.id),
+  ]);
+  const favoriteIds = (favs ?? []).map((f) => f.recipe_id as string);
 
   return (
     <PageShell>
@@ -27,6 +31,7 @@ export default async function RecipesPage() {
         <ArrowLeft className="h-4 w-4" /> Nutrition
       </Link>
       <RecipeLibrary
+        favoriteIds={favoriteIds}
         recipes={(recipes ?? []).map((r) => ({
           id: r.id as string,
           title: r.title as string,
