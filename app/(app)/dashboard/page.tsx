@@ -26,21 +26,33 @@ export default async function DashboardPage() {
     getRecentSessions(user.id, 5),
   ]);
 
-  // Body-weight trend + workout count stats.
-  const [{ data: metrics }, { count: totalWorkouts }] = await Promise.all([
-    supabase
-      .from("body_metrics")
-      .select("weight_kg, recorded_on")
-      .eq("user_id", user.id)
-      .not("weight_kg", "is", null)
-      .order("recorded_on", { ascending: false })
-      .limit(2),
-    supabase
-      .from("workout_sessions")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("status", "completed"),
-  ]);
+  // Body-weight trend + workout count stats + split count (for new-user nudge).
+  const [{ data: metrics }, { count: totalWorkouts }, { count: splitCount }] =
+    await Promise.all([
+      supabase
+        .from("body_metrics")
+        .select("weight_kg, recorded_on")
+        .eq("user_id", user.id)
+        .not("weight_kg", "is", null)
+        .order("recorded_on", { ascending: false })
+        .limit(2),
+      supabase
+        .from("workout_sessions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("status", "completed"),
+      supabase
+        .from("custom_splits")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_user_id", user.id),
+    ]);
+
+  // Show a gentle "get started" nudge to brand-new members with nothing set up.
+  const showStarterNudge =
+    !dash.enrolment &&
+    !dash.inProgressSession &&
+    (totalWorkouts ?? 0) === 0 &&
+    (splitCount ?? 0) === 0;
 
   const latestWeight = metrics?.[0]?.weight_kg ?? null;
 
@@ -84,6 +96,35 @@ export default async function DashboardPage() {
           </Link>
         )}
       </div>
+
+      {/* New-user nudge: try a ready-made starter split */}
+      {showStarterNudge && (
+        <div className="mt-5 overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-active)] bg-[var(--accent-muted)] p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--accent-primary)]">
+            New here? Start in seconds
+          </p>
+          <p className="mt-1 font-bold">Not sure where to begin?</p>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            Pick a ready-made starter split — like Full Body or Push/Pull/Legs —
+            already filled with exercises. Customise it or start training right
+            away.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              href="/splits"
+              className="rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black"
+            >
+              Browse starter splits
+            </Link>
+            <Link
+              href="/programs"
+              className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-primary)] px-4 py-2 text-sm font-medium"
+            >
+              Or explore programs
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Continue unfinished */}
       {dash.inProgressSession && (
