@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { Pencil, ImagePlus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { createClient } from "@/lib/supabase/client";
 import { createTrainerProgram, publishTrainerProgram } from "@/lib/actions/trainer";
 import { CoverImage } from "@/components/ui/cover-image";
+
+const MEDIA_BUCKET = "trainer-media";
+const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
 
 interface TrainerProgram {
   id: string;
@@ -32,6 +36,34 @@ export function TrainerProgramList({ tenantId, programs }: { tenantId: string; p
   const [difficulty, setDifficulty] = useState<"beginner" | "intermediate" | "advanced" | "all">("beginner");
   const [durationWeeks, setDurationWeeks] = useState(4);
   const [category, setCategory] = useState("strength");
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const coverRef = useRef<HTMLInputElement>(null);
+
+  async function uploadCover(file: File) {
+    if (file.type && !IMAGE_TYPES.includes(file.type)) {
+      toast("Use a PNG, JPG or WebP image.", "error");
+      return;
+    }
+    setUploadingCover(true);
+    try {
+      const supabase = createClient();
+      const dot = file.name.lastIndexOf(".");
+      const ext = dot > -1 ? file.name.slice(dot + 1).toLowerCase() : "jpg";
+      const path = `${tenantId}/covers/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage
+        .from(MEDIA_BUCKET)
+        .upload(path, file, { contentType: file.type || "image/jpeg" });
+      if (error) {
+        toast(error.message || "Upload failed", "error");
+        return;
+      }
+      const { data } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(path);
+      setCoverImagePath(data.publicUrl);
+      toast("Cover image uploaded.", "success");
+    } finally {
+      setUploadingCover(false);
+    }
+  }
 
   function create() {
     startTransition(async () => {
@@ -136,12 +168,35 @@ export function TrainerProgramList({ tenantId, programs }: { tenantId: string; p
             rows={3}
             className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
           />
-          <input
-            value={coverImagePath}
-            onChange={(e) => setCoverImagePath(e.target.value)}
-            placeholder="Cover image URL (https://…)"
-            className="h-11 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
-          />
+          <div>
+            <input
+              ref={coverRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void uploadCover(f);
+              }}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => coverRef.current?.click()}
+              disabled={uploadingCover}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--border-subtle)] px-3 py-4 text-sm text-[var(--text-secondary)] hover:border-[var(--border-active)] disabled:opacity-60"
+            >
+              {coverImagePath ? (
+                <>
+                  <Check className="h-4 w-4 text-[var(--accent-primary)]" /> Cover image added — replace
+                </>
+              ) : (
+                <>
+                  <ImagePlus className="h-4 w-4" />
+                  {uploadingCover ? "Uploading…" : "Upload cover image (optional)"}
+                </>
+              )}
+            </button>
+          </div>
           <div className="grid grid-cols-3 gap-2">
             <select
               value={difficulty}
