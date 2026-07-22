@@ -15,6 +15,7 @@ export function Sidebar({
   unread,
   name,
   email,
+  avatarUrl,
 }: {
   isAdmin: boolean;
   isTrainer: boolean;
@@ -22,6 +23,7 @@ export function Sidebar({
   unread: number;
   name: string;
   email: string;
+  avatarUrl?: string | null;
 }) {
   const pathname = usePathname();
   const items = sidebarItems.filter(
@@ -66,9 +68,18 @@ export function Sidebar({
       </nav>
       <div className="border-t border-[var(--border-subtle)] p-3">
         <div className="flex items-center gap-3 rounded-2xl px-3 py-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--accent-muted)] text-sm font-bold text-[var(--accent-primary)]">
-            {(name || email).charAt(0).toUpperCase()}
-          </div>
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatarUrl}
+              alt={name}
+              className="h-9 w-9 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--accent-muted)] text-sm font-bold text-[var(--accent-primary)]">
+              {(name || email).charAt(0).toUpperCase()}
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{name || "Athlete"}</p>
             <p className="truncate text-xs text-[var(--text-muted)]">{email}</p>

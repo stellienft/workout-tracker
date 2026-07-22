@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireUser, getAuthContext, isAdminRole } from "@/lib/auth";
 import { getPrimaryGoal } from "@/lib/queries";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
+import { AvatarUploader } from "@/components/profile/avatar-uploader";
 import { signOut } from "@/lib/actions/auth";
 import {
   BookOpen,
@@ -43,9 +44,12 @@ export default async function ProfilePage() {
     <PageShell>
       <PageHeader title="Profile" />
       <div className="mt-6 flex items-center gap-4 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent-muted)] text-xl font-bold text-[var(--accent-primary)]">
-          {name.charAt(0).toUpperCase()}
-        </div>
+        <AvatarUploader
+          userId={user.id}
+          name={name}
+          email={email}
+          avatarUrl={profile?.avatar_url ?? null}
+        />
         <div className="min-w-0">
           <p className="truncate text-lg font-bold">{name}</p>
           <p className="truncate text-sm text-[var(--text-muted)]">{email}</p>
