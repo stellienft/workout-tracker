@@ -11,6 +11,8 @@ export default async function AdminExercisesPage() {
     .select("*")
     .order("name");
 
+  const hasKey = Boolean(process.env.EXERCISEDB_API_KEY);
+
   return (
     <div>
       <h1 className="text-2xl font-bold">Exercises</h1>
@@ -18,8 +20,20 @@ export default async function AdminExercisesPage() {
         Edit instructions, shoulder-safety flags and publication status.
       </p>
 
+      {!hasKey && (
+        <div className="mt-4 rounded-[var(--radius-card)] border border-[var(--warning)]/40 bg-[var(--surface-primary)] p-4 text-sm">
+          <p className="font-medium">ExerciseDB isn&apos;t configured yet</p>
+          <p className="mt-1 text-[var(--text-secondary)]">
+            Subscribe (free) to ExerciseDB on RapidAPI, then add an{" "}
+            <code>EXERCISEDB_API_KEY</code> environment variable (Vercel → Project
+            → Settings → Environment Variables, and your Stellio environment) and
+            redeploy.
+          </p>
+        </div>
+      )}
+
       <div className="mt-6">
-        <ExerciseImport />
+        <ExerciseImport disabled={!hasKey} />
       </div>
 
       <div className="mt-8 overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)]">
