@@ -205,7 +205,25 @@ export async function addExerciseToTrainerProgram(input: {
   });
 
   if (error) return { ok: false, error: error.message };
+  revalidatePath(`/trainer/programs/${input.trainerProgramId}`);
   revalidatePath("/trainer");
+  return { ok: true };
+}
+
+export async function removeTrainerProgramExercise(input: {
+  rowId: string;
+  trainerProgramId: string;
+}) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("trainer_program_exercises")
+    .delete()
+    .eq("id", input.rowId);
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/trainer/programs/${input.trainerProgramId}`);
   return { ok: true };
 }
 
@@ -272,60 +290,55 @@ export async function addTrainerVideo(input: z.input<typeof videoSchema>) {
 }
 
 const VIDEO_BUCKET = "trainer-videos";
-const MAX_VIDEO_BYTES = 500 * 1024 * 1024; // 500 MB
-const VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime", "video/ogg"];
 
-/** Upload a trainer's own video file to the platform. */
-export async function uploadTrainerVideo(formData: FormData) {
+/**
+ * Record a video the trainer already uploaded straight to storage from the
+ * browser. The file itself never passes through this server action — large
+ * videos exceed the Server Action / serverless request-body limits, which was
+ * crashing the upload — so the client uploads to the per-tenant folder (guarded
+ * by storage RLS) and we just persist the row here.
+ */
+export async function recordTrainerVideoUpload(input: {
+  title: string;
+  notes?: string;
+  storagePath: string;
+}) {
   const { supabase, user } = await auth();
   if (!user) return { ok: false, error: "Not authenticated" };
 
-  const title = String(formData.get("title") ?? "").trim();
-  const notes = String(formData.get("notes") ?? "").trim();
-  const file = formData.get("file");
-  if (title.length < 2) return { ok: false, error: "Add a title." };
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, error: "Choose a video file." };
-  }
-  if (file.size > MAX_VIDEO_BYTES) {
-    return { ok: false, error: "Video is too large (max 500 MB)." };
-  }
-  if (file.type && !VIDEO_TYPES.includes(file.type)) {
-    return { ok: false, error: "Unsupported format. Use MP4, WebM or MOV." };
-  }
+  const parsed = z
+    .object({
+      title: z.string().min(2).max(200),
+      notes: z.string().max(1000).optional(),
+      storagePath: z.string().min(3).max(300),
+    })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+  const d = parsed.data;
 
   const tenant = await getOrCreateTenant(supabase, user.id);
-  const ext =
-    file.type === "video/webm"
-      ? "webm"
-      : file.type === "video/quicktime"
-        ? "mov"
-        : file.type === "video/ogg"
-          ? "ogv"
-          : "mp4";
-  const path = `${tenant.id}/${randomUUID()}.${ext}`;
 
-  const { error: uploadError } = await supabase.storage
+  // The upload RLS already scopes writes to the tenant folder; double-check the
+  // recorded path belongs to this trainer so a row can't point elsewhere.
+  if (!d.storagePath.startsWith(`${tenant.id}/`)) {
+    return { ok: false, error: "Invalid upload path." };
+  }
+
+  const { data: pub } = supabase.storage
     .from(VIDEO_BUCKET)
-    .upload(path, file, {
-      contentType: file.type || "video/mp4",
-      upsert: false,
-    });
-  if (uploadError) return { ok: false, error: uploadError.message };
-
-  const { data: pub } = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(path);
+    .getPublicUrl(d.storagePath);
 
   const { error } = await supabase.from("trainer_videos").insert({
     tenant_id: tenant.id,
-    title,
+    title: d.title,
     source_url: pub.publicUrl,
-    storage_path: path,
+    storage_path: d.storagePath,
     provider: "upload",
-    notes: notes || null,
+    notes: d.notes || null,
   });
   if (error) {
-    // Roll back the orphaned upload so storage and table stay consistent.
-    await supabase.storage.from(VIDEO_BUCKET).remove([path]);
+    // Clean up the orphaned object so storage and table stay consistent.
+    await supabase.storage.from(VIDEO_BUCKET).remove([d.storagePath]);
     return { ok: false, error: error.message };
   }
 

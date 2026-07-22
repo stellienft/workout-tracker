@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { createTrainerProgram, publishTrainerProgram } from "@/lib/actions/trainer";
@@ -18,6 +21,8 @@ interface TrainerProgram {
 }
 
 export function TrainerProgramList({ tenantId, programs }: { tenantId: string; programs?: TrainerProgram[] }) {
+  void tenantId;
+  const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
@@ -39,11 +44,13 @@ export function TrainerProgramList({ tenantId, programs }: { tenantId: string; p
         category,
       });
       if (res.ok) {
-        toast("Program created.", "success");
+        toast("Program created — now add exercises.", "success");
         setName("");
         setDescription("");
         setCoverImagePath("");
         setShowForm(false);
+        // Take the trainer straight into the editor to fill in exercises.
+        router.push(`/trainer/programs/${res.id}`);
       } else {
         toast(res.error ?? "Could not create", "error");
       }
@@ -102,6 +109,12 @@ export function TrainerProgramList({ tenantId, programs }: { tenantId: string; p
                     {p.description}
                   </p>
                 )}
+                <Link
+                  href={`/trainer/programs/${p.id}`}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)]"
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Edit &amp; add exercises
+                </Link>
               </div>
             </div>
           ))}
