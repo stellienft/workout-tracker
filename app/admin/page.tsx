@@ -73,6 +73,7 @@ export default async function AdminOverviewPage() {
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         <QuickLink href="/admin/programs" title="Programs" desc="Create, edit, publish and feature training programs." />
+        <QuickLink href="/admin/recipes" title="Recipes" desc="Import real recipes with photos + macros from Spoonacular." />
         <QuickLink href="/admin/videos" title="YouTube videos" desc="Add and verify exercise video links." />
         <QuickLink href="/admin/media" title="Media" desc="Review cover-image placeholders and publish uploads." />
         <QuickLink href="/admin/featured-content" title="Featured" desc="Curate dashboard hero and discovery cards." />
