@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { CoverImage } from "@/components/ui/cover-image";
+import { ExerciseImage } from "@/components/ui/exercise-image";
 import { cn } from "@/lib/utils";
 import { ShieldAlert, Search } from "lucide-react";
 import type { Exercise } from "@/lib/types";
@@ -67,7 +67,7 @@ export function ExerciseLibrary({ exercises }: { exercises: Exercise[] }) {
             className="group flex gap-3 overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-3"
           >
             <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl">
-              <CoverImage path={e.cover_image_path} alt={e.name} sizes="64px" />
+              <ExerciseImage path={e.cover_image_path} alt={e.name} />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">

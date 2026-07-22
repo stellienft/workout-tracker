@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageShell } from "@/components/ui/page-header";
 import { ExerciseVideoPlayer } from "@/components/workout/exercise-video-player";
-import { CoverImage } from "@/components/ui/cover-image";
+import { ExerciseImage } from "@/components/ui/exercise-image";
 import { normaliseVideoForClient } from "@/lib/video-utils";
 import { ShieldAlert } from "lucide-react";
 import Link from "next/link";
@@ -50,7 +50,7 @@ export default async function ExerciseDetailPage({
     <PageShell>
       <div className="flex items-start gap-4">
         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl">
-          <CoverImage path={e.cover_image_path} alt={e.name} sizes="96px" />
+          <ExerciseImage path={e.cover_image_path} alt={e.name} />
         </div>
         <div>
           <div className="flex items-center gap-2">
