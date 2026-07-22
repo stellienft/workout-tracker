@@ -102,7 +102,11 @@ export default async function TrainerPage() {
       {/* Programs */}
       <div className="mt-8">
         <h2 className="mb-3 text-lg font-bold">Programs</h2>
-        <TrainerProgramList tenantId={tenant.id} programs={programs ?? []} />
+        <TrainerProgramList
+          tenantId={tenant.id}
+          logoUrl={tenant.logo_url}
+          programs={programs ?? []}
+        />
       </div>
 
       {/* Videos */}

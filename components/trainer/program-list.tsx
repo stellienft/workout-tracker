@@ -24,8 +24,15 @@ interface TrainerProgram {
   published: boolean;
 }
 
-export function TrainerProgramList({ tenantId, programs }: { tenantId: string; programs?: TrainerProgram[] }) {
-  void tenantId;
+export function TrainerProgramList({
+  tenantId,
+  logoUrl,
+  programs,
+}: {
+  tenantId: string;
+  logoUrl?: string | null;
+  programs?: TrainerProgram[];
+}) {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
@@ -115,6 +122,14 @@ export function TrainerProgramList({ tenantId, programs }: { tenantId: string; p
                   alt={p.name}
                   sizes="(max-width: 640px) 100vw, 50vw"
                 />
+                {logoUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={logoUrl}
+                    alt=""
+                    className="absolute bottom-2 right-2 h-9 w-9 rounded-lg bg-black/45 object-contain p-1 backdrop-blur-sm"
+                  />
+                )}
               </div>
               <div className="p-3">
                 <div className="flex items-center justify-between gap-2">
