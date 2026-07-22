@@ -123,6 +123,39 @@ export async function addCustomFood(input: {
   return { ok: true as const };
 }
 
+/** Toggle a recipe in the member's favourites. */
+export async function toggleRecipeFavorite(recipeId: string) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+  const parsed = z.string().uuid().safeParse(recipeId);
+  if (!parsed.success) return { ok: false as const, error: "Invalid" };
+
+  const { data: existing } = await supabase
+    .from("recipe_favorites")
+    .select("recipe_id")
+    .eq("user_id", user.id)
+    .eq("recipe_id", parsed.data)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase
+      .from("recipe_favorites")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("recipe_id", parsed.data);
+    if (error) return { ok: false as const, error: error.message };
+  } else {
+    const { error } = await supabase
+      .from("recipe_favorites")
+      .insert({ user_id: user.id, recipe_id: parsed.data });
+    if (error) return { ok: false as const, error: error.message };
+  }
+
+  revalidatePath("/nutrition");
+  revalidatePath("/nutrition/recipes");
+  return { ok: true as const, favorited: !existing };
+}
+
 export async function deleteMealEntry(id: string) {
   const { supabase, user } = await auth();
   if (!user) return { ok: false as const, error: "Not authenticated" };

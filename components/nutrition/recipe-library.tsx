@@ -1,9 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Search, Clock, X, Flame } from "lucide-react";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Search, Clock, X, Flame, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/toast";
 import { RECIPE_CATEGORIES } from "@/lib/nutrition";
+import { toggleRecipeFavorite } from "@/lib/actions/nutrition";
+
+const FAV = "★ Favourites";
 
 interface Recipe {
   id: string;
@@ -22,15 +27,23 @@ interface Recipe {
   steps: string[];
 }
 
-export function RecipeLibrary({ recipes }: { recipes: Recipe[] }) {
+export function RecipeLibrary({
+  recipes,
+  favoriteIds,
+}: {
+  recipes: Recipe[];
+  favoriteIds: string[];
+}) {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<string | null>(null);
   const [open, setOpen] = useState<Recipe | null>(null);
+  const favSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
     return recipes.filter((r) => {
-      if (cat && r.category !== cat) return false;
+      if (cat === FAV && !favSet.has(r.id)) return false;
+      if (cat && cat !== FAV && r.category !== cat) return false;
       if (
         query &&
         !r.title.toLowerCase().includes(query) &&
@@ -39,7 +52,7 @@ export function RecipeLibrary({ recipes }: { recipes: Recipe[] }) {
         return false;
       return true;
     });
-  }, [recipes, q, cat]);
+  }, [recipes, q, cat, favSet]);
 
   return (
     <div>
@@ -60,6 +73,7 @@ export function RecipeLibrary({ recipes }: { recipes: Recipe[] }) {
         </div>
         <div className="no-scrollbar flex gap-1.5 overflow-x-auto pb-1">
           <Chip active={!cat} onClick={() => setCat(null)} label="All" />
+          <Chip active={cat === FAV} onClick={() => setCat(cat === FAV ? null : FAV)} label={FAV} />
           {RECIPE_CATEGORIES.map((c) => (
             <Chip key={c} active={cat === c} onClick={() => setCat(cat === c ? null : c)} label={c} />
           ))}
@@ -73,12 +87,19 @@ export function RecipeLibrary({ recipes }: { recipes: Recipe[] }) {
             onClick={() => setOpen(r)}
             className="overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-primary)] text-left"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={r.image_url ?? ""}
-              alt={r.title}
-              className="h-28 w-full bg-[var(--surface-secondary)] object-cover"
-            />
+            <div className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={r.image_url ?? ""}
+                alt={r.title}
+                className="h-28 w-full bg-[var(--surface-secondary)] object-cover"
+              />
+              {favSet.has(r.id) && (
+                <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50">
+                  <Heart className="h-3.5 w-3.5 fill-[var(--accent-primary)] text-[var(--accent-primary)]" />
+                </span>
+              )}
+            </div>
             <div className="p-3">
               <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--accent-primary)]">
                 {r.category}
@@ -98,19 +119,50 @@ export function RecipeLibrary({ recipes }: { recipes: Recipe[] }) {
         </p>
       )}
 
-      {open && <RecipeDetail recipe={open} onClose={() => setOpen(null)} />}
+      {open && (
+        <RecipeDetail
+          recipe={open}
+          favorited={favSet.has(open.id)}
+          onClose={() => setOpen(null)}
+        />
+      )}
     </div>
   );
 }
 
-function RecipeDetail({ recipe, onClose }: { recipe: Recipe; onClose: () => void }) {
+function RecipeDetail({
+  recipe,
+  favorited,
+  onClose,
+}: {
+  recipe: Recipe;
+  favorited: boolean;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const toast = useToast();
+  const [pending, startTransition] = useTransition();
+  const [fav, setFav] = useState(favorited);
+
+  function toggleFav() {
+    setFav((v) => !v);
+    startTransition(async () => {
+      const res = await toggleRecipeFavorite(recipe.id);
+      if (res.ok) router.refresh();
+      else {
+        setFav(favorited);
+        toast(res.error ?? "Could not update", "error");
+      }
+    });
+  }
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 sm:items-center"
       onClick={onClose}
     >
       <div
-        className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-[var(--radius-card)] bg-[var(--surface-primary)] sm:rounded-[var(--radius-card)]"
+        className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-[var(--radius-card)] bg-[var(--surface-primary)] sm:rounded-[var(--radius-card)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative">
@@ -120,13 +172,28 @@ function RecipeDetail({ recipe, onClose }: { recipe: Recipe; onClose: () => void
             alt={recipe.title}
             className="h-44 w-full bg-[var(--surface-secondary)] object-cover"
           />
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="absolute right-3 top-3 flex gap-2">
+            <button
+              onClick={toggleFav}
+              disabled={pending}
+              aria-label={fav ? "Remove favourite" : "Add favourite"}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
+            >
+              <Heart
+                className={cn(
+                  "h-5 w-5",
+                  fav ? "fill-[var(--accent-primary)] text-[var(--accent-primary)]" : ""
+                )}
+              />
+            </button>
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto p-5">
           <span className="text-xs font-medium uppercase tracking-wide text-[var(--accent-primary)]">

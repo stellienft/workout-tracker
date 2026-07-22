@@ -32,6 +32,7 @@ export default async function NutritionPage({
     { data: weightRow },
     primaryGoal,
     { data: profile },
+    { data: favs },
   ] = await Promise.all([
     supabase.from("nutrition_targets").select("*").eq("user_id", user.id).maybeSingle(),
     supabase
@@ -54,7 +55,9 @@ export default async function NutritionPage({
       .maybeSingle(),
     getPrimaryGoal(user.id),
     supabase.from("profiles").select("weekly_frequency").eq("id", user.id).maybeSingle(),
+    supabase.from("recipe_favorites").select("recipe_id").eq("user_id", user.id),
   ]);
+  const favoriteIds = (favs ?? []).map((f) => f.recipe_id as string);
 
   const suggested = suggestTargets({
     weightKg: weightRow?.weight_kg ?? null,
@@ -79,9 +82,9 @@ export default async function NutritionPage({
         action={
           <Link
             href="/nutrition/recipes"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)]"
+            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)]"
           >
-            <BookOpen className="h-4 w-4" /> Browse recipes
+            <BookOpen className="h-4 w-4" /> Recipes
           </Link>
         }
       />
@@ -91,6 +94,7 @@ export default async function NutritionPage({
           targets={targets}
           suggested={suggested}
           hasSavedTargets={Boolean(targetsRow)}
+          favoriteIds={favoriteIds}
           entries={(entries ?? []).map((e) => ({
             id: e.id as string,
             meal: e.meal as string,

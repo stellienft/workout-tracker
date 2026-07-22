@@ -65,6 +65,7 @@ export function NutritionDashboard({
   hasSavedTargets,
   entries,
   recipes,
+  favoriteIds,
 }: {
   date: string;
   targets: MacroTargets;
@@ -72,6 +73,7 @@ export function NutritionDashboard({
   hasSavedTargets: boolean;
   entries: Entry[];
   recipes: Recipe[];
+  favoriteIds: string[];
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -213,6 +215,7 @@ export function NutritionDashboard({
           date={date}
           meal={addFor}
           recipes={recipes}
+          favoriteIds={favoriteIds}
           onClose={() => setAddFor(null)}
           onDone={() => {
             setAddFor(null);
@@ -337,12 +340,14 @@ function AddModal({
   date,
   meal,
   recipes,
+  favoriteIds,
   onClose,
   onDone,
 }: {
   date: string;
   meal: string;
   recipes: Recipe[];
+  favoriteIds: string[];
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -353,6 +358,8 @@ function AddModal({
   const [cat, setCat] = useState<string | null>(null);
   const [selected, setSelected] = useState<Recipe | null>(null);
   const [servings, setServings] = useState(1);
+  const favSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
+  const FAV = "★ Favourites";
 
   // Custom
   const [cTitle, setCTitle] = useState("");
@@ -365,12 +372,13 @@ function AddModal({
     const query = q.trim().toLowerCase();
     return recipes
       .filter((r) => {
-        if (cat && r.category !== cat) return false;
+        if (cat === FAV && !favSet.has(r.id)) return false;
+        if (cat && cat !== FAV && r.category !== cat) return false;
         if (query && !r.title.toLowerCase().includes(query)) return false;
         return true;
       })
       .slice(0, 60);
-  }, [recipes, q, cat]);
+  }, [recipes, q, cat, favSet]);
 
   function addRecipe() {
     if (!selected) return;
@@ -412,11 +420,11 @@ function AddModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 sm:items-center"
       onClick={onClose}
     >
       <div
-        className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-t-[var(--radius-card)] bg-[var(--surface-primary)] sm:rounded-[var(--radius-card)]"
+        className="flex max-h-[88dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-[var(--radius-card)] bg-[var(--surface-primary)] sm:rounded-[var(--radius-card)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] p-4">
@@ -496,6 +504,11 @@ function AddModal({
                   </div>
                   <div className="no-scrollbar flex gap-1.5 overflow-x-auto pb-1">
                     <FilterChip active={!cat} onClick={() => setCat(null)} label="All" />
+                    <FilterChip
+                      active={cat === FAV}
+                      onClick={() => setCat(cat === FAV ? null : FAV)}
+                      label={FAV}
+                    />
                     {RECIPE_CATEGORIES.map((c) => (
                       <FilterChip
                         key={c}
