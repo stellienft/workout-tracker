@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ChevronRight, Dumbbell, PlayCircle, Youtube } from "lucide-react";
+import { PlayCircle, Youtube } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
+import { CoverImage } from "@/components/ui/cover-image";
 
 export const metadata = { title: "My Coach" };
 
@@ -41,20 +42,39 @@ export default async function MyCoachPage() {
   const accent = (tenant.accent_color as string) || "#ccff30";
   const tenantId = first.tenant_id as string;
 
-  const [{ data: splits }, { data: videos }] = await Promise.all([
-    supabase
-      .from("custom_splits")
-      .select("id, name, description, custom_split_days(id)")
-      .eq("owner_user_id", user.id)
-      .eq("source", "coach")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("trainer_videos")
-      .select("id, title, source_url, embed_url, thumbnail_url, provider")
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false })
-      .limit(12),
-  ]);
+  const [{ data: splits }, { data: videos }, { data: assignments }] =
+    await Promise.all([
+      supabase
+        .from("custom_splits")
+        .select("id, name, description, custom_split_days(id)")
+        .eq("owner_user_id", user.id)
+        .eq("source", "coach")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("trainer_videos")
+        .select("id, title, source_url, embed_url, thumbnail_url, provider")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false })
+        .limit(12),
+      supabase
+        .from("trainer_assignments")
+        .select("custom_split_id, trainer_programs(cover_image_path)")
+        .eq("client_user_id", user.id),
+    ]);
+
+  // Map each assigned split to its source program's cover image.
+  const coverBySplit = new Map<string, string | null>();
+  for (const a of assignments ?? []) {
+    const prog = Array.isArray(a.trainer_programs)
+      ? a.trainer_programs[0]
+      : a.trainer_programs;
+    if (a.custom_split_id) {
+      coverBySplit.set(
+        a.custom_split_id as string,
+        (prog?.cover_image_path as string) ?? null
+      );
+    }
+  }
 
   const plans = (splits ?? []).map((s) => ({
     id: s.id as string,
@@ -63,6 +83,7 @@ export default async function MyCoachPage() {
     dayCount: Array.isArray(s.custom_split_days)
       ? s.custom_split_days.length
       : 0,
+    cover: coverBySplit.get(s.id as string) ?? null,
   }));
 
   return (
@@ -107,22 +128,38 @@ export default async function MyCoachPage() {
               No plans assigned yet — your coach will add them here.
             </div>
           ) : (
-            <div className="grid gap-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               {plans.map((p) => (
                 <Link
                   key={p.id}
                   href={`/splits/${p.id}`}
-                  className="flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4"
+                  className="group overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)]"
                 >
-                  <Dumbbell className="h-5 w-5 shrink-0 text-[var(--accent-primary)]" />
-                  <div className="min-w-0 flex-1">
+                  <div className="relative h-32 w-full">
+                    <CoverImage
+                      path={p.cover}
+                      alt={p.name}
+                      sizes="(max-width: 640px) 100vw, 50vw"
+                    />
+                    {tenant.logo_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={tenant.logo_url as string}
+                        alt=""
+                        className="absolute bottom-2 right-2 h-9 w-9 rounded-lg bg-black/45 object-contain p-1 backdrop-blur-sm"
+                      />
+                    )}
+                  </div>
+                  <div className="p-4">
                     <p className="font-semibold">{p.name}</p>
-                    <p className="text-xs text-[var(--text-muted)]">
+                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">
                       {p.dayCount} {p.dayCount === 1 ? "day" : "days"}
                       {p.description ? ` · ${p.description}` : ""}
                     </p>
+                    <span className="mt-3 inline-block rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black">
+                      Start training
+                    </span>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-[var(--text-muted)]" />
                 </Link>
               ))}
             </div>
