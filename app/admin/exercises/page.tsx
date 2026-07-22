@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Exercise } from "@/lib/types";
 import { ShieldAlert } from "lucide-react";
+import { ExerciseImport } from "@/components/admin/exercise-import";
 
 export default async function AdminExercisesPage() {
   const supabase = await createClient();
@@ -16,7 +17,12 @@ export default async function AdminExercisesPage() {
       <p className="text-sm text-[var(--text-secondary)]">
         Edit instructions, shoulder-safety flags and publication status.
       </p>
-      <div className="mt-6 overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)]">
+
+      <div className="mt-6">
+        <ExerciseImport />
+      </div>
+
+      <div className="mt-8 overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)]">
         <table className="w-full text-sm">
           <thead className="bg-[var(--surface-secondary)] text-left text-xs uppercase text-[var(--text-muted)]">
             <tr>
