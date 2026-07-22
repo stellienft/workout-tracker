@@ -1,10 +1,26 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Youtube, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { addTrainerVideo, uploadTrainerVideo } from "@/lib/actions/trainer";
+import { createClient } from "@/lib/supabase/client";
+import { addTrainerVideo, recordTrainerVideoUpload } from "@/lib/actions/trainer";
+
+const VIDEO_BUCKET = "trainer-videos";
+const MAX_VIDEO_BYTES = 500 * 1024 * 1024; // 500 MB
+const VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime", "video/ogg"];
+
+function extFor(file: File) {
+  if (file.type === "video/webm") return "webm";
+  if (file.type === "video/quicktime") return "mov";
+  if (file.type === "video/ogg") return "ogv";
+  if (file.type === "video/mp4") return "mp4";
+  // Fall back to the file's own extension, else mp4.
+  const dot = file.name.lastIndexOf(".");
+  return dot > -1 ? file.name.slice(dot + 1).toLowerCase() : "mp4";
+}
 
 interface TrainerVideo {
   id: string;
@@ -23,7 +39,7 @@ export function TrainerVideoList({
   tenantId: string;
   videos?: TrainerVideo[];
 }) {
-  void tenantId;
+  const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
   const [showForm, setShowForm] = useState(false);
@@ -48,6 +64,7 @@ export function TrainerVideoList({
       if (res.ok) {
         toast("Video added.", "success");
         reset();
+        router.refresh();
       } else {
         toast(res.error ?? "Could not add", "error");
       }
@@ -59,17 +76,43 @@ export function TrainerVideoList({
       toast("Choose a video file.", "error");
       return;
     }
-    const fd = new FormData();
-    fd.set("title", title);
-    fd.set("notes", notes);
-    fd.set("file", file);
+    if (file.type && !VIDEO_TYPES.includes(file.type)) {
+      toast("Unsupported format. Use MP4, WebM or MOV.", "error");
+      return;
+    }
+    if (file.size > MAX_VIDEO_BYTES) {
+      toast("Video is too large (max 500 MB).", "error");
+      return;
+    }
+    const theFile = file;
     startTransition(async () => {
-      const res = await uploadTrainerVideo(fd);
+      // Upload straight to storage from the browser — large files can't go
+      // through a Server Action (request-body limits), which was crashing this.
+      const supabase = createClient();
+      const path = `${tenantId}/${crypto.randomUUID()}.${extFor(theFile)}`;
+      const { error: upErr } = await supabase.storage
+        .from(VIDEO_BUCKET)
+        .upload(path, theFile, {
+          contentType: theFile.type || "video/mp4",
+          upsert: false,
+        });
+      if (upErr) {
+        toast(upErr.message || "Upload failed", "error");
+        return;
+      }
+      const res = await recordTrainerVideoUpload({
+        title,
+        notes,
+        storagePath: path,
+      });
       if (res.ok) {
         toast("Video uploaded.", "success");
         reset();
+        router.refresh();
       } else {
-        toast(res.error ?? "Could not upload", "error");
+        // Remove the orphaned object if we couldn't record it.
+        await supabase.storage.from(VIDEO_BUCKET).remove([path]);
+        toast(res.error ?? "Could not save video", "error");
       }
     });
   }
