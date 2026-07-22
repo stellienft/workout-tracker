@@ -16,7 +16,7 @@ export default async function SettingsPage() {
       <div className="mt-6">
         <h2 className="mb-3 text-lg font-bold">Appearance</h2>
         <ThemeControls
-          initialTheme={profile?.theme_preference ?? "system"}
+          initialTheme={profile?.theme_preference ?? "dark"}
           initialAccent={profile?.accent_color ?? "#ccff30"}
         />
       </div>

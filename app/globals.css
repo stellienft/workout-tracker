@@ -32,9 +32,11 @@
   --surface-primary: #1a1a1a;
   --surface-secondary: #222222;
   --surface-elevated: #292929;
-  /* Accent is user-customisable at runtime; the rest derive from it so a
-     single --accent-primary override recolours the whole UI. */
-  --accent-primary: #ccff30;
+  /* Accent is user-customisable at runtime. JS sets --accent-base (the raw
+     chosen colour); --accent-primary derives from it so light mode can darken
+     the accent for readable contrast without JS needing to know the theme. */
+  --accent-base: #ccff30;
+  --accent-primary: var(--accent-base);
   --accent-hover: color-mix(in srgb, var(--accent-primary) 88%, #000);
   --accent-muted: color-mix(in srgb, var(--accent-primary) 14%, transparent);
   --text-primary: #ffffff;
@@ -60,6 +62,10 @@
   --text-secondary: #52525b;
   --text-muted: #8a8a93;
   --border-subtle: rgba(0, 0, 0, 0.1);
+  /* The bright accent is unreadable on light surfaces, so darken it here.
+     Derived from --accent-base, this works for any accent the user picks and
+     still keeps black-on-accent buttons (e.g. primary CTAs) legible. */
+  --accent-primary: color-mix(in srgb, var(--accent-base) 55%, #000);
   color-scheme: light;
 }
 
