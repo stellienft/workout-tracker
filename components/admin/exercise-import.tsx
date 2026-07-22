@@ -6,7 +6,7 @@ import { Download, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import {
-  importWgerExercises,
+  importExercises,
   seedStarterExercises,
 } from "@/lib/actions/exercises-admin";
 
@@ -17,11 +17,11 @@ const SUGGESTIONS = [
   "shoulder press",
   "row",
   "pull up",
-  "bicep curl",
+  "curl",
   "plank",
 ];
 
-export function ExerciseImport() {
+export function ExerciseImport({ disabled }: { disabled?: boolean }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
@@ -36,7 +36,7 @@ export function ExerciseImport() {
       return;
     }
     startTransition(async () => {
-      const res = await importWgerExercises({ query: query.trim(), number });
+      const res = await importExercises({ query: query.trim(), number });
       if (res.ok) {
         const msg =
           "message" in res && res.message
@@ -68,10 +68,10 @@ export function ExerciseImport() {
   return (
     <div className="space-y-4 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
       <div>
-        <p className="font-semibold">Import exercises from wger</p>
+        <p className="font-semibold">Import exercises from ExerciseDB</p>
         <p className="text-sm text-[var(--text-secondary)]">
-          Free, open-source exercise database — no API key needed. Imports dedupe,
-          so re-running a search tops up the library.
+          Real exercises with animated GIF demos, target muscles and steps.
+          Imports dedupe, so re-running a search tops up the library.
         </p>
       </div>
 
@@ -81,12 +81,14 @@ export function ExerciseImport() {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && run()}
           placeholder="Search e.g. bench press"
-          className="h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
+          disabled={disabled}
+          className="h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm focus:border-[var(--border-active)] focus:outline-none disabled:opacity-50"
         />
         <select
           value={number}
           onChange={(e) => setNumber(Number(e.target.value))}
-          className="h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm"
+          disabled={disabled}
+          className="h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm disabled:opacity-50"
         >
           {[5, 10, 15, 20].map((n) => (
             <option key={n} value={n}>
@@ -101,7 +103,8 @@ export function ExerciseImport() {
           <button
             key={s}
             onClick={() => setQuery(s)}
-            className="rounded-full border border-[var(--border-subtle)] px-3 py-1 text-xs text-[var(--text-secondary)] hover:border-[var(--border-active)]"
+            disabled={disabled}
+            className="rounded-full border border-[var(--border-subtle)] px-3 py-1 text-xs text-[var(--text-secondary)] hover:border-[var(--border-active)] disabled:opacity-50"
           >
             {s}
           </button>
@@ -109,13 +112,13 @@ export function ExerciseImport() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={run} disabled={pending || seeding} className="gap-1.5">
+        <Button onClick={run} disabled={disabled || pending || seeding} className="gap-1.5">
           <Download className="h-4 w-4" />
           {pending ? "Importing…" : "Import"}
         </Button>
         <button
           onClick={seed}
-          disabled={pending || seeding}
+          disabled={disabled || pending || seeding}
           className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)] disabled:opacity-50"
         >
           <Sparkles className="h-4 w-4 text-[var(--accent-primary)]" />

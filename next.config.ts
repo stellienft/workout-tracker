@@ -15,8 +15,9 @@ const nextConfig: NextConfig = {
       // Curated free-licence cover imagery
       { protocol: "https" as const, hostname: "images.pexels.com" },
       { protocol: "https" as const, hostname: "images.unsplash.com" },
-      // wger exercise images (open-source exercise database)
-      { protocol: "https" as const, hostname: "wger.de" },
+      // ExerciseDB animated GIF demos
+      { protocol: "https" as const, hostname: "v2.exercisedb.io" },
+      { protocol: "https" as const, hostname: "d205bpvrqc9yn1.cloudfront.net" },
     ],
   },
 };
