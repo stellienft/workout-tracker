@@ -92,28 +92,52 @@ function normalize(info: WgerBaseInfo): NormalizedExercise | null {
   };
 }
 
+async function getJson(url: string): Promise<unknown | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 /** Search wger and return normalized exercises ready to import. */
 export async function searchWger(opts: {
   query: string;
   number?: number;
 }): Promise<NormalizedExercise[]> {
-  const term = opts.query.trim();
+  const term = encodeURIComponent(opts.query.trim());
   const limit = Math.min(opts.number ?? 10, 20);
 
-  const searchRes = await fetch(
-    `${BASE}/exercise/search/?term=${encodeURIComponent(term)}&language=english&format=json`,
-    { next: { revalidate: 3600 } }
-  );
-  if (!searchRes.ok) {
-    throw new Error(`wger search error ${searchRes.status}`);
+  // wger has shifted its search endpoint/params across versions — try the
+  // known variants and use the first that responds.
+  const searchUrls = [
+    `${BASE}/exercise/search/?term=${term}&format=json`,
+    `${BASE}/exercise/search/?term=${term}&language=english&format=json`,
+    `${BASE}/exercise/search/?term=${term}&language=2&format=json`,
+  ];
+  type SearchResp = { suggestions?: { data?: { base_id?: number; id?: number } }[] };
+  let search: SearchResp | null = null;
+  for (const u of searchUrls) {
+    const json = await getJson(u);
+    if (json && typeof json === "object" && "suggestions" in json) {
+      search = json as SearchResp;
+      break;
+    }
   }
-  const search = (await searchRes.json()) as {
-    suggestions?: { data?: { base_id?: number; id?: number } }[];
-  };
+  if (!search) {
+    throw new Error(
+      "wger search endpoint unavailable (their API may have changed)."
+    );
+  }
+
   const baseIds = Array.from(
     new Set(
       (search.suggestions ?? [])
-        // wger has shifted this field name across versions; accept either.
         .map((s) => s.data?.base_id ?? s.data?.id)
         .filter((n): n is number => typeof n === "number")
     )
@@ -121,17 +145,13 @@ export async function searchWger(opts: {
 
   const out: NormalizedExercise[] = [];
   for (const id of baseIds) {
-    try {
-      const infoRes = await fetch(`${BASE}/exercisebaseinfo/${id}/?format=json`, {
-        next: { revalidate: 3600 },
-      });
-      if (!infoRes.ok) continue;
-      const info = (await infoRes.json()) as WgerBaseInfo;
-      const n = normalize(info);
-      if (n) out.push(n);
-    } catch {
-      // skip a failed lookup, keep importing the rest
-    }
+    // Detail endpoint name has also changed across versions — try both.
+    const info =
+      ((await getJson(`${BASE}/exerciseinfo/${id}/?format=json`)) as WgerBaseInfo | null) ??
+      ((await getJson(`${BASE}/exercisebaseinfo/${id}/?format=json`)) as WgerBaseInfo | null);
+    if (!info) continue;
+    const n = normalize(info);
+    if (n) out.push(n);
   }
   return out;
 }
