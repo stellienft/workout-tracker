@@ -2,11 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Download } from "lucide-react";
+import { Download, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { RECIPE_CATEGORIES } from "@/lib/nutrition";
-import { importSpoonacularRecipes } from "@/lib/actions/recipes-admin";
+import {
+  importSpoonacularRecipes,
+  seedStarterRecipes,
+} from "@/lib/actions/recipes-admin";
 
 const SUGGESTIONS = [
   "high protein chicken",
@@ -27,6 +30,21 @@ export function RecipeImport({ disabled }: { disabled?: boolean }) {
   const [category, setCategory] = useState<string>("");
   const [number, setNumber] = useState(10);
   const [lastResult, setLastResult] = useState<string | null>(null);
+  const [seeding, startSeeding] = useTransition();
+
+  function seed() {
+    startSeeding(async () => {
+      const res = await seedStarterRecipes();
+      if (res.ok) {
+        const msg = "message" in res && res.message ? res.message : `Imported ${res.imported}.`;
+        setLastResult(msg);
+        toast(msg, "success");
+        router.refresh();
+      } else {
+        toast(res.error ?? "Seed failed", "error");
+      }
+    });
+  }
 
   function run() {
     if (query.trim().length < 2) {
@@ -112,15 +130,27 @@ export function RecipeImport({ disabled }: { disabled?: boolean }) {
         ))}
       </div>
 
-      <div className="flex items-center gap-3">
-        <Button onClick={run} disabled={disabled || pending} className="gap-1.5">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button onClick={run} disabled={disabled || pending || seeding} className="gap-1.5">
           <Download className="h-4 w-4" />
           {pending ? "Importing…" : "Import"}
         </Button>
+        <button
+          onClick={seed}
+          disabled={disabled || pending || seeding}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)] disabled:opacity-50"
+        >
+          <Sparkles className="h-4 w-4 text-[var(--accent-primary)]" />
+          {seeding ? "Seeding…" : "Seed a starter set"}
+        </button>
         {lastResult && (
           <span className="text-sm text-[var(--text-secondary)]">{lastResult}</span>
         )}
       </div>
+      <p className="text-xs text-[var(--text-muted)]">
+        &quot;Seed a starter set&quot; runs a spread of category searches
+        (~55 recipes) in one go — uses more of your daily Spoonacular quota.
+      </p>
     </div>
   );
 }
