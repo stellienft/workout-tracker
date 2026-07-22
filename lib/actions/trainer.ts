@@ -380,11 +380,64 @@ export async function inviteClient(input: { email: string; displayName?: string 
     tenant_id: tenant.id,
     user_id: foundId as string,
     display_name: d.displayName || null,
-    status: "active",
+    status: "pending",
   }, { onConflict: "tenant_id,user_id" });
 
   if (error) return { ok: false, error: error.message };
+
+  // Let the invited member know so they can accept in My Coach.
+  await supabase.rpc("create_notification", {
+    p_user_id: foundId as string,
+    p_type: "invite",
+    p_title: `${tenant.name} invited you`,
+    p_body: "Accept the invite to start training with your coach.",
+    p_link: "/my-coach",
+  });
+
   revalidatePath("/trainer/clients");
+  return { ok: true };
+}
+
+/** Client accepts a coach's invite (pending -> active). */
+export async function respondToInvite(input: {
+  membershipId: string;
+  accept: boolean;
+}) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const { data: membership } = await supabase
+    .from("trainer_clients")
+    .select("id, tenant_id, tenants(name, owner_user_id)")
+    .eq("id", input.membershipId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!membership) return { ok: false, error: "Invite not found" };
+
+  const { error } = await supabase
+    .from("trainer_clients")
+    .update({ status: input.accept ? "active" : "declined" })
+    .eq("id", input.membershipId)
+    .eq("user_id", user.id);
+  if (error) return { ok: false, error: error.message };
+
+  const tenant = Array.isArray(membership.tenants)
+    ? membership.tenants[0]
+    : membership.tenants;
+  if (tenant?.owner_user_id) {
+    await supabase.rpc("create_notification", {
+      p_user_id: tenant.owner_user_id as string,
+      p_type: input.accept ? "invite_accepted" : "invite_declined",
+      p_title: input.accept
+        ? "A client accepted your invite"
+        : "A client declined your invite",
+      p_body: null,
+      p_link: "/trainer/clients",
+    });
+  }
+
+  revalidatePath("/my-coach");
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 
@@ -415,6 +468,15 @@ export async function assignProgramToClient(input: {
     p_client_user_id: parsed.data.clientUserId,
   });
   if (error) return { ok: false, error: error.message };
+
+  await supabase.rpc("create_notification", {
+    p_user_id: parsed.data.clientUserId,
+    p_type: "assignment",
+    p_title: "Your coach assigned you a new plan",
+    p_body: "Open My Coach to start training.",
+    p_link: "/my-coach",
+  });
+
   revalidatePath("/trainer/clients");
   return { ok: true };
 }
@@ -473,14 +535,50 @@ export async function sendMessage(input: z.input<typeof messageSchema>) {
 
   if (error) return { ok: false, error: error.message };
 
-  // Update thread timestamp
-  await supabase
+  // Update thread timestamp + notify the other participant (best-effort).
+  const { data: thread } = await supabase
     .from("chat_threads")
     .update({ last_message_at: new Date().toISOString() })
-    .eq("id", d.threadId);
+    .eq("id", d.threadId)
+    .select("trainer_id, client_id")
+    .maybeSingle();
+
+  if (thread) {
+    const other =
+      thread.trainer_id === user.id ? thread.client_id : thread.trainer_id;
+    const recipientIsTrainer = other === thread.trainer_id;
+    await supabase.rpc("create_notification", {
+      p_user_id: other as string,
+      p_type: "message",
+      p_title: "New message from your " + (recipientIsTrainer ? "client" : "coach"),
+      p_body: d.body.slice(0, 120),
+      p_link: recipientIsTrainer ? "/trainer/chat" : "/my-coach",
+    });
+  }
 
   revalidatePath("/trainer/chat");
+  revalidatePath("/my-coach");
   return { ok: true };
+}
+
+/** Client sends a message to their coach — ensures the thread exists first. */
+export async function sendCoachMessage(input: { tenantId: string; body: string }) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false, error: "Not authenticated" };
+  const parsed = z
+    .object({ tenantId: z.string().uuid(), body: z.string().min(1).max(5000) })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+
+  const { data: threadId, error: threadErr } = await supabase.rpc(
+    "get_or_create_coach_thread",
+    { p_tenant_id: parsed.data.tenantId }
+  );
+  if (threadErr || !threadId) {
+    return { ok: false, error: threadErr?.message ?? "Could not open chat" };
+  }
+
+  return sendMessage({ threadId: threadId as string, body: parsed.data.body });
 }
 
 export async function startThread(clientId: string) {
