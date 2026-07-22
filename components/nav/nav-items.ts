@@ -17,6 +17,7 @@ import {
   MessageSquare,
   Briefcase,
   UserRound,
+  Utensils,
   type LucideIcon,
 } from "lucide-react";
 
@@ -33,6 +34,7 @@ export const sidebarItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Workouts", href: "/workouts", icon: Dumbbell },
   { label: "My Splits", href: "/splits", icon: Layers },
+  { label: "Nutrition", href: "/nutrition", icon: Utensils },
   { label: "Programs", href: "/programs", icon: BookOpen },
   { label: "Exercises", href: "/exercises", icon: Library },
   { label: "Schedule", href: "/schedule", icon: Calendar },
