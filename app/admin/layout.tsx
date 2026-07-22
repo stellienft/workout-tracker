@@ -48,7 +48,10 @@ export default async function AdminLayout({
           </div>
         </aside>
         <main className="min-w-0 flex-1">
-          <div className="sticky top-0 z-30 border-b border-[var(--border-subtle)] bg-[var(--background-secondary)] px-4 py-3 md:hidden">
+          <div
+            className="sticky top-0 z-30 border-b border-[var(--border-subtle)] bg-[var(--background-secondary)] px-4 pb-3 md:hidden"
+            style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}
+          >
             <div className="flex items-center justify-between gap-2">
               <p className="font-bold">
                 Stellio <span className="text-[var(--accent-primary)]">Admin</span>
