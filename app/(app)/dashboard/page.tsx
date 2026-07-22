@@ -82,7 +82,7 @@ export default async function DashboardPage() {
   return (
     <PageShell>
       {/* Welcome */}
-      <div className="pt-safe flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-[var(--text-secondary)]">Welcome back</p>
           <h1 className="text-2xl font-bold sm:text-3xl">{firstName}</h1>
