@@ -21,7 +21,12 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   // back on the login screen with no explanation.
   useEffect(() => {
     if (params.get("error") === "auth") {
-      setError("We couldn't complete that sign-in. Please try again.");
+      const reason = params.get("reason");
+      setError(
+        reason
+          ? `Sign-in failed: ${reason}`
+          : "We couldn't complete that sign-in. Please try again."
+      );
     }
   }, [params]);
 
