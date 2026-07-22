@@ -4,6 +4,8 @@ import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { CoverImage } from "@/components/ui/cover-image";
+import { InviteResponse } from "@/components/coach/invite-response";
+import { CoachChat } from "@/components/coach/coach-chat";
 
 export const metadata = { title: "My Coach" };
 
@@ -11,14 +13,16 @@ export default async function MyCoachPage() {
   const { user } = await requireUser();
   const supabase = await createClient();
 
-  // The tenant(s) this member is an active client of.
+  // The tenant(s) this member is connected to (active or a pending invite).
   const { data: clientRows } = await supabase
     .from("trainer_clients")
-    .select("tenant_id, tenants(name, tagline, logo_url, accent_color, slug)")
+    .select("id, tenant_id, status, tenants(name, tagline, logo_url, accent_color, slug)")
     .eq("user_id", user.id)
-    .eq("status", "active");
+    .in("status", ["active", "pending"]);
 
-  const first = (clientRows ?? [])[0];
+  // Prefer an active coach; otherwise surface a pending invite.
+  const rows = clientRows ?? [];
+  const first = rows.find((r) => r.status === "active") ?? rows[0];
   const tenant = first
     ? Array.isArray(first.tenants)
       ? first.tenants[0]
@@ -41,6 +45,23 @@ export default async function MyCoachPage() {
 
   const accent = (tenant.accent_color as string) || "#ccff30";
   const tenantId = first.tenant_id as string;
+
+  // Pending invite — the member accepts/declines before anything else shows.
+  if (first.status === "pending") {
+    return (
+      <div style={{ ["--accent-primary" as string]: accent } as React.CSSProperties}>
+        <PageShell>
+          <PageHeader title="My Coach" subtitle="You have a coaching invite." />
+          <InviteResponse
+            membershipId={first.id as string}
+            coachName={tenant.name as string}
+            tagline={(tenant.tagline as string | null) ?? null}
+            logoUrl={(tenant.logo_url as string | null) ?? null}
+          />
+        </PageShell>
+      </div>
+    );
+  }
 
   const [{ data: splits }, { data: videos }, { data: assignments }] =
     await Promise.all([
@@ -85,6 +106,31 @@ export default async function MyCoachPage() {
       : 0,
     cover: coverBySplit.get(s.id as string) ?? null,
   }));
+
+  // Existing conversation with this coach (created lazily when either side
+  // sends the first message).
+  const { data: thread } = await supabase
+    .from("chat_threads")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("client_id", user.id)
+    .maybeSingle();
+
+  let coachMessages: {
+    id: string;
+    sender_id: string;
+    body: string;
+    created_at: string;
+  }[] = [];
+  if (thread) {
+    const { data: msgs } = await supabase
+      .from("chat_messages")
+      .select("id, sender_id, body, created_at")
+      .eq("thread_id", thread.id)
+      .order("created_at", { ascending: true })
+      .limit(100);
+    coachMessages = (msgs ?? []) as typeof coachMessages;
+  }
 
   return (
     // Scope the coach's accent to this page so their brand colour drives the
@@ -208,6 +254,16 @@ export default async function MyCoachPage() {
             </div>
           </section>
         )}
+
+        {/* Messages with the coach */}
+        <section className="mt-8">
+          <h2 className="mb-3 text-lg font-bold">Messages</h2>
+          <CoachChat
+            tenantId={tenantId}
+            currentUserId={user.id}
+            messages={coachMessages}
+          />
+        </section>
       </PageShell>
     </div>
   );

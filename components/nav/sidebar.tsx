@@ -6,17 +6,20 @@ import { sidebarItems } from "./nav-items";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/actions/auth";
 import { LogOut } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 export function Sidebar({
   isAdmin,
   isTrainer,
   isClient,
+  unread,
   name,
   email,
 }: {
   isAdmin: boolean;
   isTrainer: boolean;
   isClient: boolean;
+  unread: number;
   name: string;
   email: string;
 }) {
@@ -30,10 +33,11 @@ export function Sidebar({
 
   return (
     <aside className="hidden md:flex md:w-[248px] lg:w-[264px] shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--background-secondary)] h-dvh sticky top-0">
-      <div className="px-6 py-6">
+      <div className="flex items-center justify-between px-6 py-6">
         <Link href="/dashboard" className="text-xl font-extrabold tracking-tight">
           Stellio <span className="text-[var(--accent-primary)]">Fit</span>
         </Link>
+        <NotificationBell unread={unread} />
       </div>
       <nav className="flex-1 overflow-y-auto px-3">
         <ul className="flex flex-col gap-1">
