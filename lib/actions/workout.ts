@@ -12,6 +12,8 @@ import {
   type SchedulingMode,
 } from "@/lib/engine";
 import { DEFAULT_TZ } from "@/lib/timezone";
+import { normaliseVideoForClient } from "@/lib/video-utils";
+import type { ExerciseVideo } from "@/lib/types";
 
 async function auth() {
   const supabase = await createClient();
@@ -383,4 +385,50 @@ export async function replaceExercise() {
   // the live UI performs the swap client-side, so no server state is needed
   // beyond what logSet records. Kept for API symmetry / future persistence.
   return { ok: true as const };
+}
+
+/**
+ * Full display detail for a substitute exercise (technique, cover, video) so a
+ * swap in workout mode shows the replacement's guidance, not the original's.
+ */
+export async function getExerciseDetail(exerciseId: string) {
+  const parsed = z.string().uuid().safeParse(exerciseId);
+  if (!parsed.success) return null;
+  const supabase = await createClient();
+
+  const [{ data: ex }, { data: videoRows }] = await Promise.all([
+    supabase
+      .from("exercises")
+      .select(
+        "id, name, shoulder_safe, shoulder_notes, instructions, technique_cues, cover_image_path, primary_muscles"
+      )
+      .eq("id", parsed.data)
+      .maybeSingle(),
+    supabase.from("exercise_videos").select("*").eq("exercise_id", parsed.data),
+  ]);
+  if (!ex) return null;
+
+  // Preferred video: verified > unverified > placeholder (mirrors the loader).
+  const rank = (x: ExerciseVideo) =>
+    x.verification_status === "verified"
+      ? 0
+      : x.verification_status === "placeholder"
+        ? 2
+        : 1;
+  let best: ExerciseVideo | null = null;
+  for (const v of (videoRows ?? []) as ExerciseVideo[]) {
+    if (!best || rank(v) < rank(best)) best = v;
+  }
+
+  return {
+    id: ex.id as string,
+    name: ex.name as string,
+    shoulder_safe: ex.shoulder_safe as boolean,
+    shoulderNotes: (ex.shoulder_notes as string | null) ?? null,
+    instructions: (ex.instructions as string | null) ?? null,
+    techniqueCues: (ex.technique_cues as string[] | null) ?? [],
+    coverPath: (ex.cover_image_path as string | null) ?? null,
+    primaryMuscles: (ex.primary_muscles as string[] | null) ?? [],
+    video: normaliseVideoForClient(best),
+  };
 }

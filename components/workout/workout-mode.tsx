@@ -25,10 +25,23 @@ import {
   reportDiscomfort,
   deleteSetLog,
   deleteExerciseSets,
+  getExerciseDetail,
 } from "@/lib/actions/workout";
 import { enqueue, flush, pendingCount } from "@/lib/offline-queue";
 import type { LoadedVideo, AltOption } from "@/lib/workout-loader";
 import { cn, formatDuration } from "@/lib/utils";
+
+interface SubDetail {
+  id: string;
+  name: string;
+  shoulder_safe: boolean;
+  shoulderNotes: string | null;
+  instructions: string | null;
+  techniqueCues: string[];
+  coverPath: string | null;
+  primaryMuscles: string[];
+  video: LoadedVideo | null;
+}
 
 export interface WorkoutExerciseVM {
   templateExerciseId: string | null;
@@ -108,10 +121,9 @@ export function WorkoutMode({
   const [pending, setPending] = useState(0);
   const [removed, setRemoved] = useState<Set<string>>(new Set());
 
-  // Active substitution: exerciseId -> replacement.
-  const [subs, setSubs] = useState<
-    Record<string, { id: string; name: string; shoulder_safe: boolean }>
-  >({});
+  // Active substitution: exerciseId -> replacement (full display detail so the
+  // technique cues, cover and video swap to the substitute, not the original).
+  const [subs, setSubs] = useState<Record<string, SubDetail>>({});
 
   // Per-exercise set state, seeded from any existing logs (resume).
   const [state, setState] = useState<Record<string, SetState[]>>(() => {
@@ -359,9 +371,22 @@ export function WorkoutMode({
     );
   }
 
-  const activeName = subs[current.exerciseId]?.name ?? current.name;
+  // When substituted, show the substitute's guidance (technique, cover, video);
+  // otherwise the original's.
+  const sub = subs[current.exerciseId];
+  const active = {
+    name: sub?.name ?? current.name,
+    shoulderSafe: sub?.shoulder_safe ?? current.shoulderSafe,
+    shoulderNotes: sub ? sub.shoulderNotes : current.shoulderNotes,
+    instructions: sub ? sub.instructions : current.instructions,
+    techniqueCues: sub ? sub.techniqueCues : current.techniqueCues,
+    coverPath: sub ? sub.coverPath : current.coverPath,
+    primaryMuscles: sub ? sub.primaryMuscles : current.primaryMuscles,
+    video: sub ? sub.video : current.video,
+  };
+  const activeName = active.name;
   const shoulderRisk =
-    (preShoulderPain ?? 0) >= 3 && !current.shoulderSafe && !subs[current.exerciseId];
+    (preShoulderPain ?? 0) >= 3 && !active.shoulderSafe && !sub;
   const rows = state[current.exerciseId] ?? [];
 
   return (
@@ -413,12 +438,12 @@ export function WorkoutMode({
           </p>
           <div className="mt-1 flex items-start justify-between gap-2">
             <h1 className="text-2xl font-extrabold">{activeName}</h1>
-            {!current.shoulderSafe && (
+            {!active.shoulderSafe && (
               <ShieldAlert className="mt-1 h-5 w-5 shrink-0 text-[var(--warning)]" />
             )}
           </div>
           <p className="text-sm capitalize text-[var(--text-secondary)]">
-            {current.primaryMuscles.join(", ")} · target {current.repTarget}
+            {active.primaryMuscles.join(", ")} · target {current.repTarget}
           </p>
 
           {subs[current.exerciseId] && (
@@ -464,7 +489,7 @@ export function WorkoutMode({
 
           {/* Media */}
           <div className="relative mt-4 aspect-video w-full overflow-hidden rounded-[var(--radius-card)]">
-            <CoverImage path={current.coverPath} alt={activeName} sizes="600px" />
+            <CoverImage path={active.coverPath} alt={activeName} sizes="600px" />
             <button
               onClick={() => setVideoOpen(true)}
               className="absolute inset-0 flex items-center justify-center bg-black/40"
@@ -516,19 +541,19 @@ export function WorkoutMode({
 
           {showCues && (
             <div className="mt-3 rounded-2xl bg-[var(--surface-primary)] p-4 text-sm">
-              {current.instructions && (
-                <p className="text-[var(--text-secondary)]">{current.instructions}</p>
+              {active.instructions && (
+                <p className="text-[var(--text-secondary)]">{active.instructions}</p>
               )}
-              {current.techniqueCues.length > 0 && (
+              {active.techniqueCues.length > 0 && (
                 <ul className="mt-2 list-inside list-disc space-y-1 text-[var(--text-secondary)]">
-                  {current.techniqueCues.map((c) => (
+                  {active.techniqueCues.map((c) => (
                     <li key={c}>{c}</li>
                   ))}
                 </ul>
               )}
-              {current.shoulderNotes && (
+              {active.shoulderNotes && (
                 <p className="mt-2 text-xs text-[var(--warning)]">
-                  {current.shoulderNotes}
+                  {active.shoulderNotes}
                 </p>
               )}
             </div>
@@ -678,7 +703,7 @@ export function WorkoutMode({
 
       {videoOpen && (
         <VideoSheet
-          video={current.video}
+          video={active.video}
           exerciseName={activeName}
           onClose={() => setVideoOpen(false)}
         />
@@ -742,15 +767,26 @@ export function WorkoutMode({
   );
 
   function pick(alt: AltOption) {
+    const exId = current.exerciseId;
+    setShowReplace(false);
+    // Show the swap immediately, then fill in the substitute's technique/video.
     setSubs((s) => ({
       ...s,
-      [current.exerciseId]: {
+      [exId]: {
         id: alt.id,
         name: alt.name,
         shoulder_safe: alt.shoulder_safe,
+        shoulderNotes: null,
+        instructions: null,
+        techniqueCues: [],
+        coverPath: null,
+        primaryMuscles: [],
+        video: null,
       },
     }));
-    setShowReplace(false);
+    void getExerciseDetail(alt.id).then((detail) => {
+      if (detail) setSubs((s) => ({ ...s, [exId]: detail }));
+    });
   }
 }
 
