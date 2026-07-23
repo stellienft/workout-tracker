@@ -29,6 +29,7 @@ import {
 } from "@/lib/actions/workout";
 import { enqueue, flush, pendingCount } from "@/lib/offline-queue";
 import type { LoadedVideo, AltOption } from "@/lib/workout-loader";
+import { parseConcerns, exerciseConcern } from "@/lib/injury";
 import { cn, formatDuration } from "@/lib/utils";
 
 interface SubDetail {
@@ -83,7 +84,6 @@ export function WorkoutMode({
   startedAt,
   programName,
   workoutName,
-  preShoulderPain,
   considerations,
   exercises,
   initialLogs,
@@ -92,7 +92,9 @@ export function WorkoutMode({
   startedAt: string;
   programName: string;
   workoutName: string;
-  preShoulderPain: number | null;
+  // Accepted for compatibility with the caller; injury caution is now driven by
+  // the member's own considerations, not a global shoulder signal.
+  preShoulderPain?: number | null;
   considerations?: string | null;
   exercises: WorkoutExerciseVM[];
   initialLogs: {
@@ -151,6 +153,7 @@ export function WorkoutMode({
     () => exercises.filter((e) => !removed.has(e.exerciseId)),
     [exercises, removed]
   );
+  const concerns = useMemo(() => parseConcerns(considerations), [considerations]);
   const safeIndex = Math.min(index, Math.max(0, workingExercises.length - 1));
   const current = workingExercises[safeIndex];
   const haptics = true;
@@ -385,8 +388,11 @@ export function WorkoutMode({
     video: sub ? sub.video : current.video,
   };
   const activeName = active.name;
-  const shoulderRisk =
-    (preShoulderPain ?? 0) >= 3 && !active.shoulderSafe && !sub;
+  // Personalised injury caution from the member's own stated concerns, matched
+  // to this exercise's muscles (not a global shoulder flag).
+  const concernLabel = sub
+    ? null
+    : exerciseConcern(concerns, active.primaryMuscles);
   const rows = state[current.exerciseId] ?? [];
 
   return (
@@ -438,7 +444,7 @@ export function WorkoutMode({
           </p>
           <div className="mt-1 flex items-start justify-between gap-2">
             <h1 className="text-2xl font-extrabold">{activeName}</h1>
-            {!active.shoulderSafe && (
+            {concernLabel && (
               <ShieldAlert className="mt-1 h-5 w-5 shrink-0 text-[var(--warning)]" />
             )}
           </div>
@@ -472,16 +478,16 @@ export function WorkoutMode({
             </div>
           )}
 
-          {shoulderRisk && (
+          {concernLabel && (
             <div className="mt-3 flex gap-2 rounded-2xl border border-[var(--warning)]/40 bg-[var(--surface-secondary)] p-3">
               <ShieldAlert className="h-5 w-5 shrink-0 text-[var(--warning)]" />
               <div>
-                <p className="text-sm font-medium text-[var(--warning)]">
-                  Shoulder caution
+                <p className="text-sm font-medium capitalize text-[var(--warning)]">
+                  {concernLabel} caution
                 </p>
                 <p className="text-xs text-[var(--text-secondary)]">
-                  You flagged shoulder pain today and this loads the shoulder. Keep
-                  it pain-free or tap Replace for a safer option.
+                  You noted a {concernLabel} concern and this movement loads it.
+                  Keep it pain-free, ease off, or tap Replace for another option.
                 </p>
               </div>
             </div>
