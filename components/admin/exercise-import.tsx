@@ -68,15 +68,33 @@ export function ExerciseImport({ disabled }: { disabled?: boolean }) {
 
   function rehost() {
     startSeeding(async () => {
-      const res = await rehostExerciseGifs();
-      if (res.ok) {
-        const msg = "message" in res && res.message ? res.message : `Re-hosted ${res.rehosted}.`;
-        setLastResult(msg);
-        toast(msg, "success");
-        router.refresh();
-      } else {
-        toast(res.error ?? "Re-host failed", "error");
+      let offset = 0;
+      let totalRehosted = 0;
+      let totalFailed = 0;
+      // Loop the batches until the server reports there's nothing left.
+      for (let guard = 0; guard < 200; guard++) {
+        const res = await rehostExerciseGifs(offset);
+        if (!res.ok) {
+          toast(res.error ?? "Re-host failed", "error");
+          return;
+        }
+        totalRehosted += res.rehosted;
+        totalFailed += res.failed ?? 0;
+        setLastResult(
+          `Re-hosting… ${res.nextOffset}/${res.total} processed` +
+            (totalFailed ? ` (${totalFailed} failed)` : "")
+        );
+        if (!res.hasMore) break;
+        offset = res.nextOffset;
       }
+      const msg =
+        `Re-hosted ${totalRehosted} GIF${totalRehosted === 1 ? "" : "s"}.` +
+        (totalFailed
+          ? ` ${totalFailed} couldn't be fetched — check the ExerciseDB API key/subscription.`
+          : "");
+      setLastResult(msg);
+      toast(msg, totalFailed && !totalRehosted ? "error" : "success");
+      router.refresh();
     });
   }
 
