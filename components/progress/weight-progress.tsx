@@ -93,15 +93,12 @@ export function WeightProgress({
       const file = new File([blob], "stellio-fit-progress.png", {
         type: "image/png",
       });
-      const chg = (data[data.length - 1].y ?? 0) - (data[0].y ?? 0);
-      const text =
-        chg < 0
-          ? `Down ${Math.abs(chg).toFixed(1)} kg with Stellio Fit 💪 Train Smarter. Build Stronger.`
-          : `Tracking my progress with Stellio Fit 💪 ${current?.toFixed(1)} kg and counting.`;
+      // Share ONLY the image. Including text with a URL makes share targets
+      // unfurl it into a second (link-preview) image; the card is already
+      // branded with stellio.fit, so no caption is needed.
       const shareData: ShareData = {
         files: [file],
         title: "My Stellio Fit progress",
-        text: `${text} https://stellio.fit`,
       };
       const nav = navigator as Navigator & {
         canShare?: (d?: ShareData) => boolean;
