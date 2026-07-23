@@ -2,12 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Download, Sparkles } from "lucide-react";
+import { Download, Sparkles, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import {
   importExercises,
   seedStarterExercises,
+  rehostExerciseGifs,
 } from "@/lib/actions/exercises-admin";
 
 const SUGGESTIONS = [
@@ -61,6 +62,20 @@ export function ExerciseImport({ disabled }: { disabled?: boolean }) {
         router.refresh();
       } else {
         toast(res.error ?? "Seed failed", "error");
+      }
+    });
+  }
+
+  function rehost() {
+    startSeeding(async () => {
+      const res = await rehostExerciseGifs();
+      if (res.ok) {
+        const msg = "message" in res && res.message ? res.message : `Re-hosted ${res.rehosted}.`;
+        setLastResult(msg);
+        toast(msg, "success");
+        router.refresh();
+      } else {
+        toast(res.error ?? "Re-host failed", "error");
       }
     });
   }
@@ -123,6 +138,15 @@ export function ExerciseImport({ disabled }: { disabled?: boolean }) {
         >
           <Sparkles className="h-4 w-4 text-[var(--accent-primary)]" />
           {seeding ? "Seeding…" : "Seed the main lifts"}
+        </button>
+        <button
+          onClick={rehost}
+          disabled={pending || seeding}
+          title="Download imported GIFs onto our storage so they load in the app"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)] disabled:opacity-50"
+        >
+          <Film className="h-4 w-4 text-[var(--accent-primary)]" />
+          {seeding ? "Working…" : "Re-host GIFs"}
         </button>
         {lastResult && (
           <span className="text-sm text-[var(--text-secondary)]">{lastResult}</span>

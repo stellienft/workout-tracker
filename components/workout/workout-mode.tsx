@@ -15,7 +15,7 @@ import {
   Minus,
   Trash2,
 } from "lucide-react";
-import { CoverImage } from "@/components/ui/cover-image";
+import { ExerciseImage } from "@/components/ui/exercise-image";
 import { RestTimer } from "@/components/workout/rest-timer";
 import { VideoSheet } from "@/components/workout/video-sheet";
 import {
@@ -487,17 +487,24 @@ export function WorkoutMode({
             </div>
           )}
 
-          {/* Media */}
+          {/* Media — animated GIF demo plays inline; the YouTube overlay only
+              appears when a real video exists. */}
           <div className="relative mt-4 aspect-video w-full overflow-hidden rounded-[var(--radius-card)]">
-            <CoverImage path={active.coverPath} alt={activeName} sizes="600px" />
-            <button
-              onClick={() => setVideoOpen(true)}
-              className="absolute inset-0 flex items-center justify-center bg-black/40"
-            >
-              <span className="flex items-center gap-2 rounded-full bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black">
-                <Youtube className="h-4 w-4" /> Watch technique
+            <ExerciseImage path={active.coverPath} alt={activeName} />
+            {active.video ? (
+              <button
+                onClick={() => setVideoOpen(true)}
+                className="absolute inset-0 flex items-center justify-center bg-black/40"
+              >
+                <span className="flex items-center gap-2 rounded-full bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black">
+                  <Youtube className="h-4 w-4" /> Watch technique
+                </span>
+              </button>
+            ) : active.coverPath ? (
+              <span className="absolute bottom-2 right-2 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-white">
+                Demo
               </span>
-            </button>
+            ) : null}
           </div>
 
           {/* Action row */}
