@@ -7,10 +7,10 @@ import type { Program, FitnessGoal } from "@/lib/types";
 export const metadata = { title: "Programs" };
 
 export default async function ProgramsPage() {
-  await requireUser();
+  const { user } = await requireUser();
   const supabase = await createClient();
 
-  const [{ data: programs }, { data: goals }] = await Promise.all([
+  const [{ data: programs }, { data: goals }, { data: saved }] = await Promise.all([
     supabase
       .from("programs")
       .select("*")
@@ -22,7 +22,10 @@ export default async function ProgramsPage() {
       .select("*")
       .eq("active", true)
       .order("display_order"),
+    supabase.from("saved_programs").select("program_id").eq("user_id", user.id),
   ]);
+
+  const savedIds = (saved ?? []).map((s) => s.program_id as string);
 
   return (
     <PageShell>
@@ -34,6 +37,7 @@ export default async function ProgramsPage() {
         <ProgramLibrary
           programs={(programs ?? []) as Program[]}
           goals={(goals ?? []) as FitnessGoal[]}
+          savedIds={savedIds}
         />
       </div>
     </PageShell>

@@ -8,9 +8,11 @@ import type { Program, FitnessGoal } from "@/lib/types";
 export function ProgramLibrary({
   programs,
   goals,
+  savedIds = [],
 }: {
   programs: Program[];
   goals: FitnessGoal[];
+  savedIds?: string[];
 }) {
   const [goalFilter, setGoalFilter] = useState<string>("all");
   const [levelFilter, setLevelFilter] = useState<string>("all");
@@ -20,6 +22,7 @@ export function ProgramLibrary({
     () => Object.fromEntries(goals.map((g) => [g.id, g.name])),
     [goals]
   );
+  const savedSet = useMemo(() => new Set(savedIds), [savedIds]);
 
   const filtered = programs.filter((p) => {
     if (goalFilter !== "all" && p.fitness_goal_id !== goalFilter) return false;
@@ -86,6 +89,7 @@ export function ProgramLibrary({
               key={p.id}
               program={p}
               goalName={p.fitness_goal_id ? goalName[p.fitness_goal_id] : undefined}
+              saved={savedSet.has(p.id)}
             />
           ))}
         </div>

@@ -35,7 +35,7 @@ export default async function SavedProgramsPage() {
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {programs.map((p) => (
-            <ProgramCard key={p.id} program={p} />
+            <ProgramCard key={p.id} program={p} saved />
           ))}
         </div>
       )}

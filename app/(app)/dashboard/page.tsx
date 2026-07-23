@@ -68,13 +68,22 @@ export default async function DashboardPage() {
     .filter((f) => f.content_type === "program" && f.content_id)
     .map((f) => f.content_id);
   let discoverPrograms: Program[] = [];
+  let savedProgramIds = new Set<string>();
   if (discoverIds.length) {
-    const { data } = await supabase
-      .from("programs")
-      .select("*")
-      .in("id", discoverIds)
-      .eq("status", "published");
+    const [{ data }, { data: saved }] = await Promise.all([
+      supabase
+        .from("programs")
+        .select("*")
+        .in("id", discoverIds)
+        .eq("status", "published"),
+      supabase
+        .from("saved_programs")
+        .select("program_id")
+        .eq("user_id", user.id)
+        .in("program_id", discoverIds),
+    ]);
     discoverPrograms = (data ?? []) as Program[];
+    savedProgramIds = new Set((saved ?? []).map((s) => s.program_id as string));
   }
 
   const firstName = (profile?.full_name || "Athlete").split(" ")[0];
@@ -244,7 +253,7 @@ export default async function DashboardPage() {
           </div>
           <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {discoverPrograms.map((p) => (
-              <ProgramCard key={p.id} program={p} />
+              <ProgramCard key={p.id} program={p} saved={savedProgramIds.has(p.id)} />
             ))}
           </div>
         </section>

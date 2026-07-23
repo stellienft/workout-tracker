@@ -11,7 +11,7 @@ export default async function GoalDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  await requireUser();
+  const { user } = await requireUser();
   const supabase = await createClient();
 
   const { data: goal } = await supabase
@@ -22,12 +22,16 @@ export default async function GoalDetailPage({
   if (!goal) notFound();
   const g = goal as FitnessGoal;
 
-  const { data: programs } = await supabase
-    .from("programs")
-    .select("*")
-    .eq("fitness_goal_id", g.id)
-    .eq("status", "published")
-    .order("featured", { ascending: false });
+  const [{ data: programs }, { data: saved }] = await Promise.all([
+    supabase
+      .from("programs")
+      .select("*")
+      .eq("fitness_goal_id", g.id)
+      .eq("status", "published")
+      .order("featured", { ascending: false }),
+    supabase.from("saved_programs").select("program_id").eq("user_id", user.id),
+  ]);
+  const savedIds = new Set((saved ?? []).map((s) => s.program_id as string));
 
   return (
     <div className="pb-12">
@@ -49,7 +53,12 @@ export default async function GoalDetailPage({
         {programs && programs.length > 0 ? (
           <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {(programs as Program[]).map((p) => (
-              <ProgramCard key={p.id} program={p} goalName={g.name} />
+              <ProgramCard
+                key={p.id}
+                program={p}
+                goalName={g.name}
+                saved={savedIds.has(p.id)}
+              />
             ))}
           </div>
         ) : (

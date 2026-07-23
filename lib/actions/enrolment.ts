@@ -163,6 +163,7 @@ export async function toggleSavedProgram(programId: string) {
   if (existing) {
     await supabase.from("saved_programs").delete().eq("id", existing.id);
     revalidatePath("/programs");
+    revalidatePath("/programs/saved");
     return { ok: true, saved: false };
   }
   const { error } = await supabase
@@ -170,5 +171,6 @@ export async function toggleSavedProgram(programId: string) {
     .insert({ user_id: user.id, program_id: programId });
   if (error) return { ok: false, error: error.message };
   revalidatePath("/programs");
+  revalidatePath("/programs/saved");
   return { ok: true, saved: true };
 }

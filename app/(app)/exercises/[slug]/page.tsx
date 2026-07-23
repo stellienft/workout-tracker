@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageShell } from "@/components/ui/page-header";
 import { ExerciseVideoPlayer } from "@/components/workout/exercise-video-player";
 import { ExerciseImage } from "@/components/ui/exercise-image";
+import { ExerciseFavoriteButton } from "@/components/exercise-favorite-button";
 import { normaliseVideoForClient } from "@/lib/video-utils";
 import { ShieldAlert } from "lucide-react";
 import Link from "next/link";
@@ -15,7 +16,7 @@ export default async function ExerciseDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  await requireUser();
+  const { user } = await requireUser();
   const supabase = await createClient();
 
   const { data: exercise } = await supabase
@@ -26,7 +27,7 @@ export default async function ExerciseDetailPage({
   if (!exercise) notFound();
   const e = exercise as Exercise;
 
-  const [{ data: videoRow }, { data: alts }] = await Promise.all([
+  const [{ data: videoRow }, { data: alts }, { data: fav }] = await Promise.all([
     supabase
       .from("exercise_videos")
       .select("*")
@@ -42,6 +43,12 @@ export default async function ExerciseDetailPage({
       )
       .eq("exercise_id", e.id)
       .order("priority"),
+    supabase
+      .from("exercise_favorites")
+      .select("exercise_id")
+      .eq("user_id", user.id)
+      .eq("exercise_id", e.id)
+      .maybeSingle(),
   ]);
 
   const video = normaliseVideoForClient(videoRow as ExerciseVideo | null);
@@ -52,12 +59,15 @@ export default async function ExerciseDetailPage({
         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl">
           <ExerciseImage path={e.cover_image_path} alt={e.name} />
         </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">{e.name}</h1>
-            {!e.shoulder_safe && (
-              <ShieldAlert className="h-5 w-5 text-[var(--warning)]" />
-            )}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">{e.name}</h1>
+              {!e.shoulder_safe && (
+                <ShieldAlert className="h-5 w-5 text-[var(--warning)]" />
+              )}
+            </div>
+            <ExerciseFavoriteButton exerciseId={e.id} initial={!!fav} />
           </div>
           <p className="mt-1 text-sm capitalize text-[var(--text-secondary)]">
             {e.primary_muscles.join(", ")}
