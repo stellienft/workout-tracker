@@ -18,6 +18,7 @@ import {
   Briefcase,
   UserRound,
   Utensils,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 
@@ -39,6 +40,7 @@ export const sidebarItems: NavItem[] = [
   { label: "Exercises", href: "/exercises", icon: Library },
   { label: "Schedule", href: "/schedule", icon: Calendar },
   { label: "Progress", href: "/progress", icon: TrendingUp },
+  { label: "AI Coach", href: "/ai-coach", icon: Sparkles },
   { label: "Check-ins", href: "/check-ins", icon: ClipboardCheck },
   { label: "Goals", href: "/goals", icon: Target },
   { label: "Health", href: "/health", icon: HeartPulse },
