@@ -3,13 +3,22 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ExerciseImage } from "@/components/ui/exercise-image";
+import { ExerciseFavoriteButton } from "@/components/exercise-favorite-button";
 import { cn } from "@/lib/utils";
-import { ShieldAlert, Search } from "lucide-react";
+import { ShieldAlert, Search, Heart } from "lucide-react";
 import type { Exercise } from "@/lib/types";
 
-export function ExerciseLibrary({ exercises }: { exercises: Exercise[] }) {
+export function ExerciseLibrary({
+  exercises,
+  favoriteIds = [],
+}: {
+  exercises: Exercise[];
+  favoriteIds?: string[];
+}) {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("all");
+  const [favOnly, setFavOnly] = useState(false);
+  const favSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
 
   const categories = useMemo(
     () => ["all", ...Array.from(new Set(exercises.map((e) => e.category)))],
@@ -17,6 +26,7 @@ export function ExerciseLibrary({ exercises }: { exercises: Exercise[] }) {
   );
 
   const filtered = exercises.filter((e) => {
+    if (favOnly && !favSet.has(e.id)) return false;
     if (category !== "all" && e.category !== category) return false;
     if (q) {
       const hay = (
@@ -43,6 +53,18 @@ export function ExerciseLibrary({ exercises }: { exercises: Exercise[] }) {
         />
       </div>
       <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto">
+        <button
+          onClick={() => setFavOnly((v) => !v)}
+          className={cn(
+            "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm",
+            favOnly
+              ? "border-[var(--border-active)] bg-[var(--accent-muted)] text-[var(--accent-primary)]"
+              : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
+          )}
+        >
+          <Heart className={cn("h-3.5 w-3.5", favOnly && "fill-current")} />
+          Favourites
+        </button>
         {categories.map((c) => (
           <button
             key={c}
@@ -61,34 +83,42 @@ export function ExerciseLibrary({ exercises }: { exercises: Exercise[] }) {
 
       <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {filtered.map((e) => (
-          <Link
+          <div
             key={e.id}
-            href={`/exercises/${e.slug}`}
-            className="group flex gap-3 overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-3"
+            className="group relative flex gap-3 overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-3"
           >
-            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl">
-              <ExerciseImage path={e.cover_image_path} alt={e.name} />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <p className="font-semibold">{e.name}</p>
-                {!e.shoulder_safe && (
-                  <ShieldAlert className="h-3.5 w-3.5 text-[var(--warning)]" />
-                )}
+            <Link href={`/exercises/${e.slug}`} className="flex min-w-0 flex-1 gap-3">
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl">
+                <ExerciseImage path={e.cover_image_path} alt={e.name} />
               </div>
-              <p className="text-xs capitalize text-[var(--text-muted)]">
-                {e.primary_muscles.join(", ")}
-              </p>
-              <p className="text-xs capitalize text-[var(--text-secondary)]">
-                {e.equipment.join(", ")}
-              </p>
-            </div>
-          </Link>
+              <div className="min-w-0 pr-8">
+                <div className="flex items-center gap-1.5">
+                  <p className="font-semibold">{e.name}</p>
+                  {!e.shoulder_safe && (
+                    <ShieldAlert className="h-3.5 w-3.5 text-[var(--warning)]" />
+                  )}
+                </div>
+                <p className="text-xs capitalize text-[var(--text-muted)]">
+                  {e.primary_muscles.join(", ")}
+                </p>
+                <p className="text-xs capitalize text-[var(--text-secondary)]">
+                  {e.equipment.join(", ")}
+                </p>
+              </div>
+            </Link>
+            <ExerciseFavoriteButton
+              exerciseId={e.id}
+              initial={favSet.has(e.id)}
+              className="absolute right-2 top-2 h-9 w-9 rounded-xl border-0"
+            />
+          </div>
         ))}
       </div>
       {filtered.length === 0 && (
         <p className="mt-10 text-center text-[var(--text-secondary)]">
-          No exercises match your search.
+          {favOnly
+            ? "No favourite exercises yet. Tap the heart on an exercise to save it here."
+            : "No exercises match your search."}
         </p>
       )}
     </div>

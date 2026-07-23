@@ -7,13 +7,20 @@ import type { Exercise } from "@/lib/types";
 export const metadata = { title: "Exercise library" };
 
 export default async function ExercisesPage() {
-  await requireUser();
+  const { user } = await requireUser();
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("exercises")
-    .select("*")
-    .eq("status", "published")
-    .order("name");
+  const [{ data }, { data: favs }] = await Promise.all([
+    supabase
+      .from("exercises")
+      .select("*")
+      .eq("status", "published")
+      .order("name"),
+    supabase
+      .from("exercise_favorites")
+      .select("exercise_id")
+      .eq("user_id", user.id),
+  ]);
+  const favoriteIds = (favs ?? []).map((f) => f.exercise_id as string);
 
   return (
     <PageShell>
@@ -22,7 +29,10 @@ export default async function ExercisesPage() {
         subtitle="Every movement, with technique guidance and shoulder-safe flags."
       />
       <div className="mt-6">
-        <ExerciseLibrary exercises={(data ?? []) as Exercise[]} />
+        <ExerciseLibrary
+          exercises={(data ?? []) as Exercise[]}
+          favoriteIds={favoriteIds}
+        />
       </div>
     </PageShell>
   );

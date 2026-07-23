@@ -2,12 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Menu, X, LogOut } from "lucide-react";
-import { sidebarItems } from "./nav-items";
+import { usePathname, useRouter } from "next/navigation";
+import { Menu, X, LogOut, ArrowLeft } from "lucide-react";
+import { sidebarItems, bottomNavItems } from "./nav-items";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/actions/auth";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+
+// Top-level destinations reachable from the nav — these don't get a back button.
+const ROOT_PATHS = new Set(
+  [...sidebarItems, ...bottomNavItems].map((i) => i.href)
+);
 
 export function MobileTopBar({
   isAdmin,
@@ -27,7 +32,21 @@ export function MobileTopBar({
   avatarUrl: string | null;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+
+  // Show a back button on any page that isn't a top-level nav destination.
+  const showBack = !ROOT_PATHS.has(pathname);
+
+  function goBack() {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      // Deep-linked in with no in-app history: fall back to the parent path.
+      const parent = pathname.split("/").slice(0, -1).join("/") || "/dashboard";
+      router.push(parent);
+    }
+  }
 
   const items = sidebarItems.filter(
     (i) =>
@@ -39,13 +58,24 @@ export function MobileTopBar({
   return (
     <>
       <div className="pt-safe sticky top-0 z-40 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--background-secondary)] px-4 py-2.5 md:hidden">
-        <button
-          onClick={() => setOpen(true)}
-          aria-label="Open menu"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-[var(--text-secondary)]"
-        >
-          <Menu className="h-6 w-6" />
-        </button>
+        <div className="flex items-center gap-1">
+          {showBack && (
+            <button
+              onClick={goBack}
+              aria-label="Go back"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-[var(--text-secondary)]"
+            >
+              <ArrowLeft className="h-6 w-6" />
+            </button>
+          )}
+          <button
+            onClick={() => setOpen(true)}
+            aria-label="Open menu"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-[var(--text-secondary)]"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+        </div>
         <Link href="/dashboard" className="text-lg font-extrabold tracking-tight">
           Stellio <span className="text-[var(--accent-primary)]">Fit</span>
         </Link>
