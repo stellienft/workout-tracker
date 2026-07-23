@@ -160,11 +160,25 @@ export function WorkoutMode({
 
   const activeId = (ex: WorkoutExerciseVM) => subs[ex.exerciseId]?.id ?? ex.exerciseId;
 
-  // Elapsed timer.
+  // Elapsed timer. Derived from the fixed start time (not an incrementing
+  // counter) so it stays accurate when the app is backgrounded — mobile
+  // browsers suspend setInterval, so we also resync on return to foreground.
   useEffect(() => {
-    const t = setInterval(() => setElapsed((e) => e + 1), 1000);
-    return () => clearInterval(t);
-  }, []);
+    const start = new Date(startedAt).getTime();
+    const compute = () => setElapsed(Math.max(0, Math.floor((Date.now() - start) / 1000)));
+    compute();
+    const t = setInterval(compute, 1000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") compute();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, [startedAt]);
 
   // Flush any queued offline logs on mount + when we come back online.
   useEffect(() => {
