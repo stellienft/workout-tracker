@@ -27,18 +27,113 @@ function toRow(e: NormalizedExercise) {
   };
 }
 
+const GIF_BUCKET = "exercise-gifs";
+
+/**
+ * Download a demo GIF and re-host it on our storage. ExerciseDB's CDN blocks
+ * hotlinking (a browser <img> gets 403 via the Referer header), but a
+ * server-side fetch has no Referer, so it downloads fine. Returns the public
+ * storage URL, or the original URL if the download/upload fails.
+ */
+async function rehostGif(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  externalId: string,
+  gifUrl: string | null
+): Promise<string | null> {
+  if (!gifUrl) return null;
+  if (gifUrl.includes(`/${GIF_BUCKET}/`)) return gifUrl; // already ours
+  try {
+    const res = await fetch(gifUrl);
+    if (!res.ok) return gifUrl;
+    const buf = Buffer.from(await res.arrayBuffer());
+    const path = `${externalId.replace(/[^a-z0-9]+/gi, "_")}.gif`;
+    const { error } = await supabase.storage
+      .from(GIF_BUCKET)
+      .upload(path, buf, { contentType: "image/gif", upsert: true });
+    if (error) return gifUrl;
+    return supabase.storage.from(GIF_BUCKET).getPublicUrl(path).data.publicUrl;
+  } catch {
+    return gifUrl;
+  }
+}
+
+async function rehostAll(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  exercises: NormalizedExercise[]
+) {
+  const CONCURRENCY = 5;
+  for (let i = 0; i < exercises.length; i += CONCURRENCY) {
+    const chunk = exercises.slice(i, i + CONCURRENCY);
+    await Promise.all(
+      chunk.map(async (e) => {
+        e.imageUrl = await rehostGif(supabase, e.externalId, e.imageUrl);
+      })
+    );
+  }
+}
+
 async function upsertExercises(exercises: NormalizedExercise[]) {
   const byId = new Map(exercises.map((e) => [e.externalId, e]));
-  const rows = Array.from(byId.values()).map(toRow);
-  if (rows.length === 0) return { imported: 0 };
+  const list = Array.from(byId.values());
+  if (list.length === 0) return { imported: 0 };
 
   const supabase = await createClient();
+  await rehostAll(supabase, list); // pull GIFs onto our storage
+  const rows = list.map(toRow);
+
   const { data, error } = await supabase
     .from("exercises")
     .upsert(rows, { onConflict: "external_id", ignoreDuplicates: false })
     .select("id");
   if (error) throw new Error(error.message);
   return { imported: data?.length ?? rows.length };
+}
+
+/**
+ * Backfill: re-host GIFs for already-imported exercises whose cover still points
+ * at ExerciseDB's (hotlink-protected) CDN. Processes a batch and is re-runnable.
+ */
+export async function rehostExerciseGifs() {
+  const { roles } = await getAuthContext();
+  if (!isAdminRole(roles)) return { ok: false as const, error: "Admins only" };
+
+  const supabase = await createClient();
+  const { data: rows } = await supabase
+    .from("exercises")
+    .select("id, external_id, cover_image_path")
+    .eq("source", "exercisedb")
+    .not("cover_image_path", "is", null)
+    .limit(20);
+
+  const todo = (rows ?? []).filter(
+    (r) => r.cover_image_path && !String(r.cover_image_path).includes(`/${GIF_BUCKET}/`)
+  );
+  if (todo.length === 0) {
+    return { ok: true as const, rehosted: 0, message: "All exercise GIFs are already re-hosted." };
+  }
+
+  let done = 0;
+  for (const r of todo) {
+    const newUrl = await rehostGif(
+      supabase,
+      (r.external_id as string) ?? (r.id as string),
+      r.cover_image_path as string
+    );
+    if (newUrl && newUrl !== r.cover_image_path) {
+      await supabase.from("exercises").update({ cover_image_path: newUrl }).eq("id", r.id);
+      done += 1;
+    }
+  }
+
+  revalidatePath("/exercises");
+  revalidatePath("/admin/exercises");
+  return {
+    ok: true as const,
+    rehosted: done,
+    message:
+      `Re-hosted ${done} GIF${done === 1 ? "" : "s"}.` +
+      (todo.length === 20 ? " Run again for the rest." : ""),
+  };
 }
 
 export async function importExercises(input: { query: string; number?: number }) {
