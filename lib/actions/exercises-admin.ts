@@ -35,6 +35,44 @@ const GIF_BUCKET = "exercise-gifs";
  * server-side fetch has no Referer, so it downloads fine. Returns the public
  * storage URL, or the original URL if the download/upload fails.
  */
+async function downloadGif(externalId: string, gifUrl: string): Promise<Buffer | null> {
+  // 1. Direct CDN fetch (server-side, no Referer → bypasses hotlink block).
+  try {
+    const res = await fetch(gifUrl);
+    if (res.ok) {
+      const b = Buffer.from(await res.arrayBuffer());
+      if (b.byteLength > 0) return b;
+    }
+  } catch {
+    /* fall through */
+  }
+  // 2. Fallback: ExerciseDB's authenticated image endpoint (needs the key).
+  const key = process.env.EXERCISEDB_API_KEY;
+  const id = externalId.startsWith("exercisedb:")
+    ? externalId.slice("exercisedb:".length)
+    : null;
+  if (key && id) {
+    try {
+      const res = await fetch(
+        `https://exercisedb.p.rapidapi.com/image?exerciseId=${encodeURIComponent(id)}&resolution=360`,
+        {
+          headers: {
+            "X-RapidAPI-Key": key,
+            "X-RapidAPI-Host": "exercisedb.p.rapidapi.com",
+          },
+        }
+      );
+      if (res.ok) {
+        const b = Buffer.from(await res.arrayBuffer());
+        if (b.byteLength > 0) return b;
+      }
+    } catch {
+      /* give up */
+    }
+  }
+  return null;
+}
+
 async function rehostGif(
   supabase: Awaited<ReturnType<typeof createClient>>,
   externalId: string,
@@ -42,10 +80,9 @@ async function rehostGif(
 ): Promise<string | null> {
   if (!gifUrl) return null;
   if (gifUrl.includes(`/${GIF_BUCKET}/`)) return gifUrl; // already ours
+  const buf = await downloadGif(externalId, gifUrl);
+  if (!buf) return gifUrl;
   try {
-    const res = await fetch(gifUrl);
-    if (!res.ok) return gifUrl;
-    const buf = Buffer.from(await res.arrayBuffer());
     const path = `${externalId.replace(/[^a-z0-9]+/gi, "_")}.gif`;
     const { error } = await supabase.storage
       .from(GIF_BUCKET)
