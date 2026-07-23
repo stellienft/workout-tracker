@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
@@ -370,15 +370,40 @@ function AddModal({
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
-    return recipes
-      .filter((r) => {
-        if (cat === FAV && !favSet.has(r.id)) return false;
-        if (cat && cat !== FAV && r.category !== cat) return false;
-        if (query && !r.title.toLowerCase().includes(query)) return false;
-        return true;
-      })
-      .slice(0, 60);
+    return recipes.filter((r) => {
+      if (cat === FAV && !favSet.has(r.id)) return false;
+      if (cat && cat !== FAV && r.category !== cat) return false;
+      if (query && !r.title.toLowerCase().includes(query)) return false;
+      return true;
+    });
   }, [recipes, q, cat, favSet]);
+
+  // Infinite scroll: render a growing window instead of the whole list at once.
+  const PAGE = 12;
+  const [visible, setVisible] = useState(PAGE);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Reset the window whenever the filters change or the list shrinks.
+  useEffect(() => {
+    setVisible(PAGE);
+  }, [q, cat]);
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisible((v) => (v < filtered.length ? v + PAGE : v));
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [filtered.length]);
+
+  const shown = filtered.slice(0, visible);
 
   function addRecipe() {
     if (!selected) return;
@@ -519,35 +544,46 @@ function AddModal({
                     ))}
                   </div>
                 </div>
-                <div className="grid flex-1 grid-cols-2 gap-3 overflow-y-auto p-3">
-                  {filtered.map((r) => (
-                    <button
-                      key={r.id}
-                      onClick={() => {
-                        setSelected(r);
-                        setServings(1);
-                      }}
-                      className="overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] text-left"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={r.image_url ?? ""}
-                        alt=""
-                        className="h-24 w-full bg-[var(--surface-elevated)] object-cover"
-                      />
-                      <div className="p-2.5">
-                        <p className="line-clamp-2 text-xs font-medium">{r.title}</p>
-                        <p className="mt-1 flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
-                          <Clock className="h-3 w-3" /> {r.prep_minutes}m · {r.calories} kcal ·{" "}
-                          {r.protein_g}g P
-                        </p>
-                      </div>
-                    </button>
-                  ))}
+                <div className="flex-1 overflow-y-auto p-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    {shown.map((r) => (
+                      <button
+                        key={r.id}
+                        onClick={() => {
+                          setSelected(r);
+                          setServings(1);
+                        }}
+                        className="overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] text-left"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={r.image_url ?? ""}
+                          alt=""
+                          loading="lazy"
+                          className="h-24 w-full bg-[var(--surface-elevated)] object-cover"
+                        />
+                        <div className="p-2.5">
+                          <p className="line-clamp-2 text-xs font-medium">{r.title}</p>
+                          <p className="mt-1 flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
+                            <Clock className="h-3 w-3" /> {r.prep_minutes}m · {r.calories} kcal ·{" "}
+                            {r.protein_g}g P
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                   {filtered.length === 0 && (
-                    <p className="col-span-2 p-6 text-center text-sm text-[var(--text-muted)]">
+                    <p className="p-6 text-center text-sm text-[var(--text-muted)]">
                       No recipes match.
                     </p>
+                  )}
+                  {visible < filtered.length && (
+                    <div
+                      ref={sentinelRef}
+                      className="flex items-center justify-center py-4 text-xs text-[var(--text-muted)]"
+                    >
+                      Loading more…
+                    </div>
                   )}
                 </div>
               </>
