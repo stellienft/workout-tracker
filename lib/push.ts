@@ -7,7 +7,9 @@ let configured = false;
 /** Configure web-push with the VAPID keys. Returns false if keys are missing. */
 export function configurePush(): boolean {
   if (configured) return true;
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  // Public key is named without "KEY" so Vercel allows the NEXT_PUBLIC_ prefix
+  // (it refuses to expose "Sensitive" vars, and KEY/SECRET/TOKEN auto-flag it).
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
   if (!publicKey || !privateKey) return false;
   webpush.setVapidDetails(
