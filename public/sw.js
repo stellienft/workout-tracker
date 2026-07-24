@@ -5,7 +5,7 @@
 //  - Static assets (_next/static, icons, images): cache-first.
 //  - Never cache Supabase API calls or auth — always network.
 
-const CACHE = "stellio-fit-v1";
+const CACHE = "stellio-fit-v2";
 const SHELL = ["/offline", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
@@ -24,6 +24,42 @@ self.addEventListener("activate", (event) => {
       )
   );
   self.clients.claim();
+});
+
+// ---- Web Push: show notifications and focus the app on click. ----
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: "Stellio Fit", body: event.data ? event.data.text() : "" };
+  }
+  const title = data.title || "Stellio Fit";
+  const options = {
+    body: data.body || "",
+    icon: data.icon || "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
+    tag: data.tag || "stellio-fit",
+    data: { url: data.url || "/dashboard" },
+    vibrate: [80, 40, 80],
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || "/dashboard";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ("focus" in client) {
+          client.navigate(target).catch(() => {});
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(target);
+    })
+  );
 });
 
 self.addEventListener("fetch", (event) => {
