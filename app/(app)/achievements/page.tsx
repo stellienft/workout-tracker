@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { AchievementsSync } from "@/components/achievements/achievements-sync";
+import { ShareAchievement } from "@/components/achievements/share-achievement";
 import { loadAchievements } from "@/lib/achievements-loader";
 import type { AchGroup, AchIcon } from "@/lib/achievements";
 import {
@@ -130,10 +131,16 @@ export default async function AchievementsPage() {
                         <p className="text-sm text-[var(--text-secondary)]">
                           {a.description}
                         </p>
+                        <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                          {fmtDate(a.shownAt)}
+                        </p>
                       </div>
-                      <span className="shrink-0 text-xs text-[var(--text-muted)]">
-                        {fmtDate(a.shownAt)}
-                      </span>
+                      <ShareAchievement
+                        group={a.group}
+                        title={a.title}
+                        description={a.description}
+                        dateLabel={fmtDate(a.shownAt)}
+                      />
                     </div>
                   );
                 })}
