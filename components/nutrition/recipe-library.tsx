@@ -105,10 +105,12 @@ export function RecipeLibrary({
                 {r.category}
               </span>
               <p className="mt-0.5 line-clamp-2 text-sm font-medium">{r.title}</p>
-              <p className="mt-1 flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
-                <Clock className="h-3 w-3" /> {r.prep_minutes}m · {r.calories} kcal ·{" "}
-                {r.protein_g}g P
-              </p>
+              {r.calories > 0 && (
+                <p className="mt-1 flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
+                  <Clock className="h-3 w-3" /> {r.prep_minutes}m · {r.calories} kcal ·{" "}
+                  {r.protein_g}g P
+                </p>
+              )}
             </div>
           </button>
         ))}
@@ -204,25 +206,29 @@ function RecipeDetail({
             <p className="mt-1 text-sm text-[var(--text-secondary)]">{recipe.description}</p>
           )}
 
-          <div className="mt-4 grid grid-cols-4 gap-2 text-center">
-            {[
-              ["Cals", recipe.calories, <Flame key="f" className="mx-auto h-3.5 w-3.5" />],
-              ["Protein", `${recipe.protein_g}g`, null],
-              ["Carbs", `${recipe.carbs_g}g`, null],
-              ["Fat", `${recipe.fat_g}g`, null],
-            ].map(([label, val]) => (
-              <div
-                key={label as string}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-2"
-              >
-                <p className="text-sm font-bold text-[var(--accent-primary)]">{val as string}</p>
-                <p className="text-[10px] text-[var(--text-muted)]">{label as string}</p>
+          {recipe.calories > 0 ? (
+            <>
+              <div className="mt-4 grid grid-cols-4 gap-2 text-center">
+                {[
+                  ["Cals", recipe.calories, <Flame key="f" className="mx-auto h-3.5 w-3.5" />],
+                  ["Protein", `${recipe.protein_g}g`, null],
+                  ["Carbs", `${recipe.carbs_g}g`, null],
+                  ["Fat", `${recipe.fat_g}g`, null],
+                ].map(([label, val]) => (
+                  <div
+                    key={label as string}
+                    className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-2"
+                  >
+                    <p className="text-sm font-bold text-[var(--accent-primary)]">{val as string}</p>
+                    <p className="text-[10px] text-[var(--text-muted)]">{label as string}</p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <p className="mt-2 text-center text-xs text-[var(--text-muted)]">
-            per serving · {recipe.prep_minutes} min · makes {recipe.servings}
-          </p>
+              <p className="mt-2 text-center text-xs text-[var(--text-muted)]">
+                per serving · {recipe.prep_minutes} min · makes {recipe.servings}
+              </p>
+            </>
+          ) : null}
 
           {recipe.ingredients.length > 0 && (
             <div className="mt-5">

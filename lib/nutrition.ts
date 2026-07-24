@@ -9,17 +9,18 @@ export const MEAL_SLOTS = ["breakfast", "lunch", "dinner", "snack"] as const;
 export type MealSlot = (typeof MEAL_SLOTS)[number];
 
 export const RECIPE_CATEGORIES = [
-  "High-Protein",
-  "Low-Carb",
-  "Vegan",
-  "Vegetarian",
-  "Bowls",
-  "Salads",
   "Breakfast",
-  "Smoothies",
-  "Snacks",
-  "Soups",
-  "Desserts",
+  "Chicken",
+  "Beef",
+  "Pork",
+  "Lamb",
+  "Seafood",
+  "Pasta",
+  "Side",
+  "Vegetarian",
+  "Vegan",
+  "Dessert",
+  "Miscellaneous",
 ];
 
 /**

@@ -4,7 +4,8 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getAuthContext, isAdminRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { searchSpoonacular, type NormalizedRecipe } from "@/lib/spoonacular";
+import type { NormalizedRecipe } from "@/lib/spoonacular";
+import { searchTheMealDb, listByCategory } from "@/lib/themealdb";
 
 function toRow(r: NormalizedRecipe) {
   return {
@@ -22,7 +23,7 @@ function toRow(r: NormalizedRecipe) {
     tags: r.tags,
     ingredients: r.ingredients,
     steps: r.steps,
-    source: "spoonacular",
+    source: "themealdb",
     external_id: r.externalId,
   };
 }
@@ -42,23 +43,39 @@ async function upsertRecipes(recipes: NormalizedRecipe[]) {
   return { imported: data?.length ?? rows.length };
 }
 
+/** Delete every recipe in the library (admin only). Meal entries keep their
+ * copied macros (recipe_id is set null); favourites cascade away. */
+export async function clearAllRecipes() {
+  const { roles } = await getAuthContext();
+  if (!isAdminRole(roles)) return { ok: false as const, error: "Admins only" };
+
+  const supabase = await createClient();
+  const { count: before } = await supabase
+    .from("recipes")
+    .select("id", { count: "exact", head: true });
+
+  // Delete all rows (the predicate matches every row).
+  const { error } = await supabase.from("recipes").delete().not("id", "is", null);
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath("/nutrition/recipes");
+  revalidatePath("/nutrition");
+  revalidatePath("/admin/recipes");
+  return { ok: true as const, removed: before ?? 0 };
+}
+
 /**
- * Import recipes from Spoonacular into the local library (admin only).
+ * Import recipes from TheMealDB into the local library (admin only).
  * Dedupes on external_id, so re-running a query tops up rather than duplicates.
  */
-export async function importSpoonacularRecipes(input: {
-  query: string;
-  category?: string;
-  number?: number;
-}) {
+export async function importRecipes(input: { query: string; number?: number }) {
   const { roles } = await getAuthContext();
   if (!isAdminRole(roles)) return { ok: false as const, error: "Admins only" };
 
   const parsed = z
     .object({
       query: z.string().min(2).max(80),
-      category: z.string().max(40).optional(),
-      number: z.coerce.number().int().min(1).max(25).default(10),
+      number: z.coerce.number().int().min(1).max(25).default(15),
     })
     .safeParse(input);
   if (!parsed.success)
@@ -66,15 +83,14 @@ export async function importSpoonacularRecipes(input: {
 
   let recipes: NormalizedRecipe[];
   try {
-    recipes = await searchSpoonacular({
+    recipes = await searchTheMealDb({
       query: parsed.data.query,
       number: parsed.data.number,
-      category: parsed.data.category,
     });
   } catch (err) {
     return {
       ok: false as const,
-      error: err instanceof Error ? err.message : "Spoonacular request failed",
+      error: err instanceof Error ? err.message : "TheMealDB request failed",
     };
   }
 
@@ -95,58 +111,41 @@ export async function importSpoonacularRecipes(input: {
   }
 }
 
-// A spread of searches that fills the library across every category.
-const STARTER_SEARCHES: { query: string; category: string; number: number }[] = [
-  { query: "high protein chicken", category: "High-Protein", number: 6 },
-  { query: "lean beef dinner", category: "High-Protein", number: 4 },
-  { query: "low carb dinner", category: "Low-Carb", number: 6 },
-  { query: "vegan bowl", category: "Vegan", number: 6 },
-  { query: "vegetarian high protein", category: "Vegetarian", number: 5 },
-  { query: "healthy breakfast", category: "Breakfast", number: 6 },
-  { query: "protein smoothie", category: "Smoothies", number: 5 },
-  { query: "healthy snack", category: "Snacks", number: 5 },
-  { query: "chicken salad", category: "Salads", number: 5 },
-  { query: "vegetable soup", category: "Soups", number: 4 },
-  { query: "healthy dessert", category: "Desserts", number: 4 },
+// A spread across TheMealDB categories to fill the library with cohesive imagery.
+const STARTER_CATEGORIES: { category: string; number: number }[] = [
+  { category: "Breakfast", number: 8 },
+  { category: "Chicken", number: 10 },
+  { category: "Beef", number: 8 },
+  { category: "Seafood", number: 8 },
+  { category: "Pasta", number: 8 },
+  { category: "Vegetarian", number: 8 },
+  { category: "Vegan", number: 8 },
+  { category: "Pork", number: 6 },
+  { category: "Lamb", number: 6 },
+  { category: "Side", number: 6 },
+  { category: "Dessert", number: 8 },
+  { category: "Miscellaneous", number: 6 },
 ];
 
-/**
- * One-click starter: run a spread of category searches and import them all.
- * Continues past an individual failed search (e.g. transient), and reports if
- * the daily quota is hit partway.
- */
+/** One-click starter: pull a spread of recipes across every category. */
 export async function seedStarterRecipes() {
   const { roles } = await getAuthContext();
   if (!isAdminRole(roles)) return { ok: false as const, error: "Admins only" };
 
   const collected: NormalizedRecipe[] = [];
-  let quotaHit = false;
   let firstError: string | null = null;
 
-  for (const s of STARTER_SEARCHES) {
+  for (const s of STARTER_CATEGORIES) {
     try {
-      const batch = await searchSpoonacular({
-        query: s.query,
-        number: s.number,
-        category: s.category,
-      });
+      const batch = await listByCategory(s.category, s.number);
       collected.push(...batch);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (!firstError) firstError = msg;
-      // 402 = out of quota / points for the day; stop early.
-      if (/402|quota|points|limit/i.test(msg)) {
-        quotaHit = true;
-        break;
-      }
+      if (!firstError) firstError = err instanceof Error ? err.message : String(err);
     }
   }
 
   if (collected.length === 0) {
-    return {
-      ok: false as const,
-      error: firstError ?? "No recipes returned. Check your Spoonacular key.",
-    };
+    return { ok: false as const, error: firstError ?? "No recipes returned from TheMealDB." };
   }
 
   try {
@@ -156,9 +155,7 @@ export async function seedStarterRecipes() {
     return {
       ok: true as const,
       imported,
-      message: quotaHit
-        ? `Imported ${imported} recipes, then your Spoonacular daily quota ran out — run this again tomorrow to top up.`
-        : `Imported ${imported} recipes across the categories.`,
+      message: `Imported ${imported} recipes across the categories.`,
     };
   } catch (err) {
     return {
