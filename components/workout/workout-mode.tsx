@@ -14,10 +14,12 @@ import {
   Plus,
   Minus,
   Trash2,
+  Calculator,
 } from "lucide-react";
 import { ExerciseImage } from "@/components/ui/exercise-image";
 import { RestTimer } from "@/components/workout/rest-timer";
 import { VideoSheet } from "@/components/workout/video-sheet";
+import { WorkoutTools } from "@/components/workout/workout-tools";
 import {
   logSet,
   completeWorkout,
@@ -118,6 +120,7 @@ export function WorkoutMode({
   const [videoOpen, setVideoOpen] = useState(false);
   const [showCues, setShowCues] = useState(false);
   const [showReplace, setShowReplace] = useState(false);
+  const [showTools, setShowTools] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
   const [pending, setPending] = useState(0);
@@ -536,6 +539,12 @@ export function WorkoutMode({
               <Info className="h-4 w-4" /> Technique
             </button>
             <button
+              onClick={() => setShowTools(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-sm"
+            >
+              <Calculator className="h-4 w-4" /> Tools
+            </button>
+            <button
               onClick={() => setShowReplace(true)}
               className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-sm"
             >
@@ -733,6 +742,17 @@ export function WorkoutMode({
           video={active.video}
           exerciseName={activeName}
           onClose={() => setVideoOpen(false)}
+        />
+      )}
+
+      {showTools && (
+        <WorkoutTools
+          onClose={() => setShowTools(false)}
+          defaultWeight={
+            Number(rows.find((r) => r.weight)?.weight) ||
+            current.previous[0]?.weight_kg ||
+            null
+          }
         />
       )}
 
