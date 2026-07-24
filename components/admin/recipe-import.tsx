@@ -2,35 +2,38 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Download, Sparkles } from "lucide-react";
+import { Download, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { RECIPE_CATEGORIES } from "@/lib/nutrition";
 import {
-  importSpoonacularRecipes,
+  importRecipes,
   seedStarterRecipes,
+  clearAllRecipes,
 } from "@/lib/actions/recipes-admin";
 
 const SUGGESTIONS = [
-  "high protein chicken",
-  "vegan bowl",
-  "low carb dinner",
-  "overnight oats",
-  "protein smoothie",
+  "chicken",
+  "beef",
   "salmon",
-  "chickpea salad",
-  "healthy dessert",
+  "pasta",
+  "curry",
+  "breakfast",
+  "salad",
+  "dessert",
 ];
 
-export function RecipeImport({ disabled }: { disabled?: boolean }) {
+export function RecipeImport() {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<string>("");
-  const [number, setNumber] = useState(10);
-  const [lastResult, setLastResult] = useState<string | null>(null);
   const [seeding, startSeeding] = useTransition();
+  const [clearing, startClearing] = useTransition();
+  const [query, setQuery] = useState("");
+  const [number, setNumber] = useState(15);
+  const [lastResult, setLastResult] = useState<string | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
+
+  const busy = pending || seeding || clearing;
 
   function seed() {
     startSeeding(async () => {
@@ -52,11 +55,7 @@ export function RecipeImport({ disabled }: { disabled?: boolean }) {
       return;
     }
     startTransition(async () => {
-      const res = await importSpoonacularRecipes({
-        query: query.trim(),
-        category: category || undefined,
-        number,
-      });
+      const res = await importRecipes({ query: query.trim(), number });
       if (res.ok) {
         const msg =
           "message" in res && res.message
@@ -71,43 +70,45 @@ export function RecipeImport({ disabled }: { disabled?: boolean }) {
     });
   }
 
+  function clearAll() {
+    startClearing(async () => {
+      const res = await clearAllRecipes();
+      if (res.ok) {
+        const msg = `Removed ${res.removed} recipe${res.removed === 1 ? "" : "s"}.`;
+        setLastResult(msg);
+        toast(msg, "success");
+        setConfirmClear(false);
+        router.refresh();
+      } else {
+        toast(res.error ?? "Couldn't clear recipes", "error");
+      }
+    });
+  }
+
   return (
     <div className="space-y-4 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
       <div>
-        <p className="font-semibold">Import from Spoonacular</p>
+        <p className="font-semibold">Import from TheMealDB</p>
         <p className="text-sm text-[var(--text-secondary)]">
-          Search real recipes with photos and verified macros. Imports dedupe, so
-          re-running a search tops up the library.
+          Real recipes with high-quality photos, ingredients and steps. Imports
+          dedupe, so re-running tops up the library. Note: TheMealDB doesn&apos;t
+          provide macros, so recipes show ingredients &amp; steps rather than
+          calorie counts.
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && run()}
-          placeholder="Search e.g. high protein chicken"
-          disabled={disabled}
-          className="h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm focus:border-[var(--border-active)] focus:outline-none disabled:opacity-50"
+          placeholder="Search e.g. chicken, salmon, curry"
+          className="h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
         />
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          disabled={disabled}
-          className="h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm disabled:opacity-50"
-        >
-          <option value="">Auto category</option>
-          {RECIPE_CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
         <select
           value={number}
           onChange={(e) => setNumber(Number(e.target.value))}
-          disabled={disabled}
-          className="h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm disabled:opacity-50"
+          className="h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm"
         >
           {[5, 10, 15, 20, 25].map((n) => (
             <option key={n} value={n}>
@@ -122,8 +123,7 @@ export function RecipeImport({ disabled }: { disabled?: boolean }) {
           <button
             key={s}
             onClick={() => setQuery(s)}
-            disabled={disabled}
-            className="rounded-full border border-[var(--border-subtle)] px-3 py-1 text-xs text-[var(--text-secondary)] hover:border-[var(--border-active)] disabled:opacity-50"
+            className="rounded-full border border-[var(--border-subtle)] px-3 py-1 text-xs text-[var(--text-secondary)] hover:border-[var(--border-active)]"
           >
             {s}
           </button>
@@ -131,13 +131,13 @@ export function RecipeImport({ disabled }: { disabled?: boolean }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={run} disabled={disabled || pending || seeding} className="gap-1.5">
+        <Button onClick={run} disabled={busy} className="gap-1.5">
           <Download className="h-4 w-4" />
           {pending ? "Importing…" : "Import"}
         </Button>
         <button
           onClick={seed}
-          disabled={disabled || pending || seeding}
+          disabled={busy}
           className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)] disabled:opacity-50"
         >
           <Sparkles className="h-4 w-4 text-[var(--accent-primary)]" />
@@ -147,10 +147,45 @@ export function RecipeImport({ disabled }: { disabled?: boolean }) {
           <span className="text-sm text-[var(--text-secondary)]">{lastResult}</span>
         )}
       </div>
+
       <p className="text-xs text-[var(--text-muted)]">
-        &quot;Seed a starter set&quot; runs a spread of category searches
-        (~55 recipes) in one go — uses more of your daily Spoonacular quota.
+        &quot;Seed a starter set&quot; pulls a spread across every category
+        (~90 recipes) in one go.
       </p>
+
+      {/* Danger zone: wipe the library. */}
+      <div className="mt-2 border-t border-[var(--border-subtle)] pt-4">
+        {confirmClear ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm text-[var(--text-secondary)]">
+              Remove every recipe? Your logged meals keep their macros.
+            </span>
+            <button
+              onClick={clearAll}
+              disabled={busy}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--danger)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              {clearing ? "Removing…" : "Yes, remove all"}
+            </button>
+            <button
+              onClick={() => setConfirmClear(false)}
+              disabled={busy}
+              className="text-sm text-[var(--text-secondary)]"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmClear(true)}
+            disabled={busy}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--danger)] disabled:opacity-50"
+          >
+            <Trash2 className="h-4 w-4" /> Remove all recipes
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -470,9 +470,10 @@ function AddModal({
               />
               <div>
                 <p className="font-semibold">{selected.title}</p>
-                <p className="text-xs text-[var(--text-muted)]">
-                  {selected.calories} kcal · {selected.protein_g}p / {selected.carbs_g}c /{" "}
-                  {selected.fat_g}f per serving
+                <p className="text-xs capitalize text-[var(--text-muted)]">
+                  {selected.calories > 0
+                    ? `${selected.calories} kcal · ${selected.protein_g}p / ${selected.carbs_g}c / ${selected.fat_g}f per serving`
+                    : `${selected.category} · no macro data`}
                 </p>
               </div>
             </div>
@@ -564,9 +565,15 @@ function AddModal({
                         />
                         <div className="p-2.5">
                           <p className="line-clamp-2 text-xs font-medium">{r.title}</p>
-                          <p className="mt-1 flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
-                            <Clock className="h-3 w-3" /> {r.prep_minutes}m · {r.calories} kcal ·{" "}
-                            {r.protein_g}g P
+                          <p className="mt-1 flex items-center gap-1 text-[10px] capitalize text-[var(--text-muted)]">
+                            {r.calories > 0 ? (
+                              <>
+                                <Clock className="h-3 w-3" /> {r.prep_minutes}m · {r.calories} kcal
+                                · {r.protein_g}g P
+                              </>
+                            ) : (
+                              r.category
+                            )}
                           </p>
                         </div>
                       </button>
