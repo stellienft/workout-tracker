@@ -5,10 +5,33 @@ import { PageShell } from "@/components/ui/page-header";
 import { ExerciseVideoPlayer } from "@/components/workout/exercise-video-player";
 import { ExerciseImage } from "@/components/ui/exercise-image";
 import { ExerciseFavoriteButton } from "@/components/exercise-favorite-button";
+import { ExerciseHistory, type HistoryPoint } from "@/components/exercise/exercise-history";
+import { estimate1RM } from "@/lib/ai/analysis";
 import { normaliseVideoForClient } from "@/lib/video-utils";
 import { ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import type { Exercise, ExerciseVideo } from "@/lib/types";
+
+/** Best estimated-1RM day-by-day from the member's logged sets for this lift. */
+function buildHistory(
+  logs: { weight_kg: number | null; reps: number | null; created_at: string }[]
+): HistoryPoint[] {
+  const byDay = new Map<string, HistoryPoint>();
+  for (const l of logs) {
+    const w = l.weight_kg ?? 0;
+    const r = l.reps ?? 0;
+    if (w <= 0 || r <= 0) continue;
+    const day = l.created_at.slice(0, 10);
+    const e1rm = estimate1RM(w, r);
+    const cur = byDay.get(day);
+    if (!cur || e1rm > cur.e1rm) {
+      byDay.set(day, { date: day, e1rm: Math.round(e1rm), top: w, reps: r });
+    }
+  }
+  return Array.from(byDay.values()).sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+}
 
 export default async function ExerciseDetailPage({
   params,
@@ -27,31 +50,47 @@ export default async function ExerciseDetailPage({
   if (!exercise) notFound();
   const e = exercise as Exercise;
 
-  const [{ data: videoRow }, { data: alts }, { data: fav }] = await Promise.all([
-    supabase
-      .from("exercise_videos")
-      .select("*")
-      .eq("exercise_id", e.id)
-      .eq("active", true)
-      .order("verification_status")
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("exercise_alternatives")
-      .select(
-        "alternative:exercises!exercise_alternatives_alternative_exercise_id_fkey(name, slug, shoulder_safe)"
-      )
-      .eq("exercise_id", e.id)
-      .order("priority"),
-    supabase
-      .from("exercise_favorites")
-      .select("exercise_id")
-      .eq("user_id", user.id)
-      .eq("exercise_id", e.id)
-      .maybeSingle(),
-  ]);
+  const [{ data: videoRow }, { data: alts }, { data: fav }, { data: setLogs }] =
+    await Promise.all([
+      supabase
+        .from("exercise_videos")
+        .select("*")
+        .eq("exercise_id", e.id)
+        .eq("active", true)
+        .order("verification_status")
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("exercise_alternatives")
+        .select(
+          "alternative:exercises!exercise_alternatives_alternative_exercise_id_fkey(name, slug, shoulder_safe)"
+        )
+        .eq("exercise_id", e.id)
+        .order("priority"),
+      supabase
+        .from("exercise_favorites")
+        .select("exercise_id")
+        .eq("user_id", user.id)
+        .eq("exercise_id", e.id)
+        .maybeSingle(),
+      supabase
+        .from("set_logs")
+        .select("weight_kg, reps, created_at")
+        .eq("user_id", user.id)
+        .eq("exercise_id", e.id)
+        .eq("completed", true)
+        .order("created_at", { ascending: true })
+        .limit(2000),
+    ]);
 
   const video = normaliseVideoForClient(videoRow as ExerciseVideo | null);
+  const history = buildHistory(
+    (setLogs ?? []) as {
+      weight_kg: number | null;
+      reps: number | null;
+      created_at: string;
+    }[]
+  );
 
   return (
     <PageShell>
@@ -84,6 +123,8 @@ export default async function ExerciseDetailPage({
       <div className="mt-6">
         <ExerciseVideoPlayer video={video} exerciseName={e.name} />
       </div>
+
+      {history.length > 0 && <ExerciseHistory points={history} />}
 
       {e.instructions && (
         <div className="mt-6">
