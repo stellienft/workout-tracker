@@ -26,6 +26,8 @@ export function PushToggle() {
 
   // Named without "KEY" so Vercel doesn't force it "Sensitive" (which can't be
   // NEXT_PUBLIC). It's the public VAPID key — safe to expose to the browser.
+  // NB: NEXT_PUBLIC_* values are inlined at build time, so this must be set
+  // before the build runs and picked up on a fresh (non-cached) deploy.
   const vapid = process.env.NEXT_PUBLIC_VAPID_PUBLIC;
 
   useEffect(() => {
