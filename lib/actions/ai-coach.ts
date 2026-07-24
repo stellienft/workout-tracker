@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { getAuthContext, isAdminRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import {
   buildInsights,
@@ -11,14 +12,6 @@ import {
 } from "@/lib/ai/analysis";
 import { generateProgram } from "@/lib/ai/program-generator";
 import { llmCoachNarrative } from "@/lib/ai/coach-narrative";
-
-async function auth() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return { supabase, user };
-}
 
 const ANALYSIS_WINDOW_DAYS = 120;
 
@@ -79,10 +72,14 @@ async function loadInsights(
  * AI-generated split. Insights are computed live so they're always current.
  */
 export async function getTrainingInsights() {
-  const { supabase, user } = await auth();
+  const { supabase, user, roles } = await getAuthContext();
   if (!user) return { ok: false as const, error: "Not authenticated" };
 
+  // Admins can unlock the coach early to test it, regardless of the 4-week gate.
+  const testMode = isAdminRole(roles);
+
   const { insights } = await loadInsights(supabase, user.id);
+  if (testMode) insights.consistency.eligible = true;
 
   const narrative = insights.consistency.eligible
     ? await llmCoachNarrative(insights)
@@ -102,6 +99,7 @@ export async function getTrainingInsights() {
     insights,
     narrative,
     aiSplitId: (aiSplit?.id as string) ?? null,
+    testMode,
   };
 }
 
@@ -111,8 +109,10 @@ export async function getTrainingInsights() {
  * consistent use.
  */
 export async function generateAdaptiveProgram(input?: { daysPerWeek?: number }) {
-  const { supabase, user } = await auth();
+  const { supabase, user, roles } = await getAuthContext();
   if (!user) return { ok: false as const, error: "Not authenticated" };
+
+  const testMode = isAdminRole(roles);
 
   const daysParsed = z
     .object({ daysPerWeek: z.coerce.number().int().min(3).max(5).optional() })
@@ -120,7 +120,7 @@ export async function generateAdaptiveProgram(input?: { daysPerWeek?: number }) 
   if (!daysParsed.success) return { ok: false as const, error: "Invalid input" };
 
   const { insights, metaById } = await loadInsights(supabase, user.id);
-  if (!insights.consistency.eligible) {
+  if (!insights.consistency.eligible && !testMode) {
     return {
       ok: false as const,
       error:

@@ -49,7 +49,7 @@ export default async function AiCoachPage() {
     );
   }
 
-  const { insights, narrative, aiSplitId } = res;
+  const { insights, narrative, aiSplitId, testMode } = res;
   const c = insights.consistency;
 
   return (
@@ -58,6 +58,14 @@ export default async function AiCoachPage() {
         title="AI Coach"
         subtitle="Adaptive programming that learns from your own training."
       />
+
+      {testMode && (
+        <div className="mt-6 rounded-[var(--radius-card)] border border-[var(--border-active)] bg-[var(--accent-muted)] p-4 text-sm text-[var(--accent-primary)]">
+          Admin test mode — the 4-week unlock is bypassed for your account so you
+          can preview the coach. Members still need 4 weeks of consistent training.
+          With little logged history, targets fall back to library defaults.
+        </div>
+      )}
 
       {!c.eligible ? (
         <BaselineCard
