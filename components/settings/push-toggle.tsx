@@ -24,7 +24,9 @@ export function PushToggle() {
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const vapid = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  // Named without "KEY" so Vercel doesn't force it "Sensitive" (which can't be
+  // NEXT_PUBLIC). It's the public VAPID key — safe to expose to the browser.
+  const vapid = process.env.NEXT_PUBLIC_VAPID_PUBLIC;
 
   useEffect(() => {
     if (
