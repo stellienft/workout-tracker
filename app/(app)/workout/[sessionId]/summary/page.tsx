@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatDuration } from "@/lib/utils";
 import { Confetti } from "@/components/ui/confetti";
+import { ShareAchievement } from "@/components/achievements/share-achievement";
 import { Check, Trophy, PartyPopper } from "lucide-react";
 
 export const metadata = { title: "Workout complete" };
@@ -115,6 +116,12 @@ export default async function WorkoutSummaryPage({
             >
               <PartyPopper className="h-5 w-5" /> Choose your next program
             </Link>
+            <ShareAchievement
+              group="Attendance"
+              title="Program complete!"
+              description={`I finished ${programName} on Stellio Fit.`}
+              label="Share your achievement"
+            />
             <Link
               href="/dashboard"
               className="rounded-2xl border border-[var(--border-subtle)] py-3.5 text-sm"
