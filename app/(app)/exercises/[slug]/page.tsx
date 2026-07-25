@@ -5,6 +5,7 @@ import { PageShell } from "@/components/ui/page-header";
 import { ExerciseVideoPlayer } from "@/components/workout/exercise-video-player";
 import { ExerciseImage } from "@/components/ui/exercise-image";
 import { ExerciseFavoriteButton } from "@/components/exercise-favorite-button";
+import { GifDemo } from "@/components/exercise/gif-demo";
 import { ExerciseHistory, type HistoryPoint } from "@/components/exercise/exercise-history";
 import { estimate1RM } from "@/lib/ai/analysis";
 import { normaliseVideoForClient } from "@/lib/video-utils";
@@ -84,6 +85,10 @@ export default async function ExerciseDetailPage({
     ]);
 
   const video = normaliseVideoForClient(videoRow as ExerciseVideo | null);
+  // Exercises with an animated GIF cover (e.g. ExerciseDB imports) show the GIF
+  // as the demo instead of an empty YouTube embed.
+  const hasGif =
+    !!e.cover_image_path && /\.gif($|\?)|exercise-gifs/i.test(e.cover_image_path);
   const history = buildHistory(
     (setLogs ?? []) as {
       weight_kg: number | null;
@@ -121,7 +126,11 @@ export default async function ExerciseDetailPage({
       </div>
 
       <div className="mt-6">
-        <ExerciseVideoPlayer video={video} exerciseName={e.name} />
+        {hasGif ? (
+          <GifDemo path={e.cover_image_path} name={e.name} />
+        ) : (
+          <ExerciseVideoPlayer video={video} exerciseName={e.name} />
+        )}
       </div>
 
       {history.length > 0 && <ExerciseHistory points={history} />}
