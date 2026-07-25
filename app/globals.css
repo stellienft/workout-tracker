@@ -77,6 +77,19 @@
   color: var(--text-primary);
 }
 
+/* iOS Safari zooms the page in whenever a focused field's font-size is under
+   16px. Our fields use text-sm (14px), so typing anywhere — the friend field,
+   rep logging — triggered a jarring zoom. Force 16px on touch/coarse-pointer
+   devices only, so the desktop design is untouched. Excludes range/checkbox/
+   radio, which have no text and shouldn't change size. */
+@media (pointer: coarse) {
+  input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
 html,
 body {
   background: var(--background-primary);
