@@ -9,6 +9,7 @@ const PUBLIC_PATHS = [
   "/forgot-password",
   "/reset-password",
   "/auth",
+  "/legal",
   "/manifest.webmanifest",
   "/sw.js",
 ];
