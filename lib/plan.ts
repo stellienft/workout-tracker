@@ -18,10 +18,20 @@ export type Feature =
 export const PRO_PRICE_LABEL = "$10/mo";
 export const TRAINER_PRICE_LABEL = "$15/mo";
 
+// Free trainers can coach this many clients before needing the Trainer plan.
+export const FREE_TRAINER_CLIENT_LIMIT = 1;
+
+// What a free trainer account includes, for the billing / upsell UI.
+export const FREE_TRAINER_INCLUDES: string[] = [
+  `Coach ${FREE_TRAINER_CLIENT_LIMIT} client`,
+  "Build programs and assign them to your client",
+  "In-app client messaging and your own branding",
+];
+
 // What the Trainer plan unlocks, for the trainer paywall / billing UI.
 export const TRAINER_BENEFITS: string[] = [
+  "Unlimited clients — invite and manage as many as you like",
   "Everything in Pro (AI Coach, Splits, Nutrition, Health, stats)",
-  "Unlimited clients — invite and manage them",
   "Build programs and assign them to clients",
   "Create your own paid coaching packages",
   "In-app client messaging and your own branding",

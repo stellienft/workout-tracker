@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { getAuthContext, isTrainerRole, isAdminRole } from "@/lib/auth";
-import { getUserPlan } from "@/lib/entitlements";
-import { TrainerPaywall } from "@/components/billing/trainer-paywall";
 
 /**
- * Gate every trainer tool behind the Trainer plan. Non-trainers are sent home;
- * trainers without an active subscription hit the paywall. Admins pass through.
+ * Trainer tools are free to use with a 1-client limit; the Trainer plan lifts
+ * that limit and unlocks the Pro features. So the portal itself is open to any
+ * trainer (and admins) — non-trainers are sent home. The client cap is enforced
+ * where clients are added (see inviteClient) and surfaced on the Clients page.
  */
 export default async function TrainerLayout({
   children,
@@ -14,9 +14,6 @@ export default async function TrainerLayout({
 }) {
   const { roles } = await getAuthContext();
   if (!isTrainerRole(roles) && !isAdminRole(roles)) redirect("/dashboard");
-
-  const { isPro } = await getUserPlan();
-  if (!isPro) return <TrainerPaywall />;
 
   return <>{children}</>;
 }
