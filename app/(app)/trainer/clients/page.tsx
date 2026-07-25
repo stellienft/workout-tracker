@@ -24,25 +24,38 @@ export default async function TrainerClientsPage() {
     );
   }
 
-  const [{ data: clients }, { data: programs }, { data: assignments }] =
-    await Promise.all([
-      supabase
-        .from("trainer_clients")
-        .select(
-          "id, user_id, display_name, status, subscription_active, assigned_at"
-        )
-        .eq("tenant_id", tenant.id)
-        .order("assigned_at", { ascending: false }),
-      supabase
-        .from("trainer_programs")
-        .select("id, name")
-        .eq("tenant_id", tenant.id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("trainer_assignments")
-        .select("id, client_user_id, trainer_program_id, trainer_programs(name)")
-        .eq("tenant_id", tenant.id),
-    ]);
+  const [
+    { data: clients },
+    { data: programs },
+    { data: assignments },
+    { data: packages },
+    { data: clientPkgs },
+  ] = await Promise.all([
+    supabase
+      .from("trainer_clients")
+      .select("id, user_id, display_name, status, subscription_active, assigned_at")
+      .eq("tenant_id", tenant.id)
+      .order("assigned_at", { ascending: false }),
+    supabase
+      .from("trainer_programs")
+      .select("id, name")
+      .eq("tenant_id", tenant.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("trainer_assignments")
+      .select("id, client_user_id, trainer_program_id, trainer_programs(name)")
+      .eq("tenant_id", tenant.id),
+    supabase
+      .from("trainer_packages")
+      .select("id, name, price_cents, currency, interval")
+      .eq("tenant_id", tenant.id)
+      .eq("status", "active")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("trainer_client_packages")
+      .select("client_user_id, package_id, status")
+      .eq("tenant_id", tenant.id),
+  ]);
 
   // trainer_clients.user_id references auth.users (not profiles), so there's no
   // FK for a PostgREST embed — fetch the client profiles separately and merge.
@@ -89,6 +102,18 @@ export default async function TrainerClientsPage() {
             name: p.name as string,
           }))}
           assignments={assignmentList}
+          packages={(packages ?? []).map((p) => ({
+            id: p.id as string,
+            name: p.name as string,
+            price_cents: p.price_cents as number,
+            currency: p.currency as string,
+            interval: p.interval as "monthly" | "weekly" | "one_off",
+          }))}
+          clientPackages={(clientPkgs ?? []).map((p) => ({
+            clientUserId: p.client_user_id as string,
+            packageId: p.package_id as string,
+            status: p.status as "active" | "paused" | "cancelled",
+          }))}
         />
       </div>
     </PageShell>

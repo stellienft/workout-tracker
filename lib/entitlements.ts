@@ -5,8 +5,8 @@ import type { Plan } from "@/lib/plan";
 export interface Entitlement {
   plan: Plan;
   isPro: boolean;
-  // Why they're Pro: their own subscription, or a staff role (admin/trainer).
-  source: "subscription" | "staff" | "free";
+  // Why they're Pro: own subscription, a coaching package, or a staff role.
+  source: "subscription" | "coaching" | "staff" | "free";
   currentPeriodEnd: string | null;
 }
 
@@ -30,10 +30,26 @@ export const getUserPlan = cache(async (): Promise<Entitlement> => {
     .maybeSingle();
 
   const active = data?.plan === "pro" && (data?.status === "active" || data?.status === "trialing");
-  return {
-    plan: active ? "pro" : "free",
-    isPro: !!active,
-    source: active ? "subscription" : "free",
-    currentPeriodEnd: (data?.current_period_end as string | null) ?? null,
-  };
+  if (active) {
+    return {
+      plan: "pro",
+      isPro: true,
+      source: "subscription",
+      currentPeriodEnd: (data?.current_period_end as string | null) ?? null,
+    };
+  }
+
+  // An active coaching package from a trainer also unlocks Pro.
+  const { data: pkg } = await supabase
+    .from("trainer_client_packages")
+    .select("id")
+    .eq("client_user_id", user.id)
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle();
+  if (pkg) {
+    return { plan: "pro", isPro: true, source: "coaching", currentPeriodEnd: null };
+  }
+
+  return { plan: "free", isPro: false, source: "free", currentPeriodEnd: null };
 });

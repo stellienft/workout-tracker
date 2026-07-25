@@ -21,6 +21,7 @@ import {
   Sparkles,
   Medal,
   Crown,
+  Package,
   type LucideIcon,
 } from "lucide-react";
 
@@ -74,6 +75,7 @@ export const navSections: NavSection[] = [
       { label: "My Coach", href: "/my-coach", icon: UserRound, clientOnly: true },
       { label: "Trainer Portal", href: "/trainer", icon: Briefcase, trainerOnly: true },
       { label: "Clients", href: "/trainer/clients", icon: Users, trainerOnly: true },
+      { label: "Packages", href: "/trainer/packages", icon: Package, trainerOnly: true },
       { label: "Messages", href: "/trainer/chat", icon: MessageSquare, trainerOnly: true },
     ],
   },

@@ -116,6 +116,32 @@ export default async function MyCoachPage() {
     .eq("client_id", user.id)
     .maybeSingle();
 
+  // The coaching package this member is on with this coach (if any).
+  const { data: pkgRow } = await supabase
+    .from("trainer_client_packages")
+    .select(
+      "status, package:trainer_packages(name, description, price_cents, currency, interval, features)"
+    )
+    .eq("client_user_id", user.id)
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+  const pkg = pkgRow
+    ? (Array.isArray(pkgRow.package) ? pkgRow.package[0] : pkgRow.package) as {
+        name: string;
+        description: string | null;
+        price_cents: number;
+        currency: string;
+        interval: "monthly" | "weekly" | "one_off";
+        features: string[];
+      } | null
+    : null;
+  const pkgStatus = (pkgRow?.status as string | null) ?? null;
+  const intervalLabel: Record<string, string> = {
+    monthly: "/mo",
+    weekly: "/wk",
+    one_off: " one-off",
+  };
+
   let coachMessages: {
     id: string;
     sender_id: string;
@@ -165,6 +191,48 @@ export default async function MyCoachPage() {
             </div>
           </div>
         </div>
+
+        {/* Coaching package */}
+        {pkg && (
+          <div className="mt-4 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                  Your package
+                </p>
+                <p className="mt-0.5 text-lg font-bold">{pkg.name}</p>
+              </div>
+              <span className="text-lg font-extrabold">
+                ${(pkg.price_cents / 100) % 1
+                  ? (pkg.price_cents / 100).toFixed(2)
+                  : (pkg.price_cents / 100).toFixed(0)}
+                <span className="text-xs font-medium text-[var(--text-muted)]">
+                  {intervalLabel[pkg.interval] ?? ""}
+                </span>
+              </span>
+            </div>
+            {pkg.description && (
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">{pkg.description}</p>
+            )}
+            {pkg.features.length > 0 && (
+              <ul className="mt-3 space-y-1 text-sm text-[var(--text-secondary)]">
+                {pkg.features.map((f) => (
+                  <li key={f}>• {f}</li>
+                ))}
+              </ul>
+            )}
+            {pkgStatus === "active" && (
+              <p className="mt-3 text-xs text-[var(--accent-primary)]">
+                Active — includes full Pro access.
+              </p>
+            )}
+            {pkgStatus === "paused" && (
+              <p className="mt-3 text-xs text-[var(--warning)]">
+                Paused — contact your coach to resume.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Assigned plans */}
         <section className="mt-8">

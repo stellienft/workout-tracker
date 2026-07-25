@@ -46,13 +46,19 @@ export default async function BillingPage({
             <div className="flex items-center gap-2">
               <Crown className="h-5 w-5 text-[var(--accent-primary)]" />
               <p className="text-lg font-bold">
-                {source === "staff" ? "Full access (staff)" : "Stellio Fit Pro"}
+                {source === "staff"
+                  ? "Full access (staff)"
+                  : source === "coaching"
+                    ? "Pro — included with your coach"
+                    : "Stellio Fit Pro"}
               </p>
             </div>
             <p className="mt-1 text-sm text-[var(--text-secondary)]">
               {source === "staff"
                 ? "Your admin/trainer role includes every feature."
-                : "You have every feature unlocked. Thanks for supporting Stellio Fit."}
+                : source === "coaching"
+                  ? "Your coaching package includes full Pro access. Manage it with your coach."
+                  : "You have every feature unlocked. Thanks for supporting Stellio Fit."}
               {currentPeriodEnd
                 ? ` Renews ${new Date(currentPeriodEnd).toLocaleDateString()}.`
                 : ""}
