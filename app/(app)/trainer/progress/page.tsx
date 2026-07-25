@@ -154,10 +154,10 @@ export default async function TrainerProgressPage() {
                   </div>
                   <div className="mt-3">
                     <Link
-                      href="/trainer/clients"
+                      href={`/trainer/clients/${p.client_user_id}`}
                       className="text-xs text-[var(--accent-primary)]"
                     >
-                      Manage client →
+                      View weight &amp; photos →
                     </Link>
                   </div>
                 </div>
