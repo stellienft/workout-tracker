@@ -51,11 +51,7 @@ export function ShareAchievement({
         footnote: dateLabel,
       });
       if (!blob) throw new Error("render failed");
-      const result = await shareOrDownload(
-        blob,
-        "stellio-fit-achievement.png",
-        title
-      );
+      const result = await shareOrDownload(blob, "stellio-fit-achievement.png");
       if (result === "downloaded") toast("Image saved — share it anywhere.", "success");
     } catch (e) {
       if ((e as Error).name !== "AbortError") toast("Couldn't share — try again.", "error");

@@ -140,14 +140,14 @@ export async function drawAchievementCard(card: ShareCard): Promise<Blob | null>
 /** Share the image via the Web Share API, or download it as a fallback. */
 export async function shareOrDownload(
   blob: Blob,
-  filename: string,
-  title: string
+  filename: string
 ): Promise<"shared" | "downloaded"> {
   const file = new File([blob], filename, { type: "image/png" });
   const nav = navigator as Navigator & { canShare?: (d?: ShareData) => boolean };
-  // Share ONLY the file — a text/URL makes targets unfurl a second image.
+  // Share ONLY the file — no title/text. Some targets (e.g. WhatsApp on iOS)
+  // attach the image AND the title, sending it twice.
   if (nav.canShare?.({ files: [file] }) && nav.share) {
-    await nav.share({ files: [file], title });
+    await nav.share({ files: [file] });
     return "shared";
   }
   const url = URL.createObjectURL(blob);

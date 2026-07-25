@@ -93,18 +93,15 @@ export function WeightProgress({
       const file = new File([blob], "stellio-fit-progress.png", {
         type: "image/png",
       });
-      // Share ONLY the image. Including text with a URL makes share targets
-      // unfurl it into a second (link-preview) image; the card is already
-      // branded with stellio.fit, so no caption is needed.
-      const shareData: ShareData = {
-        files: [file],
-        title: "My Stellio Fit progress",
-      };
+      // Share ONLY the file — no title/text. Some targets (e.g. WhatsApp on
+      // iOS) attach the image AND render the title as a second item, so the
+      // card ends up shared twice. The card is already branded with
+      // stellio.fit, so no caption is needed.
       const nav = navigator as Navigator & {
         canShare?: (d?: ShareData) => boolean;
       };
       if (nav.canShare?.({ files: [file] }) && nav.share) {
-        await nav.share(shareData);
+        await nav.share({ files: [file] });
       } else {
         downloadBlob(blob, "stellio-fit-progress.png");
         setNote("Image saved — share it to your socials.");
