@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAuthContext, isAdminRole, isTrainerRole } from "@/lib/auth";
+import { getUserPlan } from "@/lib/entitlements";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/nav/sidebar";
 import { BottomNav } from "@/components/nav/bottom-nav";
@@ -35,6 +36,7 @@ export default async function AppLayout({
   ]);
   const isClient = (clientCount ?? 0) > 0;
   const unread = unreadCount ?? 0;
+  const { isPro } = await getUserPlan();
 
   // Gate the app behind setup. Trainers get their own setup flow; members get
   // the goal-based onboarding. Both routes live outside this layout.
@@ -56,6 +58,7 @@ export default async function AppLayout({
           isAdmin={isAdmin}
           isTrainer={isTrainer}
           isClient={isClient}
+          isPro={isPro}
           unread={unread}
           name={name}
           email={email}
@@ -69,6 +72,7 @@ export default async function AppLayout({
             isAdmin={isAdmin}
             isTrainer={isTrainer}
             isClient={isClient}
+            isPro={isPro}
             unread={unread}
             name={name}
             email={email}

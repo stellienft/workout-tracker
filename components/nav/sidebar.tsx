@@ -5,13 +5,14 @@ import { usePathname } from "next/navigation";
 import { navSections } from "./nav-items";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/actions/auth";
-import { LogOut } from "lucide-react";
+import { LogOut, Lock } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 
 export function Sidebar({
   isAdmin,
   isTrainer,
   isClient,
+  isPro,
   unread,
   name,
   email,
@@ -20,6 +21,7 @@ export function Sidebar({
   isAdmin: boolean;
   isTrainer: boolean;
   isClient: boolean;
+  isPro: boolean;
   unread: number;
   name: string;
   email: string;
@@ -72,7 +74,10 @@ export function Sidebar({
                       )}
                     >
                       <Icon className="h-5 w-5 shrink-0" />
-                      {item.label}
+                      <span className="flex-1">{item.label}</span>
+                      {item.pro && !isPro && (
+                        <Lock className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                      )}
                     </Link>
                   </li>
                 );

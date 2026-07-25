@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { ChevronRight, Dumbbell } from "lucide-react";
 import { requireUser } from "@/lib/auth";
+import { getUserPlan } from "@/lib/entitlements";
+import { planAllows } from "@/lib/plan";
+import { UpgradeWall } from "@/components/billing/upgrade-wall";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { SplitManager } from "@/components/splits/split-manager";
@@ -10,6 +13,9 @@ export const metadata = { title: "My Splits" };
 
 export default async function SplitsPage() {
   const { user } = await requireUser();
+  const { plan } = await getUserPlan();
+  if (!planAllows(plan, "custom_splits")) return <UpgradeWall feature="custom_splits" />;
+
   const supabase = await createClient();
 
   const { data: splits } = await supabase

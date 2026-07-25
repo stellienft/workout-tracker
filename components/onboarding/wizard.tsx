@@ -73,7 +73,8 @@ export function OnboardingWizard({
       medicationTracking,
     });
     if (res.ok) {
-      router.push("/dashboard");
+      // Land on the membership offer (paywall) once onboarding is done.
+      router.push("/billing?welcome=1");
       router.refresh();
     } else {
       setError(res.error ?? "Could not save. Please try again.");
