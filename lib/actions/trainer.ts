@@ -63,6 +63,11 @@ const tenantSchema = z.object({
   customDomain: z.string().max(200).optional().or(z.literal("")),
   paymentUrl: z.string().url().optional().or(z.literal("")),
   paymentInstructions: z.string().max(500).optional().or(z.literal("")),
+  bankAccountName: z.string().max(120).optional().or(z.literal("")),
+  bankBsb: z.string().max(20).optional().or(z.literal("")),
+  bankAccountNumber: z.string().max(40).optional().or(z.literal("")),
+  bankName: z.string().max(80).optional().or(z.literal("")),
+  paymentReference: z.string().max(80).optional().or(z.literal("")),
 });
 
 export async function updateTenant(input: z.input<typeof tenantSchema>) {
@@ -81,6 +86,13 @@ export async function updateTenant(input: z.input<typeof tenantSchema>) {
   if (d.paymentUrl !== undefined) update.payment_url = d.paymentUrl || null;
   if (d.paymentInstructions !== undefined)
     update.payment_instructions = d.paymentInstructions || null;
+  if (d.bankAccountName !== undefined) update.bank_account_name = d.bankAccountName || null;
+  if (d.bankBsb !== undefined) update.bank_bsb = d.bankBsb || null;
+  if (d.bankAccountNumber !== undefined)
+    update.bank_account_number = d.bankAccountNumber || null;
+  if (d.bankName !== undefined) update.bank_name = d.bankName || null;
+  if (d.paymentReference !== undefined)
+    update.payment_reference = d.paymentReference || null;
 
   const { error } = await supabase
     .from("tenants")

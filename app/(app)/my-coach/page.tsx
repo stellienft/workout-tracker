@@ -17,7 +17,7 @@ export default async function MyCoachPage() {
   const { data: clientRows } = await supabase
     .from("trainer_clients")
     .select(
-      "id, tenant_id, status, tenants(name, tagline, logo_url, accent_color, slug, payment_url, payment_instructions)"
+      "id, tenant_id, status, tenants(name, tagline, logo_url, accent_color, slug, payment_url, payment_instructions, bank_account_name, bank_bsb, bank_account_number, bank_name, payment_reference)"
     )
     .eq("user_id", user.id)
     .in("status", ["active", "pending"]);
@@ -229,7 +229,9 @@ export default async function MyCoachPage() {
               </p>
             )}
             {/* How to pay this coach (they collect off-platform). */}
-            {(tenant.payment_url || tenant.payment_instructions) && (
+            {(tenant.payment_url ||
+              tenant.payment_instructions ||
+              tenant.bank_account_number) && (
               <div className="mt-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                   How to pay
@@ -239,14 +241,38 @@ export default async function MyCoachPage() {
                     {tenant.payment_instructions as string}
                   </p>
                 )}
+
+                {tenant.bank_account_number && (
+                  <dl className="mt-2 space-y-1 text-sm">
+                    {tenant.bank_account_name && (
+                      <PayRow label="Account name" value={tenant.bank_account_name as string} />
+                    )}
+                    {tenant.bank_name && (
+                      <PayRow label="Bank" value={tenant.bank_name as string} />
+                    )}
+                    {tenant.bank_bsb && (
+                      <PayRow label="BSB" value={tenant.bank_bsb as string} />
+                    )}
+                    <PayRow label="Account" value={tenant.bank_account_number as string} />
+                    {tenant.payment_reference && (
+                      <PayRow label="Reference" value={tenant.payment_reference as string} />
+                    )}
+                  </dl>
+                )}
+                {tenant.bank_account_number && (
+                  <p className="mt-2 text-xs text-[var(--text-muted)]">
+                    Pay by one-off or a recurring transfer set up in your banking app.
+                  </p>
+                )}
+
                 {tenant.payment_url && (
                   <a
                     href={tenant.payment_url as string}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-2 inline-flex items-center justify-center rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black"
+                    className="mt-3 inline-flex items-center justify-center rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black"
                   >
-                    Pay {tenant.name as string}
+                    Pay {tenant.name as string} online
                   </a>
                 )}
               </div>
@@ -358,6 +384,15 @@ export default async function MyCoachPage() {
           />
         </section>
       </PageShell>
+    </div>
+  );
+}
+
+function PayRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <dt className="text-[var(--text-muted)]">{label}</dt>
+      <dd className="font-medium tabular-nums">{value}</dd>
     </div>
   );
 }

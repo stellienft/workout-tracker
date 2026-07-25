@@ -15,6 +15,11 @@ interface Tenant {
   custom_domain: string | null;
   payment_url?: string | null;
   payment_instructions?: string | null;
+  bank_account_name?: string | null;
+  bank_bsb?: string | null;
+  bank_account_number?: string | null;
+  bank_name?: string | null;
+  payment_reference?: string | null;
 }
 
 export function TrainerBrandingForm({ tenant }: { tenant: Tenant }) {
@@ -30,6 +35,13 @@ export function TrainerBrandingForm({ tenant }: { tenant: Tenant }) {
   const [paymentInstructions, setPaymentInstructions] = useState(
     tenant.payment_instructions ?? ""
   );
+  const [bankAccountName, setBankAccountName] = useState(tenant.bank_account_name ?? "");
+  const [bankBsb, setBankBsb] = useState(tenant.bank_bsb ?? "");
+  const [bankAccountNumber, setBankAccountNumber] = useState(
+    tenant.bank_account_number ?? ""
+  );
+  const [bankName, setBankName] = useState(tenant.bank_name ?? "");
+  const [paymentReference, setPaymentReference] = useState(tenant.payment_reference ?? "");
 
   function save() {
     startTransition(async () => {
@@ -41,6 +53,11 @@ export function TrainerBrandingForm({ tenant }: { tenant: Tenant }) {
         customDomain,
         paymentUrl,
         paymentInstructions,
+        bankAccountName,
+        bankBsb,
+        bankAccountNumber,
+        bankName,
+        paymentReference,
       });
       if (res.ok) {
         toast("Branding saved.", "success");
@@ -170,11 +187,52 @@ export function TrainerBrandingForm({ tenant }: { tenant: Tenant }) {
         <textarea
           value={paymentInstructions}
           onChange={(e) => setPaymentInstructions(e.target.value)}
-          rows={3}
-          placeholder="e.g. Bank transfer to BSB 000-000 Acct 12345678, ref your name."
+          rows={2}
+          placeholder="Anything else your client should know before paying."
           className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 py-2 text-sm focus:border-[var(--border-active)] focus:outline-none"
         />
       </label>
+
+      <div className="rounded-xl border border-[var(--border-subtle)] p-3">
+        <p className="text-sm font-medium">Bank transfer details (optional)</p>
+        <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+          Clients can pay you by one-off or recurring bank transfer using these.
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <input
+            value={bankAccountName}
+            onChange={(e) => setBankAccountName(e.target.value)}
+            placeholder="Account name"
+            className="h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
+          />
+          <input
+            value={bankName}
+            onChange={(e) => setBankName(e.target.value)}
+            placeholder="Bank (optional)"
+            className="h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
+          />
+          <input
+            value={bankBsb}
+            onChange={(e) => setBankBsb(e.target.value)}
+            placeholder="BSB (e.g. 000-000)"
+            inputMode="numeric"
+            className="h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
+          />
+          <input
+            value={bankAccountNumber}
+            onChange={(e) => setBankAccountNumber(e.target.value)}
+            placeholder="Account number"
+            inputMode="numeric"
+            className="h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
+          />
+          <input
+            value={paymentReference}
+            onChange={(e) => setPaymentReference(e.target.value)}
+            placeholder="Payment reference (optional)"
+            className="h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm focus:border-[var(--border-active)] focus:outline-none sm:col-span-2"
+          />
+        </div>
+      </div>
 
       <div className="rounded-xl bg-[var(--surface-secondary)] p-3 text-xs text-[var(--text-muted)]">
         <span className="font-medium text-[var(--text-secondary)]">Your portal slug:</span>{" "}
