@@ -23,6 +23,7 @@ import {
   Crown,
   Package,
   Gift,
+  UserPlus,
   type LucideIcon,
 } from "lucide-react";
 
@@ -64,6 +65,7 @@ export const navSections: NavSection[] = [
     items: [
       { label: "Progress", href: "/progress", icon: TrendingUp },
       { label: "Achievements", href: "/achievements", icon: Medal },
+      { label: "Friends", href: "/friends", icon: UserPlus },
       { label: "Nutrition", href: "/nutrition", icon: Utensils, pro: true },
       { label: "Check-ins", href: "/check-ins", icon: ClipboardCheck },
       { label: "Health", href: "/health", icon: HeartPulse, pro: true },
