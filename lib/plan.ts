@@ -16,6 +16,16 @@ export type Feature =
   | "advanced_stats";
 
 export const PRO_PRICE_LABEL = "$10/mo";
+export const TRAINER_PRICE_LABEL = "$15/mo";
+
+// What the Trainer plan unlocks, for the trainer paywall / billing UI.
+export const TRAINER_BENEFITS: string[] = [
+  "Everything in Pro (AI Coach, Splits, Nutrition, Health, stats)",
+  "Unlimited clients — invite and manage them",
+  "Build programs and assign them to clients",
+  "Create your own paid coaching packages",
+  "In-app client messaging and your own branding",
+];
 
 // Features that require Pro. Anything not listed is available on Free.
 export const PRO_FEATURES: Feature[] = [

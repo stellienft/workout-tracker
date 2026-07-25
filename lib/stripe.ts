@@ -15,6 +15,11 @@ export function isBillingConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_ID);
 }
 
+/** Trainer plan checkout needs its own $15/mo price. */
+export function isTrainerBillingConfigured(): boolean {
+  return Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_TRAINER_PRICE_ID);
+}
+
 /** Absolute base URL for Stripe redirect/callback URLs. */
 export function siteUrl(): string {
   return (
