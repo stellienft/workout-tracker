@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getAuthContext } from "@/lib/auth";
 import { getUserPlan } from "@/lib/entitlements";
 import { createClient } from "@/lib/supabase/server";
+import { notifyUser } from "@/lib/notify";
 
 async function auth() {
   const supabase = await createClient();
@@ -12,6 +13,19 @@ async function auth() {
     data: { user },
   } = await supabase.auth.getUser();
   return { supabase, user };
+}
+
+/** A friendly display name for the current user (own profile is readable). */
+async function displayName(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+): Promise<string> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("full_name, email")
+    .eq("id", userId)
+    .maybeSingle();
+  return (data?.full_name as string) || (data?.email as string) || "Someone";
 }
 
 /** Send a friend request by email. */
@@ -45,6 +59,14 @@ export async function sendFriendRequest(email: string) {
     // A pending request from them → accept it instead of duplicating.
     if (existing.requester_id === foundId) {
       await supabase.from("friendships").update({ status: "accepted", updated_at: new Date().toISOString() }).eq("id", existing.id);
+      const name = await displayName(supabase, user.id);
+      await notifyUser({
+        userId: foundId as string,
+        type: "friend_accepted",
+        title: `${name} accepted your friend request`,
+        body: "You're now friends on Stellio Fit.",
+        link: "/friends",
+      });
       revalidatePath("/friends");
       return { ok: true as const, accepted: true };
     }
@@ -57,6 +79,16 @@ export async function sendFriendRequest(email: string) {
     status: "pending",
   });
   if (error) return { ok: false as const, error: error.message };
+
+  const name = await displayName(supabase, user.id);
+  await notifyUser({
+    userId: foundId as string,
+    type: "friend_request",
+    title: `${name} sent you a friend request`,
+    body: "Open Friends to accept.",
+    link: "/friends",
+  });
+
   revalidatePath("/friends");
   return { ok: true as const };
 }
@@ -65,12 +97,33 @@ export async function sendFriendRequest(email: string) {
 export async function respondFriendRequest(friendshipId: string, accept: boolean) {
   const { supabase, user } = await auth();
   if (!user) return { ok: false as const, error: "Not authenticated" };
+
+  // Grab the requester before updating so we can tell them it was accepted.
+  const { data: fr } = await supabase
+    .from("friendships")
+    .select("requester_id")
+    .eq("id", friendshipId)
+    .eq("addressee_id", user.id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("friendships")
     .update({ status: accept ? "accepted" : "declined", updated_at: new Date().toISOString() })
     .eq("id", friendshipId)
     .eq("addressee_id", user.id); // only the addressee can accept/decline
   if (error) return { ok: false as const, error: error.message };
+
+  if (accept && fr?.requester_id) {
+    const name = await displayName(supabase, user.id);
+    await notifyUser({
+      userId: fr.requester_id as string,
+      type: "friend_accepted",
+      title: `${name} accepted your friend request`,
+      body: "You're now friends on Stellio Fit.",
+      link: "/friends",
+    });
+  }
+
   revalidatePath("/friends");
   return { ok: true as const };
 }

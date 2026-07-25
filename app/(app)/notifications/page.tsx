@@ -36,7 +36,7 @@ export default async function NotificationsPage() {
     <PageShell>
       <PageHeader
         title="Notifications"
-        subtitle="Updates from your coach and clients."
+        subtitle="Updates from your coach, clients and friends."
         action={hasUnread ? <MarkAllRead /> : undefined}
       />
 
