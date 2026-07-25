@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CoverImage } from "@/components/ui/cover-image";
 import { cn } from "@/lib/utils";
 import { completeOnboarding } from "@/lib/actions/onboarding";
+import { processReferral } from "@/lib/actions/referrals";
 import type { FitnessGoal } from "@/lib/types";
 import { Check } from "lucide-react";
 
@@ -73,7 +74,9 @@ export function OnboardingWizard({
       medicationTracking,
     });
     if (res.ok) {
-      // Land on the membership offer (paywall) once onboarding is done.
+      // Redeem any referral invite (grants both sides a free month), then land
+      // on the membership offer once onboarding is done.
+      await processReferral().catch(() => {});
       router.push("/billing?welcome=1");
       router.refresh();
     } else {

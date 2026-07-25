@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { AuthForm } from "@/components/auth-form";
+import { CaptureRef } from "@/components/referrals/capture-ref";
 
 export const metadata = { title: "Create account" };
 
@@ -15,6 +16,9 @@ export default function SignupPage() {
           Create your account and pick a goal.
         </p>
       </div>
+      <Suspense fallback={null}>
+        <CaptureRef />
+      </Suspense>
       <Suspense fallback={<div className="skeleton h-80 w-full" />}>
         <AuthForm mode="signup" />
       </Suspense>

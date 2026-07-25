@@ -5,8 +5,9 @@ import type { Plan } from "@/lib/plan";
 export interface Entitlement {
   plan: Plan;
   isPro: boolean;
-  // Why they're Pro: own subscription, a coaching package, or a staff role.
-  source: "subscription" | "coaching" | "staff" | "free";
+  // Why they're Pro: own subscription, a coaching package, a free grant
+  // (referral/trial), or a staff role.
+  source: "subscription" | "coaching" | "trial" | "staff" | "free";
   currentPeriodEnd: string | null;
 }
 
@@ -49,6 +50,21 @@ export const getUserPlan = cache(async (): Promise<Entitlement> => {
     .maybeSingle();
   if (pkg) {
     return { plan: "pro", isPro: true, source: "coaching", currentPeriodEnd: null };
+  }
+
+  // A free grant (referral bonus / trial) that hasn't expired.
+  const { data: grant } = await supabase
+    .from("free_grants")
+    .select("pro_until")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (grant?.pro_until && new Date(grant.pro_until as string).getTime() > Date.now()) {
+    return {
+      plan: "pro",
+      isPro: true,
+      source: "trial",
+      currentPeriodEnd: grant.pro_until as string,
+    };
   }
 
   return { plan: "free", isPro: false, source: "free", currentPeriodEnd: null };

@@ -58,9 +58,11 @@ export default async function BillingPage({
                   ? "Full access (staff)"
                   : source === "coaching"
                     ? "Pro — included with your coach"
-                    : isTrainer
-                      ? "Trainer plan"
-                      : "Stellio Fit Pro"}
+                    : source === "trial"
+                      ? "Pro — free month"
+                      : isTrainer
+                        ? "Trainer plan"
+                        : "Stellio Fit Pro"}
               </p>
             </div>
             <p className="mt-1 text-sm text-[var(--text-secondary)]">
@@ -68,7 +70,9 @@ export default async function BillingPage({
                 ? "Your admin/trainer role includes every feature."
                 : source === "coaching"
                   ? "Your coaching package includes full Pro access. Manage it with your coach."
-                  : "You have every feature unlocked. Thanks for supporting Stellio Fit."}
+                  : source === "trial"
+                    ? "You've got Pro free from a referral. Invite more friends to extend it, or subscribe to keep it after."
+                    : "You have every feature unlocked. Thanks for supporting Stellio Fit."}
               {currentPeriodEnd
                 ? ` Renews ${new Date(currentPeriodEnd).toLocaleDateString()}.`
                 : ""}
