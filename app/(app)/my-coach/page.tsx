@@ -16,7 +16,9 @@ export default async function MyCoachPage() {
   // The tenant(s) this member is connected to (active or a pending invite).
   const { data: clientRows } = await supabase
     .from("trainer_clients")
-    .select("id, tenant_id, status, tenants(name, tagline, logo_url, accent_color, slug)")
+    .select(
+      "id, tenant_id, status, tenants(name, tagline, logo_url, accent_color, slug, payment_url, payment_instructions)"
+    )
     .eq("user_id", user.id)
     .in("status", ["active", "pending"]);
 
@@ -225,6 +227,29 @@ export default async function MyCoachPage() {
               <p className="mt-3 text-xs text-[var(--accent-primary)]">
                 Active — includes full Pro access.
               </p>
+            )}
+            {/* How to pay this coach (they collect off-platform). */}
+            {(tenant.payment_url || tenant.payment_instructions) && (
+              <div className="mt-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                  How to pay
+                </p>
+                {tenant.payment_instructions && (
+                  <p className="mt-1 whitespace-pre-line text-sm text-[var(--text-secondary)]">
+                    {tenant.payment_instructions as string}
+                  </p>
+                )}
+                {tenant.payment_url && (
+                  <a
+                    href={tenant.payment_url as string}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-flex items-center justify-center rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black"
+                  >
+                    Pay {tenant.name as string}
+                  </a>
+                )}
+              </div>
             )}
             {pkgStatus === "paused" && (
               <p className="mt-3 text-xs text-[var(--warning)]">
