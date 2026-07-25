@@ -22,6 +22,7 @@ import {
   Medal,
   Crown,
   Package,
+  Gift,
   type LucideIcon,
 } from "lucide-react";
 
@@ -84,6 +85,7 @@ export const navSections: NavSection[] = [
     title: "Account",
     items: [
       { label: "Membership", href: "/billing", icon: Crown },
+      { label: "Refer a friend", href: "/referrals", icon: Gift },
       { label: "Settings", href: "/settings", icon: Settings },
       { label: "Admin", href: "/admin", icon: ShieldCheck, adminOnly: true },
     ],
