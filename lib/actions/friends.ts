@@ -21,7 +21,7 @@ export async function sendFriendRequest(email: string) {
   const parsed = z.string().email().safeParse(email.trim().toLowerCase());
   if (!parsed.success) return { ok: false as const, error: "Enter a valid email." };
 
-  const { data: foundId } = await supabase.rpc("find_user_id_by_email", {
+  const { data: foundId } = await supabase.rpc("friend_user_id_by_email", {
     p_email: parsed.data,
   });
   if (!foundId) {
