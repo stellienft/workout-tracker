@@ -13,6 +13,8 @@ interface Tenant {
   accent_color: string | null;
   tagline: string | null;
   custom_domain: string | null;
+  payment_url?: string | null;
+  payment_instructions?: string | null;
 }
 
 export function TrainerBrandingForm({ tenant }: { tenant: Tenant }) {
@@ -24,6 +26,10 @@ export function TrainerBrandingForm({ tenant }: { tenant: Tenant }) {
   const [logoUrl, setLogoUrl] = useState(tenant.logo_url ?? "");
   const [accentColor, setAccentColor] = useState(tenant.accent_color ?? "#CCFF30");
   const [customDomain, setCustomDomain] = useState(tenant.custom_domain ?? "");
+  const [paymentUrl, setPaymentUrl] = useState(tenant.payment_url ?? "");
+  const [paymentInstructions, setPaymentInstructions] = useState(
+    tenant.payment_instructions ?? ""
+  );
 
   function save() {
     startTransition(async () => {
@@ -33,6 +39,8 @@ export function TrainerBrandingForm({ tenant }: { tenant: Tenant }) {
         logoUrl,
         accentColor,
         customDomain,
+        paymentUrl,
+        paymentInstructions,
       });
       if (res.ok) {
         toast("Branding saved.", "success");
@@ -133,6 +141,38 @@ export function TrainerBrandingForm({ tenant }: { tenant: Tenant }) {
           onChange={(e) => setCustomDomain(e.target.value)}
           placeholder="train.yourbrand.com"
           className="h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
+        />
+      </label>
+
+      <div className="border-t border-[var(--border-subtle)] pt-4">
+        <p className="text-sm font-semibold">Getting paid</p>
+        <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+          You collect payment your own way. Add a payment link and instructions —
+          clients on a package see these to pay you.
+        </p>
+      </div>
+
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium">Payment link (optional)</span>
+        <input
+          value={paymentUrl}
+          onChange={(e) => setPaymentUrl(e.target.value)}
+          placeholder="https://buy.stripe.com/… or PayPal.me/you"
+          className="h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
+        />
+        <span className="text-xs text-[var(--text-muted)]">
+          A Stripe Payment Link, PayPal.me, or any checkout URL you use.
+        </span>
+      </label>
+
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium">Payment instructions (optional)</span>
+        <textarea
+          value={paymentInstructions}
+          onChange={(e) => setPaymentInstructions(e.target.value)}
+          rows={3}
+          placeholder="e.g. Bank transfer to BSB 000-000 Acct 12345678, ref your name."
+          className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 py-2 text-sm focus:border-[var(--border-active)] focus:outline-none"
         />
       </label>
 

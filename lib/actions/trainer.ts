@@ -61,6 +61,8 @@ const tenantSchema = z.object({
   logoUrl: z.string().url().optional().or(z.literal("")),
   accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   customDomain: z.string().max(200).optional().or(z.literal("")),
+  paymentUrl: z.string().url().optional().or(z.literal("")),
+  paymentInstructions: z.string().max(500).optional().or(z.literal("")),
 });
 
 export async function updateTenant(input: z.input<typeof tenantSchema>) {
@@ -76,6 +78,9 @@ export async function updateTenant(input: z.input<typeof tenantSchema>) {
   if (d.logoUrl) update.logo_url = d.logoUrl;
   if (d.accentColor) update.accent_color = d.accentColor;
   if (d.customDomain !== undefined) update.custom_domain = d.customDomain;
+  if (d.paymentUrl !== undefined) update.payment_url = d.paymentUrl || null;
+  if (d.paymentInstructions !== undefined)
+    update.payment_instructions = d.paymentInstructions || null;
 
   const { error } = await supabase
     .from("tenants")
