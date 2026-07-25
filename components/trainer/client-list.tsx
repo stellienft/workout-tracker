@@ -11,6 +11,8 @@ import {
   assignProgramToClient,
   unassignPlan,
 } from "@/lib/actions/trainer";
+import { assignClientPackage } from "@/lib/actions/packages";
+import { money } from "@/components/trainer/trainer-packages";
 import { useRouter } from "next/navigation";
 
 interface Client {
@@ -31,15 +33,31 @@ interface Assignment {
   clientUserId: string;
   programName: string;
 }
+export interface PackageOption {
+  id: string;
+  name: string;
+  price_cents: number;
+  currency: string;
+  interval: "monthly" | "weekly" | "one_off";
+}
+export interface ClientPackage {
+  clientUserId: string;
+  packageId: string;
+  status: "active" | "paused" | "cancelled";
+}
 
 export function ClientList({
   clients,
   programs,
   assignments,
+  packages,
+  clientPackages,
 }: {
   clients: Client[];
   programs: ProgramOption[];
   assignments: Assignment[];
+  packages: PackageOption[];
+  clientPackages: ClientPackage[];
 }) {
   const toast = useToast();
   const router = useRouter();
@@ -96,6 +114,34 @@ export function ClientList({
     });
   }
 
+  function setPackage(clientUserId: string, packageId: string | null) {
+    startTransition(async () => {
+      const res = await assignClientPackage({ clientUserId, packageId });
+      if (res.ok) {
+        toast(packageId ? "Package assigned." : "Package removed.", "success");
+        router.refresh();
+      } else {
+        toast(res.error ?? "Could not update package", "error");
+      }
+    });
+  }
+
+  function setPackageStatus(
+    clientUserId: string,
+    packageId: string,
+    status: "active" | "paused"
+  ) {
+    startTransition(async () => {
+      const res = await assignClientPackage({ clientUserId, packageId, status });
+      if (res.ok) {
+        toast(`Package ${status}.`, "success");
+        router.refresh();
+      } else {
+        toast(res.error ?? "Could not update", "error");
+      }
+    });
+  }
+
   function message(userId: string) {
     startTransition(async () => {
       const res = await startThread(userId);
@@ -120,6 +166,9 @@ export function ClientList({
           {clients.map((c) => {
             const clientAssignments = assignments.filter(
               (a) => a.clientUserId === c.user_id
+            );
+            const clientPackage = clientPackages.find(
+              (p) => p.clientUserId === c.user_id
             );
             return (
               <div
@@ -243,6 +292,73 @@ export function ClientList({
                         + Assign a program
                       </button>
                     ))}
+                </div>
+
+                {/* Coaching package */}
+                <div className="space-y-2 border-t border-[var(--border-subtle)] p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                    Coaching package
+                  </p>
+                  {packages.length === 0 ? (
+                    <p className="text-xs text-[var(--text-muted)]">
+                      Create a package first on the Packages page.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <select
+                        value={clientPackage?.packageId ?? ""}
+                        onChange={(e) => setPackage(c.user_id, e.target.value || null)}
+                        disabled={pending}
+                        className="h-9 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-2 text-xs"
+                      >
+                        <option value="">No package</option>
+                        {packages.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} — {money(p.price_cents, p.currency)}
+                          </option>
+                        ))}
+                      </select>
+                      {clientPackage && (
+                        <>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs ${
+                              clientPackage.status === "active"
+                                ? "bg-[var(--accent-muted)] text-[var(--accent-primary)]"
+                                : "text-[var(--text-muted)]"
+                            }`}
+                          >
+                            {clientPackage.status}
+                          </span>
+                          {clientPackage.status === "active" ? (
+                            <button
+                              onClick={() =>
+                                setPackageStatus(c.user_id, clientPackage.packageId, "paused")
+                              }
+                              disabled={pending}
+                              className="text-xs text-[var(--text-muted)]"
+                            >
+                              Pause
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                setPackageStatus(c.user_id, clientPackage.packageId, "active")
+                              }
+                              disabled={pending}
+                              className="text-xs text-[var(--accent-primary)]"
+                            >
+                              Activate
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {clientPackage?.status === "active" && (
+                    <p className="text-[11px] text-[var(--text-muted)]">
+                      This client has full Pro access while their package is active.
+                    </p>
+                  )}
                 </div>
               </div>
             );
