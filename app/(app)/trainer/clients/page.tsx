@@ -1,4 +1,8 @@
+import Link from "next/link";
+import { Sparkles } from "lucide-react";
 import { requireTrainer, getAuthContext } from "@/lib/auth";
+import { getUserPlan } from "@/lib/entitlements";
+import { FREE_TRAINER_CLIENT_LIMIT, TRAINER_PRICE_LABEL } from "@/lib/plan";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { createClient } from "@/lib/supabase/server";
 import { ClientList } from "@/components/trainer/client-list";
@@ -8,6 +12,7 @@ export const metadata = { title: "Clients" };
 export default async function TrainerClientsPage() {
   await requireTrainer();
   const { user } = await getAuthContext();
+  const { isPro } = await getUserPlan();
   const supabase = await createClient();
 
   const { data: tenant } = await supabase
@@ -91,9 +96,38 @@ export default async function TrainerClientsPage() {
     };
   });
 
+  const activeOrPending = (clients ?? []).filter((c) =>
+    ["active", "pending"].includes(c.status as string)
+  ).length;
+  const showUpgrade = !isPro && activeOrPending >= FREE_TRAINER_CLIENT_LIMIT;
+
   return (
     <PageShell>
       <PageHeader title="Clients" subtitle="Manage your coaching clients." />
+
+      {showUpgrade && (
+        <Link
+          href="/billing"
+          className="mt-6 flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--border-active)] bg-[var(--surface-primary)] p-4 ring-1 ring-[var(--accent-primary)]/20 transition-colors hover:border-[var(--border-active)]"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--accent-muted)] text-[var(--accent-primary)]">
+            <Sparkles className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1 text-sm">
+            <span className="block font-semibold">
+              You&apos;ve reached the free {FREE_TRAINER_CLIENT_LIMIT}-client limit
+            </span>
+            <span className="block text-[var(--text-muted)]">
+              Upgrade to the Trainer plan ({TRAINER_PRICE_LABEL}) for unlimited
+              clients, plus AI Coach, nutrition and more.
+            </span>
+          </span>
+          <span className="shrink-0 text-sm font-semibold text-[var(--accent-primary)]">
+            Upgrade
+          </span>
+        </Link>
+      )}
+
       <div className="mt-6">
         <ClientList
           clients={clientList}

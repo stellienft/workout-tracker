@@ -4,6 +4,8 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { randomUUID } from "crypto";
+import { getUserPlan } from "@/lib/entitlements";
+import { FREE_TRAINER_CLIENT_LIMIT, TRAINER_PRICE_LABEL } from "@/lib/plan";
 
 async function auth() {
   const supabase = await createClient();
@@ -391,6 +393,34 @@ export async function inviteClient(input: { email: string; displayName?: string 
       ok: false,
       error: "No Stellio Fit account uses that email. Ask them to sign up first.",
     };
+  }
+
+  // Free trainers can coach a limited number of clients. Re-inviting an existing
+  // client is always allowed (it just updates their row); only adding a *new*
+  // client beyond the free limit requires the Trainer plan. Admins/paid trainers
+  // resolve to Pro and skip the cap.
+  const { data: existingClient } = await supabase
+    .from("trainer_clients")
+    .select("id")
+    .eq("tenant_id", tenant.id)
+    .eq("user_id", foundId as string)
+    .maybeSingle();
+
+  if (!existingClient) {
+    const { isPro } = await getUserPlan();
+    if (!isPro) {
+      const { count } = await supabase
+        .from("trainer_clients")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenant.id)
+        .in("status", ["active", "pending"]);
+      if ((count ?? 0) >= FREE_TRAINER_CLIENT_LIMIT) {
+        return {
+          ok: false,
+          error: `Free trainers can coach ${FREE_TRAINER_CLIENT_LIMIT} client. Upgrade to the Trainer plan (${TRAINER_PRICE_LABEL}) for unlimited clients.`,
+        };
+      }
+    }
   }
 
   const { error } = await supabase.from("trainer_clients").upsert({
