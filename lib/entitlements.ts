@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { getAuthContext, isAdminRole, isTrainerRole } from "@/lib/auth";
+import { getAuthContext, isAdminRole } from "@/lib/auth";
 import type { Plan } from "@/lib/plan";
 
 export interface Entitlement {
@@ -11,15 +11,15 @@ export interface Entitlement {
 }
 
 /**
- * The current user's plan. Admins and trainers always get Pro (they need the
- * full toolset to run the platform / their clients). Everyone else resolves to
- * their subscription row, defaulting to Free.
+ * The current user's plan. Admins always get full access. Trainers must hold an
+ * active Trainer subscription ($15/mo) — they are not auto-Pro. Members resolve
+ * to their subscription (or an active coaching package), defaulting to Free.
  */
 export const getUserPlan = cache(async (): Promise<Entitlement> => {
   const { user, roles, supabase } = await getAuthContext();
   if (!user) return { plan: "free", isPro: false, source: "free", currentPeriodEnd: null };
 
-  if (isAdminRole(roles) || isTrainerRole(roles)) {
+  if (isAdminRole(roles)) {
     return { plan: "pro", isPro: true, source: "staff", currentPeriodEnd: null };
   }
 

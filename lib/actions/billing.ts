@@ -1,16 +1,19 @@
 "use server";
 
-import { getAuthContext } from "@/lib/auth";
-import { stripeClient, isBillingConfigured, siteUrl } from "@/lib/stripe";
+import { getAuthContext, isTrainerRole } from "@/lib/auth";
+import { stripeClient, siteUrl } from "@/lib/stripe";
 
-/** Start a Stripe Checkout for the Pro subscription; returns the redirect URL. */
+/** Start a Stripe Checkout. Trainers get the $15/mo Trainer plan; members the
+ * $10/mo Pro plan. Returns the redirect URL. */
 export async function createCheckoutSession() {
-  const { user, profile } = await getAuthContext();
+  const { user, profile, roles } = await getAuthContext();
   if (!user) return { ok: false as const, error: "Not authenticated" };
 
   const stripe = stripeClient();
-  const priceId = process.env.STRIPE_PRICE_ID;
-  if (!stripe || !priceId || !isBillingConfigured()) {
+  const priceId = isTrainerRole(roles)
+    ? process.env.STRIPE_TRAINER_PRICE_ID
+    : process.env.STRIPE_PRICE_ID;
+  if (!stripe || !priceId) {
     return { ok: false as const, error: "Billing isn't configured yet." };
   }
 
