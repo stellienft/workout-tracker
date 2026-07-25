@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getTemplate } from "@/lib/split-templates";
+import { getUserPlan } from "@/lib/entitlements";
 
 async function auth() {
   const supabase = await createClient();
@@ -16,6 +17,8 @@ async function auth() {
 export async function createSplit(input: { name: string; description?: string }) {
   const { supabase, user } = await auth();
   if (!user) return { ok: false as const, error: "Not authenticated" };
+  const { isPro } = await getUserPlan();
+  if (!isPro) return { ok: false as const, error: "Custom Splits is a Pro feature." };
   const parsed = z
     .object({
       name: z.string().min(2, "Give your split a name").max(120),
@@ -46,6 +49,8 @@ export async function createSplit(input: { name: string; description?: string })
 export async function createSplitFromTemplate(templateKey: string) {
   const { supabase, user } = await auth();
   if (!user) return { ok: false as const, error: "Not authenticated" };
+  const { isPro } = await getUserPlan();
+  if (!isPro) return { ok: false as const, error: "Custom Splits is a Pro feature." };
 
   const template = getTemplate(templateKey);
   if (!template) return { ok: false as const, error: "Unknown template" };

@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { requireUser, getAuthContext } from "@/lib/auth";
+import { getUserPlan } from "@/lib/entitlements";
+import { planAllows } from "@/lib/plan";
+import { UpgradeWall } from "@/components/billing/upgrade-wall";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { HealthPanel } from "@/components/tracking/health-panel";
@@ -10,6 +13,9 @@ export const metadata = { title: "Health" };
 
 export default async function HealthPage() {
   const { user } = await requireUser();
+  const { plan } = await getUserPlan();
+  if (!planAllows(plan, "health")) return <UpgradeWall feature="health" />;
+
   const { profile } = await getAuthContext();
   const supabase = await createClient();
 

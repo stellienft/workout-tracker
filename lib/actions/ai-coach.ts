@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getAuthContext, isAdminRole } from "@/lib/auth";
+import { getUserPlan } from "@/lib/entitlements";
 import { createClient } from "@/lib/supabase/server";
 import {
   buildInsights,
@@ -111,6 +112,9 @@ export async function getTrainingInsights() {
 export async function generateAdaptiveProgram(input?: { daysPerWeek?: number }) {
   const { supabase, user, roles } = await getAuthContext();
   if (!user) return { ok: false as const, error: "Not authenticated" };
+
+  const { isPro } = await getUserPlan();
+  if (!isPro) return { ok: false as const, error: "AI Coach is a Pro feature." };
 
   const testMode = isAdminRole(roles);
 

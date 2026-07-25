@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { requireUser } from "@/lib/auth";
+import { getUserPlan } from "@/lib/entitlements";
+import { planAllows } from "@/lib/plan";
+import { UpgradeWall } from "@/components/billing/upgrade-wall";
 import { createClient } from "@/lib/supabase/server";
 import { PageShell } from "@/components/ui/page-header";
 import { RecipeLibrary } from "@/components/nutrition/recipe-library";
@@ -9,6 +12,8 @@ export const metadata = { title: "Recipes" };
 
 export default async function RecipesPage() {
   const { user } = await requireUser();
+  const { plan } = await getUserPlan();
+  if (!planAllows(plan, "nutrition")) return <UpgradeWall feature="nutrition" />;
   const supabase = await createClient();
 
   const [{ data: recipes }, { data: favs }] = await Promise.all([

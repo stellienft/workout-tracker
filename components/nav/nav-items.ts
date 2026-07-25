@@ -20,6 +20,7 @@ import {
   Utensils,
   Sparkles,
   Medal,
+  Crown,
   type LucideIcon,
 } from "lucide-react";
 
@@ -30,6 +31,7 @@ export interface NavItem {
   adminOnly?: boolean;
   trainerOnly?: boolean;
   clientOnly?: boolean;
+  pro?: boolean; // shows a lock for Free members
 }
 
 export interface NavSection {
@@ -50,7 +52,7 @@ export const navSections: NavSection[] = [
       { label: "Workouts", href: "/workouts", icon: Dumbbell },
       { label: "Programs", href: "/programs", icon: BookOpen },
       { label: "Exercises", href: "/exercises", icon: Library },
-      { label: "My Splits", href: "/splits", icon: Layers },
+      { label: "My Splits", href: "/splits", icon: Layers, pro: true },
       { label: "Schedule", href: "/schedule", icon: Calendar },
       { label: "Goals", href: "/goals", icon: Target },
     ],
@@ -60,15 +62,15 @@ export const navSections: NavSection[] = [
     items: [
       { label: "Progress", href: "/progress", icon: TrendingUp },
       { label: "Achievements", href: "/achievements", icon: Medal },
-      { label: "Nutrition", href: "/nutrition", icon: Utensils },
+      { label: "Nutrition", href: "/nutrition", icon: Utensils, pro: true },
       { label: "Check-ins", href: "/check-ins", icon: ClipboardCheck },
-      { label: "Health", href: "/health", icon: HeartPulse },
+      { label: "Health", href: "/health", icon: HeartPulse, pro: true },
     ],
   },
   {
     title: "Coaching",
     items: [
-      { label: "AI Coach", href: "/ai-coach", icon: Sparkles },
+      { label: "AI Coach", href: "/ai-coach", icon: Sparkles, pro: true },
       { label: "My Coach", href: "/my-coach", icon: UserRound, clientOnly: true },
       { label: "Trainer Portal", href: "/trainer", icon: Briefcase, trainerOnly: true },
       { label: "Clients", href: "/trainer/clients", icon: Users, trainerOnly: true },
@@ -78,6 +80,7 @@ export const navSections: NavSection[] = [
   {
     title: "Account",
     items: [
+      { label: "Membership", href: "/billing", icon: Crown },
       { label: "Settings", href: "/settings", icon: Settings },
       { label: "Admin", href: "/admin", icon: ShieldCheck, adminOnly: true },
     ],

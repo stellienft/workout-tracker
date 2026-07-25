@@ -7,7 +7,11 @@ import { ExerciseImage } from "@/components/ui/exercise-image";
 import { ExerciseFavoriteButton } from "@/components/exercise-favorite-button";
 import { GifDemo } from "@/components/exercise/gif-demo";
 import { ExerciseHistory, type HistoryPoint } from "@/components/exercise/exercise-history";
+import { getUserPlan } from "@/lib/entitlements";
+import { planAllows } from "@/lib/plan";
 import { estimate1RM } from "@/lib/ai/analysis";
+import { Lock } from "lucide-react";
+import { UpgradeButton } from "@/components/billing/billing-actions";
 import { normaliseVideoForClient } from "@/lib/video-utils";
 import { ShieldAlert } from "lucide-react";
 import Link from "next/link";
@@ -41,6 +45,8 @@ export default async function ExerciseDetailPage({
 }) {
   const { slug } = await params;
   const { user } = await requireUser();
+  const { plan } = await getUserPlan();
+  const canSeeStats = planAllows(plan, "advanced_stats");
   const supabase = await createClient();
 
   const { data: exercise } = await supabase
@@ -133,7 +139,24 @@ export default async function ExerciseDetailPage({
         )}
       </div>
 
-      {history.length > 0 && <ExerciseHistory points={history} />}
+      {history.length > 0 &&
+        (canSeeStats ? (
+          <ExerciseHistory points={history} />
+        ) : (
+          <div className="mt-8 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
+            <div className="flex items-center gap-2">
+              <Lock className="h-4 w-4 text-[var(--text-muted)]" />
+              <p className="font-semibold">Your history for this lift</p>
+            </div>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              See your PR, estimated 1RM and progression chart for every exercise
+              with Stellio Fit Pro.
+            </p>
+            <div className="mt-3">
+              <UpgradeButton label="Unlock with Pro" />
+            </div>
+          </div>
+        ))}
 
       {e.instructions && (
         <div className="mt-6">

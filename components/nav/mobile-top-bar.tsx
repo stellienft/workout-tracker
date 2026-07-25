@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, X, LogOut, ArrowLeft } from "lucide-react";
+import { Menu, X, LogOut, ArrowLeft, Lock } from "lucide-react";
 import { navSections, sidebarItems, bottomNavItems } from "./nav-items";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/actions/auth";
@@ -18,6 +18,7 @@ export function MobileTopBar({
   isAdmin,
   isTrainer,
   isClient,
+  isPro,
   unread,
   name,
   email,
@@ -26,6 +27,7 @@ export function MobileTopBar({
   isAdmin: boolean;
   isTrainer: boolean;
   isClient: boolean;
+  isPro: boolean;
   unread: number;
   name: string;
   email: string;
@@ -134,7 +136,10 @@ export function MobileTopBar({
                             )}
                           >
                             <Icon className="h-5 w-5 shrink-0" />
-                            {item.label}
+                            <span className="flex-1">{item.label}</span>
+                            {item.pro && !isPro && (
+                              <Lock className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                            )}
                           </Link>
                         </li>
                       );

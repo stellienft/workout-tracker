@@ -1,4 +1,7 @@
 import { requireUser } from "@/lib/auth";
+import { getUserPlan } from "@/lib/entitlements";
+import { planAllows } from "@/lib/plan";
+import { UpgradeWall } from "@/components/billing/upgrade-wall";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { GenerateProgram } from "@/components/coach/generate-program";
 import { getTrainingInsights } from "@/lib/actions/ai-coach";
@@ -36,6 +39,9 @@ const TREND_STYLE: Record<
 
 export default async function AiCoachPage() {
   await requireUser();
+  const { plan } = await getUserPlan();
+  if (!planAllows(plan, "ai_coach")) return <UpgradeWall feature="ai_coach" />;
+
   const res = await getTrainingInsights();
 
   if (!res.ok) {

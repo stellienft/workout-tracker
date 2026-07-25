@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import { requireUser, getAuthContext } from "@/lib/auth";
+import { getUserPlan } from "@/lib/entitlements";
+import { planAllows } from "@/lib/plan";
+import { UpgradeWall } from "@/components/billing/upgrade-wall";
 import { getPrimaryGoal } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
@@ -19,6 +22,8 @@ export default async function NutritionPage({
   searchParams: Promise<{ date?: string }>;
 }) {
   const { user } = await requireUser();
+  const { plan } = await getUserPlan();
+  if (!planAllows(plan, "nutrition")) return <UpgradeWall feature="nutrition" />;
   await getAuthContext();
   const sp = await searchParams;
   const date =
