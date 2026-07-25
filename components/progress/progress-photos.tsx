@@ -12,10 +12,24 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 import {
-  uploadProgressPhoto,
+  recordProgressPhoto,
   deleteProgressPhoto,
 } from "@/lib/actions/progress-photos";
+
+const PHOTO_BUCKET = "progress-photos";
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024; // 8 MB
+const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
+
+function photoExt(file: File) {
+  if (file.type === "image/png") return "png";
+  if (file.type === "image/webp") return "webp";
+  if (file.type === "image/heic") return "heic";
+  if (file.type === "image/jpeg") return "jpg";
+  const dot = file.name.lastIndexOf(".");
+  return dot > -1 ? file.name.slice(dot + 1).toLowerCase() : "jpg";
+}
 
 export interface ProgressPhoto {
   id: string;
@@ -262,12 +276,54 @@ function UploadPanel({
       setError("Please choose a photo.");
       return;
     }
+    if (file.type && !PHOTO_TYPES.includes(file.type)) {
+      setError("Use a JPG, PNG, WebP or HEIC image.");
+      return;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      setError("Photo is too large (max 8 MB).");
+      return;
+    }
     setBusy(true);
     setError(null);
-    const res = await uploadProgressPhoto(fd);
+
+    // Upload straight to the private bucket from the browser — routing the file
+    // through a Server Action hits the request-body size limit and fails for
+    // any normal phone photo.
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setError("Please sign in again.");
+      setBusy(false);
+      return;
+    }
+    const path = `${user.id}/${crypto.randomUUID()}.${photoExt(file)}`;
+    const { error: upErr } = await supabase.storage
+      .from(PHOTO_BUCKET)
+      .upload(path, file, {
+        contentType: file.type || "image/jpeg",
+        upsert: false,
+      });
+    if (upErr) {
+      setError(upErr.message || "Couldn't upload. Try again.");
+      setBusy(false);
+      return;
+    }
+
+    const res = await recordProgressPhoto({
+      storagePath: path,
+      pose: (fd.get("pose") as string) || undefined,
+      takenOn: (fd.get("takenOn") as string) || undefined,
+      weightKg: fd.get("weightKg") ? Number(fd.get("weightKg")) : undefined,
+      note: (fd.get("note") as string) || undefined,
+    });
     if (res.ok) {
       onDone();
     } else {
+      // Remove the orphaned object if we couldn't record it.
+      await supabase.storage.from(PHOTO_BUCKET).remove([path]);
       setError(res.error ?? "Couldn't upload. Try again.");
       setBusy(false);
     }
