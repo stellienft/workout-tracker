@@ -361,17 +361,8 @@ export async function getFeed(page = 1, perPage = 20): Promise<FeedPost[]> {
   let postsQuery = supabase
     .from("social_posts")
     .select(
-      `
-      id,
-      caption,
-      media_url,
-      media_type,
-      created_at,
-      user_id,
-      workout_session_id,
-      ai_moderation_status,
-      profiles!social_posts_user_id_fkey ( id, full_name, avatar_url )
-    `,
+      `id, caption, media_url, media_type, created_at, user_id,
+       workout_session_id, ai_moderation_status`,
     )
     .order("created_at", { ascending: false })
     .range(offset, offset + perPage - 1);
@@ -386,6 +377,20 @@ export async function getFeed(page = 1, perPage = 20): Promise<FeedPost[]> {
   if (postsError || !posts || posts.length === 0) return [];
 
   const postIds = posts.map((p) => p.id);
+  const userIds = Array.from(new Set(posts.map((p) => p.user_id as string)));
+
+  // Fetch profiles separately (no FK from social_posts to profiles)
+  const { data: profileRows } = await supabase
+    .from("profiles")
+    .select("id, full_name, avatar_url")
+    .in("id", userIds);
+  const profileMap = new Map<string, { full_name: string | null; avatar_url: string | null }>();
+  for (const p of profileRows ?? []) {
+    profileMap.set(p.id as string, {
+      full_name: p.full_name as string | null,
+      avatar_url: p.avatar_url as string | null,
+    });
+  }
 
   // --- 3. Fetch reaction counts, comment counts, and current user's reactions in parallel ---
   const [reactionsData, commentCountsData, userReactionsData] = await Promise.all([
@@ -433,7 +438,7 @@ export async function getFeed(page = 1, perPage = 20): Promise<FeedPost[]> {
 
   // --- 4. Assemble final FeedPost[] ---
   return posts.map((p) => {
-    const profile = (p as unknown as { profiles: { id: string; full_name: string | null; avatar_url: string | null } | null }).profiles;
+    const profile = profileMap.get(p.user_id as string);
     return {
       id: p.id as string,
       caption: p.caption as string | null,
@@ -441,7 +446,7 @@ export async function getFeed(page = 1, perPage = 20): Promise<FeedPost[]> {
       mediaType: (p.media_type ?? "none") as "image" | "video" | "none",
       createdAt: p.created_at as string,
       author: {
-        id: profile?.id ?? (p.user_id as string),
+        id: p.user_id as string,
         name: profile?.full_name ?? null,
         avatarUrl: profile?.avatar_url ?? null,
       },
