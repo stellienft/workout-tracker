@@ -65,18 +65,34 @@ export default async function ProgressPage() {
       .limit(200),
   ]);
 
-  // Strength progress: set logs joined with exercises, last 120 days.
+  // Strength progress: set logs + exercise names, last 120 days.
   const sinceDate = new Date(Date.now() - 120 * 86_400_000).toISOString();
   const { data: setLogs } = await supabase
     .from("set_logs")
-    .select(
-      "exercise_id, weight_kg, reps, session_id, created_at, exercises!inner(name)"
-    )
+    .select("exercise_id, weight_kg, reps, session_id, created_at")
     .eq("user_id", user.id)
     .eq("completed", true)
     .gte("created_at", sinceDate)
     .order("created_at", { ascending: true })
     .limit(2000);
+
+  // Resolve exercise names separately to avoid type issues with !inner joins.
+  const exIds = Array.from(new Set((setLogs ?? []).map((l) => l.exercise_id as string).filter(Boolean)));
+  const { data: exRows } = await supabase
+    .from("exercises")
+    .select("id, name")
+    .in("id", exIds.length > 0 ? exIds : ["00000000-0000-0000-0000-000000000000"]);
+  const exNameById = new Map<string, string>();
+  for (const e of exRows ?? []) exNameById.set(e.id as string, e.name as string);
+
+  const setLogsWithNames: SetLog[] = (setLogs ?? []).map((l) => ({
+    exercise_id: l.exercise_id as string,
+    weight_kg: l.weight_kg as number | null,
+    reps: l.reps as number | null,
+    session_id: l.session_id as string | null,
+    created_at: l.created_at as string,
+    exercises: { name: exNameById.get(l.exercise_id as string) ?? "Unknown" },
+  }));
 
   // Progress photos live in a private bucket — mint short-lived signed URLs.
   const photos: ProgressPhoto[] = [];
@@ -120,9 +136,9 @@ export default async function ProgressPage() {
   const latestWeight = weightData.at(-1)?.y ?? null;
 
   // Strength progress: per-exercise max weight per session (top 5 most-trained).
-  const strengthCharts = buildStrengthProgress(setLogs ?? []);
+  const strengthCharts = buildStrengthProgress(setLogsWithNames);
   // Total volume per week (last 12 weeks).
-  const volumeData = buildWeeklyVolume(setLogs ?? [], tz);
+  const volumeData = buildWeeklyVolume(setLogsWithNames, tz);
 
   return (
     <PageShell>
