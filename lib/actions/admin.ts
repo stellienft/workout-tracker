@@ -358,3 +358,64 @@ export async function removeUserRole(targetUserId: string, roleKey: string) {
   revalidatePath("/admin/users");
   return { ok: true };
 }
+
+// ---------- Gift subscriptions ----------
+
+const GRANT_SCHEMA = z.object({
+  targetUserId: z.string().uuid(),
+  days: z.coerce.number().int().min(1).max(3650),
+});
+
+export async function grantPro(input: z.input<typeof GRANT_SCHEMA>) {
+  const { supabase, isAdmin } = await requireAdminAction();
+  if (!isAdmin) return { ok: false, error: "Forbidden" };
+
+  const parsed = GRANT_SCHEMA.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+
+  const { targetUserId, days } = parsed.data;
+  const newExpiry = new Date(Date.now() + days * 86400000).toISOString();
+
+  // Upsert into free_grants — extend if already has a grant
+  const { data: existing } = await supabase
+    .from("free_grants")
+    .select("pro_until")
+    .eq("user_id", targetUserId)
+    .maybeSingle();
+
+  const baseDate =
+    existing?.pro_until && new Date(existing.pro_until as string).getTime() > Date.now()
+      ? new Date(existing.pro_until as string)
+      : new Date();
+  const extendedExpiry = new Date(baseDate.getTime() + days * 86400000).toISOString();
+
+  const { error } = await supabase
+    .from("free_grants")
+    .upsert(
+      { user_id: targetUserId, pro_until: extendedExpiry, reason: "Admin gift" },
+      { onConflict: "user_id" }
+    );
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/admin/users");
+  revalidatePath("/billing");
+  return { ok: true, until: extendedExpiry };
+}
+
+export async function revokePro(targetUserId: string) {
+  const { supabase, isAdmin } = await requireAdminAction();
+  if (!isAdmin) return { ok: false, error: "Forbidden" };
+
+  const parsed = z.string().uuid().safeParse(targetUserId);
+  if (!parsed.success) return { ok: false, error: "Invalid user" };
+
+  const { error } = await supabase
+    .from("free_grants")
+    .delete()
+    .eq("user_id", parsed.data);
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/admin/users");
+  revalidatePath("/billing");
+  return { ok: true };
+}
