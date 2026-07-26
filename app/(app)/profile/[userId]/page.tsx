@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { getUserPlan } from "@/lib/entitlements";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
-import { Calendar, Dumbbell, Users, ImageIcon } from "lucide-react";
+import { Calendar, Dumbbell, Users } from "lucide-react";
 
 export const metadata = { title: "Profile" };
 
@@ -190,7 +190,7 @@ export default async function UserProfilePage({
           {/* Stats */}
           <div className="mt-4 grid grid-cols-4 gap-2">
             <Stat icon={<Dumbbell className="h-4 w-4" />} label="Workouts" value={sessionCount ?? 0} />
-            <Stat icon={<ImageIcon className="h-4 w-4" />} label="Posts" value={postCount ?? 0} />
+            <Stat icon={<Users className="h-4 w-4" />} label="Posts" value={postCount ?? 0} />
             <Stat icon={<Users className="h-4 w-4" />} label="Followers" value={followersCount ?? 0} />
             <Stat icon={<Users className="h-4 w-4" />} label="Following" value={followingCount ?? 0} />
           </div>
