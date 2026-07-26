@@ -293,14 +293,14 @@ const SUPPLEMENT_SYSTEM_PROMPT =
   "Cover categories: protein (whey, casein, plant-based), performance (creatine, beta-alanine, citrulline), " +
   "recovery (magnesium, zinc, omega-3), and essential vitamins (D, B12, C, multivitamins). " +
   "Rules:\n" +
-  "1. ALWAYS start with a clear disclaimer: 'This is educational information, not medical advice. Consult your doctor before starting any supplement.'\n" +
-  "2. Base recommendations on the member's training data provided.\n" +
-  "3. For each supplement, give: what it does, why it's relevant to their training, typical dosing, and timing.\n" +
-  "4. Prioritise supplements by relevance to their actual training (e.g. heavy lifters → creatine, endurance → electrolytes).\n" +
-  "5. Mention food sources where applicable.\n" +
-  "6. Never recommend banned or illegal substances.\n" +
-  "7. Keep it concise — 3-5 supplements max, short paragraphs.\n" +
-  "8. Use plain text — no markdown, no headers, no bullet lists.";
+  "1. Base recommendations on the member's training data provided.\n" +
+  "2. For each supplement, give: name, category, what it does, why it's relevant to their training, typical dosing, timing, and food sources.\n" +
+  "3. Prioritise supplements by relevance to their actual training (e.g. heavy lifters → creatine, endurance → electrolytes).\n" +
+  "4. Never recommend banned or illegal substances.\n" +
+  "5. Keep it concise — 3-5 supplements max.\n" +
+  "6. You MUST respond with ONLY a valid JSON array, no other text. Each element: " +
+  '{"name":"Creatine Monohydrate","category":"Performance","purpose":"Increases ATP production for short bursts of power","relevance":"Directly supports your heavy compound lifting","dosing":"3-5g daily","timing":"Any time, consistently","foodSources":"Red meat, fish"}' + "\n" +
+  "7. Category must be one of: Protein, Performance, Recovery, Vitamins.";
 
 export async function getSupplementAdvice() {
   const { supabase, user } = await getAuthContext();
@@ -386,15 +386,15 @@ export async function getSupplementAdvice() {
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 1000,
+        max_tokens: 1200,
         system: SUPPLEMENT_SYSTEM_PROMPT,
         messages: [
           {
             role: "user",
             content:
               `Here is my training profile (JSON):\n${JSON.stringify(trainingSummary)}\n\n` +
-              `Based on this, recommend supplements that are relevant to my training. ` +
-              `Remember: educational only, include the disclaimer, and keep it concise.`,
+              `Based on this, recommend 3-5 supplements relevant to my training. ` +
+              `Respond with ONLY a JSON array, no other text.`,
           },
         ],
       }),
@@ -418,8 +418,29 @@ export async function getSupplementAdvice() {
       return { ok: false as const, error: "No response from the advisor." };
     }
 
-    return { ok: true as const, advice: text };
+    // Parse the JSON array from the response
+    let supplements: SupplementRecommendation[];
+    try {
+      // Extract JSON array from the text (handles cases where Claude wraps in prose)
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      supplements = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+      if (!Array.isArray(supplements)) throw new Error("not an array");
+    } catch {
+      return { ok: false as const, error: "Could not parse recommendations. Please try again." };
+    }
+
+    return { ok: true as const, supplements };
   } catch {
     return { ok: false as const, error: "The advisor is busy. Please try again." };
   }
+}
+
+export interface SupplementRecommendation {
+  name: string;
+  category: "Protein" | "Performance" | "Recovery" | "Vitamins";
+  purpose: string;
+  relevance: string;
+  dosing: string;
+  timing: string;
+  foodSources: string;
 }
