@@ -4,11 +4,10 @@ import { planAllows } from "@/lib/plan";
 import { UpgradeWall } from "@/components/billing/upgrade-wall";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { GenerateProgram } from "@/components/coach/generate-program";
-import { AskCoach } from "@/components/coach/ask-coach";
-import { SupplementAdvisor } from "@/components/coach/supplement-advisor";
 import { getTrainingInsights } from "@/lib/actions/ai-coach";
 import { chooseDaysPerWeek } from "@/lib/ai/program-generator";
-import { Sparkles, TrendingUp, Minus, TrendingDown, Circle, Lock } from "lucide-react";
+import { Sparkles, TrendingUp, Minus, TrendingDown, Circle, Lock, MessageSquare, FlaskConical } from "lucide-react";
+import Link from "next/link";
 import type { Trend } from "@/lib/ai/analysis";
 
 export const metadata = { title: "AI Coach" };
@@ -67,14 +66,32 @@ export default async function AiCoachPage() {
         subtitle="Adaptive programming that learns from your own training."
       />
 
-      {/* Ask the AI Coach — available to all Pro members */}
-      <div className="mt-6">
-        <AskCoach />
-      </div>
-
-      {/* AI Supplement Advisor — educational recommendations */}
-      <div className="mt-6">
-        <SupplementAdvisor />
+      {/* Quick links to chat & supplements */}
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <Link
+          href="/ai-coach/chat"
+          className="group flex items-center gap-4 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5 transition-colors hover:border-[var(--border-active)]"
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-muted)]">
+            <MessageSquare className="h-6 w-6 text-[var(--accent-primary)]" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold">Ask the AI Coach</p>
+            <p className="text-xs text-[var(--text-muted)]">Gym Q&amp;A — warm-ups, technique, plateaus & more</p>
+          </div>
+        </Link>
+        <Link
+          href="/supplements"
+          className="group flex items-center gap-4 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5 transition-colors hover:border-[var(--border-active)]"
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-muted)]">
+            <FlaskConical className="h-6 w-6 text-[var(--accent-primary)]" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold">Supplement Advisor</p>
+            <p className="text-xs text-[var(--text-muted)]">Educational recommendations based on your training</p>
+          </div>
+        </Link>
       </div>
 
       {testMode && (

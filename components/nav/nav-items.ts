@@ -24,6 +24,7 @@ import {
   Package,
   Gift,
   UserPlus,
+  FlaskConical,
   type LucideIcon,
 } from "lucide-react";
 
@@ -75,6 +76,8 @@ export const navSections: NavSection[] = [
     title: "Coaching",
     items: [
       { label: "AI Coach", href: "/ai-coach", icon: Sparkles, pro: true },
+      { label: "Ask Coach", href: "/ai-coach/chat", icon: MessageSquare, pro: true },
+      { label: "Supplements", href: "/supplements", icon: FlaskConical, pro: true },
       { label: "My Coach", href: "/my-coach", icon: UserRound, clientOnly: true },
       { label: "Trainer Portal", href: "/trainer", icon: Briefcase, trainerOnly: true },
       { label: "Clients", href: "/trainer/clients", icon: Users, trainerOnly: true },
