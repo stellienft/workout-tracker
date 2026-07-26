@@ -10,7 +10,6 @@ import {
   type ProgressPhoto,
 } from "@/components/progress/progress-photos";
 import { DEFAULT_TZ, startOfWeekInTz, zonedParts } from "@/lib/timezone";
-import { MuscleSuggestions } from "@/components/progress/muscle-suggestions";
 import Link from "next/link";
 
 export const metadata = { title: "Progress" };
@@ -81,14 +80,10 @@ export default async function ProgressPage() {
   const exIds = Array.from(new Set((setLogs ?? []).map((l) => l.exercise_id as string).filter(Boolean)));
   const { data: exRows } = await supabase
     .from("exercises")
-    .select("id, name, primary_muscles")
+    .select("id, name")
     .in("id", exIds.length > 0 ? exIds : ["00000000-0000-0000-0000-000000000000"]);
   const exNameById = new Map<string, string>();
-  const exMusclesById = new Map<string, string[]>();
-  for (const e of exRows ?? []) {
-    exNameById.set(e.id as string, e.name as string);
-    exMusclesById.set(e.id as string, (e.primary_muscles as string[] | null) ?? []);
-  }
+  for (const e of exRows ?? []) exNameById.set(e.id as string, e.name as string);
 
   const setLogsWithNames: SetLog[] = (setLogs ?? []).map((l) => ({
     exercise_id: l.exercise_id as string,
@@ -98,29 +93,6 @@ export default async function ProgressPage() {
     created_at: l.created_at as string,
     exercises: { name: exNameById.get(l.exercise_id as string) ?? "Unknown" },
   }));
-
-  // Muscle balance: count sets per primary muscle group from the set logs.
-  const muscleSetCounts = new Map<string, number>();
-  for (const l of setLogs ?? []) {
-    const muscles = exMusclesById.get(l.exercise_id as string) ?? [];
-    for (const m of muscles) {
-      if (!m) continue;
-      muscleSetCounts.set(m, (muscleSetCounts.get(m) ?? 0) + 1);
-    }
-  }
-  const muscleBalance = buildMuscleBalance(muscleSetCounts);
-
-  // Workout heatmap: per-day session counts for the last 120 days (16 weeks).
-  const heatmapSince = new Date(Date.now() - 120 * 86_400_000).toISOString();
-  const { data: heatmapSessions } = await supabase
-    .from("workout_sessions")
-    .select("completed_at")
-    .eq("user_id", user.id)
-    .eq("status", "completed")
-    .gte("completed_at", heatmapSince)
-    .order("completed_at", { ascending: true })
-    .limit(500);
-  const heatmap = buildHeatmap(heatmapSessions ?? [], tz);
 
   // Progress photos live in a private bucket — mint short-lived signed URLs.
   const photos: ProgressPhoto[] = [];
@@ -262,122 +234,6 @@ export default async function ProgressPage() {
         )}
       </div>
 
-      {/* Workout Heatmap */}
-      <div className="mt-6">
-        <h2 className="text-lg font-bold">Workout Activity</h2>
-        <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
-          <p className="mb-3 text-sm text-[var(--text-secondary)]">
-            Last 16 weeks · {heatmap.totalWorkouts} workouts
-          </p>
-          {/* Heatmap grid: 16 columns (weeks) × 7 rows (days, Mon→Sun) */}
-          <div className="flex gap-[3px] overflow-x-auto pb-1">
-            {heatmap.weeks.map((week, wi) => (
-              <div key={wi} className="flex flex-col gap-[3px]">
-                {week.map((day, di) => {
-                  const level = day.count;
-                  const opacity =
-                    level === 0 ? 0.08 : level === 1 ? 0.4 : level === 2 ? 0.7 : 1;
-                  return (
-                    <div
-                      key={di}
-                      title={day.date ? `${day.date}: ${day.count} workout${day.count === 1 ? "" : "s"}` : ""}
-                      className="h-[11px] w-[11px] rounded-[2px] bg-[var(--accent-primary)]"
-                      style={{ opacity }}
-                    />
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-          {/* Legend */}
-          <div className="mt-3 flex items-center justify-between">
-            <span className="text-[10px] text-[var(--text-muted)]">16 weeks ago</span>
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] text-[var(--text-muted)]">Less</span>
-              {[0, 1, 2, 3].map((lvl) => (
-                <div
-                  key={lvl}
-                  className="h-[11px] w-[11px] rounded-[2px] bg-[var(--accent-primary)]"
-                  style={{
-                    opacity: lvl === 0 ? 0.08 : lvl === 1 ? 0.4 : lvl === 2 ? 0.7 : 1,
-                  }}
-                />
-              ))}
-              <span className="text-[10px] text-[var(--text-muted)]">More</span>
-            </div>
-            <span className="text-[10px] text-[var(--text-muted)]">Today</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Muscle Balance */}
-      {muscleBalance.length > 0 && (
-        <div className="mt-6">
-          <h2 className="text-lg font-bold">Muscle Balance</h2>
-          <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
-            <p className="mb-4 text-sm text-[var(--text-secondary)]">
-              Percentage of total sets per muscle group (last 120 days)
-            </p>
-            <div className="space-y-2.5">
-              {muscleBalance.map((m) => (
-                <div key={m.muscle} className="flex items-center gap-3">
-                  <span className="w-28 shrink-0 truncate text-xs text-[var(--text-primary)]" title={m.muscle}>
-                    {m.muscle}
-                  </span>
-                  <div className="relative h-5 flex-1 overflow-hidden rounded-lg bg-[var(--surface-secondary)]">
-                    <div
-                      className="h-full rounded-lg"
-                      style={{
-                        width: `${m.percent}%`,
-                        backgroundColor: m.undertrained
-                          ? "var(--warning)"
-                          : "var(--accent-primary)",
-                      }}
-                    />
-                  </div>
-                  <span className="w-10 shrink-0 text-right text-xs font-medium text-[var(--text-secondary)]">
-                    {m.percent}%
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {/* Undertrained muscles section */}
-            {muscleBalance.some((m) => m.undertrained) && (
-              <div className="mt-5 rounded-xl border border-[var(--warning)]/30 bg-[var(--warning)]/10 p-4">
-                <p className="text-sm font-semibold text-[var(--warning)]">
-                  Undertrained muscles
-                </p>
-                <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                  These muscle groups make up the bottom 25% of your training volume:
-                </p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {muscleBalance
-                    .filter((m) => m.undertrained)
-                    .map((m) => (
-                      <span
-                        key={m.muscle}
-                        className="inline-flex items-center rounded-full bg-[var(--warning)]/20 px-2.5 py-1 text-[11px] font-medium text-[var(--warning)]"
-                      >
-                        {m.muscle}
-                      </span>
-                    ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* AI Coach Suggestions */}
-          <div className="mt-4">
-            <MuscleSuggestions
-              undertrainedMuscles={
-                muscleBalance.filter((m) => m.undertrained).map((m) => m.muscle)
-              }
-            />
-          </div>
-        </div>
-      )}
-
       <div className="mt-6">
         <h2 className="text-lg font-bold">Log body metrics</h2>
         <div className="mt-3">
@@ -512,78 +368,4 @@ function buildWeeklyVolume(
     x: w.start.toISOString().slice(0, 10),
     y: Math.round(w.volume),
   }));
-}
-
-/**
- * Build a 16-week workout heatmap. Each week is an array of 7 day-cells
- * (Mon→Sun). Cell intensity = number of completed sessions that day.
- * Aligned to the user's timezone so "today" lands on the right column.
- */
-function buildHeatmap(
-  sessions: { completed_at: string | null }[],
-  tz: string
-): { weeks: { date: string; count: number }[][]; totalWorkouts: number } {
-  // Count sessions per local calendar date.
-  const countByDate = new Map<string, number>();
-  for (const s of sessions) {
-    if (!s.completed_at) continue;
-    const p = zonedParts(new Date(s.completed_at), tz);
-    const key = `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
-    countByDate.set(key, (countByDate.get(key) ?? 0) + 1);
-  }
-
-  const totalWorkouts = sessions.length;
-
-  // Build 16 weeks ending at the current week (Mon→Sun).
-  const thisWeekStart = startOfWeekInTz(new Date(), tz);
-  const NUM_WEEKS = 16;
-  const weeks: { date: string; count: number }[][] = [];
-
-  for (let w = NUM_WEEKS - 1; w >= 0; w--) {
-    const weekStart = new Date(thisWeekStart.getTime() - w * 7 * 86_400_000);
-    const days: { date: string; count: number }[] = [];
-    for (let d = 0; d < 7; d++) {
-      const dayDate = new Date(weekStart.getTime() + d * 86_400_000);
-      const p = zonedParts(dayDate, tz);
-      const key = `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
-      // Only show counts for days up to today (no future days).
-      const isFuture = dayDate.getTime() > Date.now() + 86_400_000;
-      days.push({
-        date: isFuture ? "" : key,
-        count: isFuture ? 0 : (countByDate.get(key) ?? 0),
-      });
-    }
-    weeks.push(days);
-  }
-
-  return { weeks, totalWorkouts };
-}
-
-/**
- * Build muscle balance data from per-muscle set counts.
- * Returns sorted (desc) bars with percentage of total sets and an
- * `undertrained` flag for the bottom 25% of muscles by volume.
- */
-function buildMuscleBalance(
-  muscleSetCounts: Map<string, number>
-): { muscle: string; count: number; percent: number; undertrained: boolean }[] {
-  const total = Array.from(muscleSetCounts.values()).reduce((a, b) => a + b, 0);
-  if (total === 0) return [];
-
-  const sorted = Array.from(muscleSetCounts.entries())
-    .map(([muscle, count]) => ({
-      muscle,
-      count,
-      percent: Math.round((count / total) * 100),
-      undertrained: false,
-    }))
-    .sort((a, b) => b.count - a.count);
-
-  // Mark the bottom 25% of muscles (by count) as undertrained.
-  const threshold = Math.ceil(sorted.length * 0.25);
-  for (let i = sorted.length - threshold; i < sorted.length; i++) {
-    if (i >= 0) sorted[i].undertrained = true;
-  }
-
-  return sorted;
 }
