@@ -75,7 +75,7 @@ export async function createPost(input: {
   const { data, error } = await supabase
     .from("social_posts")
     .insert({
-      author_id: user.id,
+      user_id: user.id,
       caption: caption || null,
       media_url: mediaUrl || null,
       media_type: mediaType,
@@ -111,7 +111,7 @@ export async function deletePost(postId: string) {
     .from("social_posts")
     .delete()
     .eq("id", parsed.data)
-    .eq("author_id", user.id); // only own posts
+    .eq("user_id", user.id); // only own posts
 
   if (error) return { ok: false as const, error: error.message };
   revalidatePath("/feed");
@@ -136,7 +136,7 @@ export async function addComment(postId: string, body: string) {
 
   const { error } = await supabase.from("social_comments").insert({
     post_id: parsed.data.postId,
-    author_id: user.id,
+    user_id: user.id,
     body: parsed.data.body,
   });
 
@@ -161,7 +161,7 @@ export async function deleteComment(commentId: string) {
     .from("social_comments")
     .delete()
     .eq("id", parsed.data)
-    .eq("author_id", user.id); // only own comments
+    .eq("user_id", user.id); // only own comments
 
   if (error) return { ok: false as const, error: error.message };
   revalidatePath("/feed");
@@ -367,10 +367,10 @@ export async function getFeed(page = 1, perPage = 20): Promise<FeedPost[]> {
       media_url,
       media_type,
       created_at,
-      author_id,
+      user_id,
       workout_session_id,
       ai_moderation_status,
-      profiles!social_posts_author_id_fkey ( id, full_name, avatar_url )
+      profiles!social_posts_user_id_fkey ( id, full_name, avatar_url )
     `,
     )
     .order("created_at", { ascending: false })
@@ -378,7 +378,7 @@ export async function getFeed(page = 1, perPage = 20): Promise<FeedPost[]> {
 
   if (blockedIds.size > 0) {
     const blockedFilter = Array.from(blockedIds).join(",");
-    postsQuery = postsQuery.not("author_id", "in", `(${blockedFilter})`);
+    postsQuery = postsQuery.not("user_id", "in", `(${blockedFilter})`);
   }
 
   const { data: posts, error: postsError } = await postsQuery;
@@ -441,7 +441,7 @@ export async function getFeed(page = 1, perPage = 20): Promise<FeedPost[]> {
       mediaType: (p.media_type ?? "none") as "image" | "video" | "none",
       createdAt: p.created_at as string,
       author: {
-        id: profile?.id ?? (p.author_id as string),
+        id: profile?.id ?? (p.user_id as string),
         name: profile?.full_name ?? null,
         avatarUrl: profile?.avatar_url ?? null,
       },
