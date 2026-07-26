@@ -65,6 +65,19 @@ export default async function ProgressPage() {
       .limit(200),
   ]);
 
+  // Strength progress: set logs joined with exercises, last 120 days.
+  const sinceDate = new Date(Date.now() - 120 * 86_400_000).toISOString();
+  const { data: setLogs } = await supabase
+    .from("set_logs")
+    .select(
+      "exercise_id, weight_kg, reps, session_id, created_at, exercises!inner(name)"
+    )
+    .eq("user_id", user.id)
+    .eq("completed", true)
+    .gte("created_at", sinceDate)
+    .order("created_at", { ascending: true })
+    .limit(2000);
+
   // Progress photos live in a private bucket — mint short-lived signed URLs.
   const photos: ProgressPhoto[] = [];
   if (photoRows && photoRows.length > 0) {
@@ -105,6 +118,11 @@ export default async function ProgressPage() {
   const weeklyCounts = buildWeeklyCounts(sessions ?? [], tz);
 
   const latestWeight = weightData.at(-1)?.y ?? null;
+
+  // Strength progress: per-exercise max weight per session (top 5 most-trained).
+  const strengthCharts = buildStrengthProgress(setLogs ?? []);
+  // Total volume per week (last 12 weeks).
+  const volumeData = buildWeeklyVolume(setLogs ?? [], tz);
 
   return (
     <PageShell>
@@ -176,6 +194,30 @@ export default async function ProgressPage() {
         </div>
       </div>
 
+      {/* Strength Progress */}
+      <div className="mt-6">
+        <h2 className="text-lg font-bold">Strength Progress</h2>
+        {strengthCharts.length > 0 ? (
+          <div className="mt-3 space-y-4">
+            {strengthCharts.map((ex, i) => (
+              <div
+                key={i}
+                className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5"
+              >
+                <LineChart data={ex.data} label={ex.name} unit=" kg" />
+              </div>
+            ))}
+            <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
+              <LineChart data={volumeData} label="Total volume" unit=" kg" />
+            </div>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-[var(--text-muted)]">
+            No strength data yet. Start logging sets to see your progress.
+          </p>
+        )}
+      </div>
+
       <div className="mt-6">
         <h2 className="text-lg font-bold">Log body metrics</h2>
         <div className="mt-3">
@@ -216,4 +258,98 @@ function countThisMonth(
     const t = zonedParts(new Date(s.completed_at), tz);
     return t.month === now.month && t.year === now.year;
   }).length;
+}
+
+type SetLog = {
+  exercise_id: string;
+  weight_kg: number | null;
+  reps: number | null;
+  session_id: string | null;
+  created_at: string;
+  exercises: { name: string } | null;
+};
+
+/**
+ * Build per-exercise strength progress: for each exercise, the max weight lifted
+ * per session over time. Returns the top 5 most-trained exercises (by session count).
+ */
+function buildStrengthProgress(
+  sets: SetLog[]
+): { name: string; data: { x: string; y: number }[] }[] {
+  // Group by exercise, then by session to find max weight per session.
+  const byExercise = new Map<
+    string,
+    { name: string; sessions: Map<string, { date: string; maxWeight: number }> }
+  >();
+
+  for (const s of sets) {
+    if (!s.exercise_id || !s.exercises?.name) continue;
+    const weight = s.weight_kg != null ? Number(s.weight_kg) : 0;
+    const sessionKey = s.session_id ?? s.created_at;
+
+    if (!byExercise.has(s.exercise_id)) {
+      byExercise.set(s.exercise_id, {
+        name: s.exercises.name,
+        sessions: new Map(),
+      });
+    }
+    const ex = byExercise.get(s.exercise_id)!;
+
+    if (!ex.sessions.has(sessionKey)) {
+      ex.sessions.set(sessionKey, { date: s.created_at, maxWeight: weight });
+    } else {
+      const existing = ex.sessions.get(sessionKey)!;
+      if (weight > existing.maxWeight) {
+        existing.maxWeight = weight;
+      }
+    }
+  }
+
+  // Rank exercises by number of sessions (most-trained first), take top 5.
+  return Array.from(byExercise.entries())
+    .map(([, { name, sessions }]) => ({
+      name,
+      sessionCount: sessions.size,
+      data: Array.from(sessions.values())
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .map((s) => ({ x: s.date, y: s.maxWeight })),
+    }))
+    .sort((a, b) => b.sessionCount - a.sessionCount)
+    .slice(0, 5)
+    .map(({ name, data }) => ({ name, data }));
+}
+
+/**
+ * Build total volume per week (sum of weight × reps) for the last 12 weeks.
+ * Weeks are Mon–Sun, aligned to the user's timezone.
+ */
+function buildWeeklyVolume(
+  sets: { weight_kg: number | null; reps: number | null; created_at: string }[],
+  tz: string
+): { x: string; y: number }[] {
+  const thisWeekStart = startOfWeekInTz(new Date(), tz);
+  const weeks: { start: Date; end: Date; volume: number }[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const start = new Date(thisWeekStart.getTime() - i * 7 * 86_400_000);
+    const end = new Date(start.getTime() + 7 * 86_400_000);
+    weeks.push({ start, end, volume: 0 });
+  }
+
+  for (const s of sets) {
+    const t = new Date(s.created_at);
+    const weight = s.weight_kg != null ? Number(s.weight_kg) : 0;
+    const reps = s.reps != null ? Number(s.reps) : 0;
+    const volume = weight * reps;
+    for (const w of weeks) {
+      if (t >= w.start && t < w.end) {
+        w.volume += volume;
+        break;
+      }
+    }
+  }
+
+  return weeks.map((w) => ({
+    x: w.start.toISOString().slice(0, 10),
+    y: Math.round(w.volume),
+  }));
 }
