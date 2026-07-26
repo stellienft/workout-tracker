@@ -230,7 +230,6 @@ export default async function UserProfilePage({
                 post={post}
                 isPro={isPro}
                 currentUserId={user.id}
-                onDeleted={(deletedId) => {}}
               />
             ))}
           </div>
