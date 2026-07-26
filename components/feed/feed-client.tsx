@@ -167,7 +167,11 @@ export function FeedClient({ initialPosts, isPro, currentUserId }: FeedClientPro
         setCaption("");
         clearMedia();
         setSelectedSessionId("");
-        router.refresh();
+        // Reload the feed fresh from the server.
+        const fresh = await getFeed(1, 20);
+        setPosts(fresh);
+        setPage(1);
+        setHasMore(fresh.length === 20);
       } else {
         toast(res.error ?? "Could not create post", "error");
       }
@@ -309,6 +313,9 @@ export function FeedClient({ initialPosts, isPro, currentUserId }: FeedClientPro
               post={post}
               isPro={isPro}
               currentUserId={currentUserId}
+              onDeleted={(deletedId) =>
+                setPosts((prev) => prev.filter((p) => p.id !== deletedId))
+              }
             />
           ))}
 

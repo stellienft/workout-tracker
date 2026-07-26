@@ -41,6 +41,7 @@ interface PostCardProps {
   post: FeedPost;
   isPro: boolean;
   currentUserId: string;
+  onDeleted?: (postId: string) => void;
 }
 
 function timeAgo(iso: string): string {
@@ -68,7 +69,7 @@ function Avatar({ name, url }: { name: string | null; url: string | null }) {
   );
 }
 
-export function PostCard({ post, isPro, currentUserId }: PostCardProps) {
+export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProps) {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
@@ -100,12 +101,14 @@ export function PostCard({ post, isPro, currentUserId }: PostCardProps) {
         if (!cancelled) setMediaUrl(post.mediaUrl);
         return;
       }
+      // Strip the social-feed:// prefix if present, leaving just the storage path.
+      const storagePath = post.mediaUrl.replace(/^social-feed:\/\//, "");
       setMediaLoading(true);
       try {
         const supabase = createClient();
         const { data, error } = await supabase.storage
           .from("social-feed")
-          .createSignedUrl(post.mediaUrl, 3600);
+          .createSignedUrl(storagePath, 3600);
         if (!cancelled && !error && data?.signedUrl) {
           setMediaUrl(data.signedUrl);
         }
@@ -268,7 +271,16 @@ export function PostCard({ post, isPro, currentUserId }: PostCardProps) {
   function handleDelete() {
     setMenuOpen(false);
     if (!confirm("Delete this post? This cannot be undone.")) return;
-    act(async () => deletePost(post.id), "Post deleted.");
+    startTransition(async () => {
+      const res = await deletePost(post.id);
+      if (res.ok) {
+        toast("Post deleted.", "success");
+        if (onDeleted) onDeleted(post.id);
+        else router.refresh();
+      } else {
+        toast(res.error ?? "Could not delete post", "error");
+      }
+    });
   }
 
   return (

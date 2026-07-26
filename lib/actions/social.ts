@@ -51,7 +51,7 @@ export interface FeedPost {
 
 const createPostSchema = z.object({
   caption: z.string().max(2000).optional().default(""),
-  mediaUrl: z.string().url().optional().or(z.literal("")),
+  mediaUrl: z.string().max(500).optional().or(z.literal("")),
   mediaType: z.enum(MEDIA_TYPES).default("none"),
   workoutSessionId: z.string().uuid().optional(),
 });
