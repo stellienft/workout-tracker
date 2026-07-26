@@ -5,6 +5,7 @@ import { getUserPlan } from "@/lib/entitlements";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { FollowButton } from "@/components/feed/follow-button";
+import { PostCard } from "@/components/feed/post-card";
 import { Calendar, Dumbbell, Users, ImageIcon } from "lucide-react";
 
 export const metadata = { title: "Profile" };
@@ -128,8 +129,8 @@ export default async function UserProfilePage({
     createdAt: p.created_at as string,
     author: {
       id: p.user_id as string,
-      name: profile.full_name,
-      avatarUrl: profile.avatar_url,
+      name: profile?.full_name ?? null,
+      avatarUrl: profile?.avatar_url ?? null,
       isFollowing: !!isFollowingRow,
     },
     reactionCounts: reactionMap[p.id] ?? {},
@@ -218,19 +219,21 @@ export default async function UserProfilePage({
           {isSelf ? "Your posts" : "Posts"}
         </h2>
         {feedPosts.length === 0 ? (
-            <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-8 text-center">
-              <p className="text-sm text-[var(--text-muted)]">No posts yet.</p>
-            </div>
-          ) : (
-            <div className="mt-3 space-y-4">
-              {feedPosts.map((post) => (
-                <div key={post.id} className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4">
-                  {post.caption && <p className="text-sm text-[var(--text-primary)]">{post.caption}</p>}
-                  <p className="mt-2 text-xs text-[var(--text-muted)]">{new Date(post.createdAt).toLocaleDateString()}</p>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-8 text-center">
+            <p className="text-sm text-[var(--text-muted)]">No posts yet.</p>
+          </div>
+        ) : (
+          <div className="mt-3 space-y-4">
+            {feedPosts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                isPro={isPro}
+                currentUserId={user.id}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </PageShell>
   );
