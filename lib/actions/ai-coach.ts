@@ -210,3 +210,75 @@ export async function generateAdaptiveProgram(input?: { daysPerWeek?: number }) 
   revalidatePath("/splits");
   return { ok: true as const, id: split.id, daysPerWeek: program.daysPerWeek };
 }
+
+// ============================================================
+// Gym Q&A — ask the AI Coach a question
+// ============================================================
+
+const GYM_SYSTEM_PROMPT =
+  "You are Stellio Fit's AI Coach — a knowledgeable, encouraging personal trainer. " +
+  "Answer ONLY questions related to gym, fitness, strength training, exercise technique, " +
+  "workout programming, warm-ups, cool-downs, stretching, mobility, nutrition for training, " +
+  "recovery, and injury prevention in a gym context. " +
+  "If a question is about anything unrelated (politics, coding, relationships, general knowledge, etc.), " +
+  "politely say you can only help with gym and fitness topics, and suggest they ask a fitness question. " +
+  "Keep answers concise, practical, and actionable (2-4 short paragraphs max). " +
+  "Use plain text — no markdown, no headers, no bullet lists. Be friendly and encouraging.";
+
+export async function askCoach(question: string) {
+  const { user } = await getAuthContext();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+
+  const { isPro } = await getUserPlan();
+  if (!isPro) return { ok: false as const, error: "AI Coach is a Pro feature." };
+
+  const q = z.string().min(1).max(500).safeParse(question);
+  if (!q.success) return { ok: false as const, error: "Question too long (max 500 chars)." };
+
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) {
+    return {
+      ok: false as const,
+      error: "AI Coach Q&A is not configured. Please try again later.",
+    };
+  }
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 800,
+        system: GYM_SYSTEM_PROMPT,
+        messages: [{ role: "user", content: q.data }],
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!res.ok) {
+      return { ok: false as const, error: "Could not reach the AI Coach. Please try again." };
+    }
+
+    const data = (await res.json()) as {
+      content?: { type: string; text?: string }[];
+    };
+    const text = data.content
+      ?.filter((c) => c.type === "text")
+      .map((c) => c.text)
+      .join(" ")
+      .trim();
+
+    if (!text) {
+      return { ok: false as const, error: "No response from the AI Coach." };
+    }
+
+    return { ok: true as const, answer: text };
+  } catch {
+    return { ok: false as const, error: "The AI Coach is busy. Please try again." };
+  }
+}

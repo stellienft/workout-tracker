@@ -4,6 +4,7 @@ import { planAllows } from "@/lib/plan";
 import { UpgradeWall } from "@/components/billing/upgrade-wall";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { GenerateProgram } from "@/components/coach/generate-program";
+import { AskCoach } from "@/components/coach/ask-coach";
 import { getTrainingInsights } from "@/lib/actions/ai-coach";
 import { chooseDaysPerWeek } from "@/lib/ai/program-generator";
 import { Sparkles, TrendingUp, Minus, TrendingDown, Circle, Lock } from "lucide-react";
@@ -64,6 +65,11 @@ export default async function AiCoachPage() {
         title="AI Coach"
         subtitle="Adaptive programming that learns from your own training."
       />
+
+      {/* Ask the AI Coach — available to all Pro members */}
+      <div className="mt-6">
+        <AskCoach />
+      </div>
 
       {testMode && (
         <div className="mt-6 rounded-[var(--radius-card)] border border-[var(--border-active)] bg-[var(--accent-muted)] p-4 text-sm text-[var(--accent-primary)]">
