@@ -4,7 +4,6 @@ import { requireUser } from "@/lib/auth";
 import { getUserPlan } from "@/lib/entitlements";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
-import { FollowButton } from "@/components/feed/follow-button";
 import { Calendar, Dumbbell, Users, ImageIcon } from "lucide-react";
 
 export const metadata = { title: "Profile" };
@@ -184,12 +183,7 @@ export default async function UserProfilePage({
               )}
             </div>
             {!isSelf && (
-              <FollowButton
-                targetUserId={userId}
-                isPro={isPro}
-                initialFollowing={!!isFollowingRow}
-                initialBlocked={!!isBlockedRow}
-              />
+              <span className="text-xs text-[var(--text-muted)]">Follow</span>
             )}
           </div>
 
