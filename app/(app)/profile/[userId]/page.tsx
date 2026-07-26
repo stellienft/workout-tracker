@@ -5,7 +5,6 @@ import { getUserPlan } from "@/lib/entitlements";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { FollowButton } from "@/components/feed/follow-button";
-import { PostCard } from "@/components/feed/post-card";
 import { Calendar, Dumbbell, Users, ImageIcon } from "lucide-react";
 
 export const metadata = { title: "Profile" };
@@ -223,14 +222,27 @@ export default async function UserProfilePage({
             <p className="text-sm text-[var(--text-muted)]">No posts yet.</p>
           </div>
         ) : (
-          <div className="mt-3 space-y-4">
+          <div className="mt-3 space-y-3">
             {feedPosts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                isPro={isPro}
-                currentUserId={user.id}
-              />
+              <div key={post.id} className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4">
+                <div className="flex items-center gap-2">
+                  {post.author.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={post.author.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
+                  ) : (
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent-muted)] text-xs font-bold text-[var(--accent-primary)]">
+                      {(post.author.name ?? "?").charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  <div>
+                    <p className="text-sm font-semibold">{post.author.name ?? "Someone"}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{new Date(post.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                {post.caption && (
+                  <p className="mt-2 text-sm text-[var(--text-primary)] whitespace-pre-wrap">{post.caption}</p>
+                )}
+              </div>
             ))}
           </div>
         )}
