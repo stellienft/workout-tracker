@@ -37,6 +37,7 @@ export interface FeedPost {
     id: string;
     name: string | null;
     avatarUrl: string | null;
+    isFollowing: boolean;
   };
   reactionCounts: Record<string, number>;
   commentCount: number;
@@ -392,8 +393,8 @@ export async function getFeed(page = 1, perPage = 20): Promise<FeedPost[]> {
     });
   }
 
-  // --- 3. Fetch reaction counts, comment counts, and current user's reactions in parallel ---
-  const [reactionsData, commentCountsData, userReactionsData] = await Promise.all([
+  // --- 3. Fetch reaction counts, comment counts, user reactions, and follows ---
+  const [reactionsData, commentCountsData, userReactionsData, followsData] = await Promise.all([
     // Reaction counts grouped by post + emoji
     supabase
       .from("social_reactions")
@@ -410,6 +411,12 @@ export async function getFeed(page = 1, perPage = 20): Promise<FeedPost[]> {
       .select("post_id, emoji")
       .in("post_id", postIds)
       .eq("user_id", user.id),
+    // Current user's follows (which post authors they follow)
+    supabase
+      .from("social_follows")
+      .select("following_id")
+      .in("following_id", userIds)
+      .eq("follower_id", user.id),
   ]);
 
   // Aggregate reaction counts: { postId: { emoji: count } }
@@ -436,6 +443,10 @@ export async function getFeed(page = 1, perPage = 20): Promise<FeedPost[]> {
     userReactionsMap[pid].push(r.emoji as string);
   });
 
+  // Current user's follows: Set of following_id
+  const followingSet = new Set<string>();
+  (followsData?.data ?? []).forEach((f) => followingSet.add(f.following_id as string));
+
   // --- 4. Assemble final FeedPost[] ---
   return posts.map((p) => {
     const profile = profileMap.get(p.user_id as string);
@@ -449,6 +460,7 @@ export async function getFeed(page = 1, perPage = 20): Promise<FeedPost[]> {
         id: p.user_id as string,
         name: profile?.full_name ?? null,
         avatarUrl: profile?.avatar_url ?? null,
+        isFollowing: followingSet.has(p.user_id as string),
       },
       reactionCounts: reactionCountsMap[p.id] ?? {},
       commentCount: commentCountMap[p.id] ?? 0,
