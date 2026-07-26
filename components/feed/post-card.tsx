@@ -86,6 +86,7 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
   const [reactionCounts, setReactionCounts] = useState<Record<string, number>>(post.reactionCounts);
   const [myReactions, setMyReactions] = useState<string[]>(post.currentUserReactions);
   const [commentCount, setCommentCount] = useState(post.commentCount);
+  const [following, setFollowing] = useState(post.author.isFollowing);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const isAuthor = post.author.id === currentUserId;
@@ -252,7 +253,14 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
       return;
     }
     setMenuOpen(false);
-    act(async () => toggleFollow(post.author.id), "Follow status updated.");
+    setFollowing((v) => !v);
+    startTransition(async () => {
+      const res = await toggleFollow(post.author.id);
+      if (!res.ok) {
+        setFollowing((v) => !v);
+        toast(res.error ?? "Could not update follow status", "error");
+      }
+    });
   }
 
   function handleBlock() {
@@ -296,6 +304,22 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
             <p className="text-xs text-[var(--text-muted)]">{timeAgo(post.createdAt)}</p>
           </div>
         </Link>
+
+        {/* Inline follow button (not shown for own posts) */}
+        {!isAuthor && (
+          <button
+            onClick={handleFollow}
+            disabled={pending || !isPro}
+            title={isPro ? (following ? "Unfollow" : "Follow") : "Pro feature"}
+            className={`hidden shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors sm:inline-flex ${
+              following
+                ? "border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--danger)] hover:text-[var(--danger)]"
+                : "bg-[var(--accent-primary)] text-black"
+            } ${!isPro ? "cursor-not-allowed opacity-50" : ""}`}
+          >
+            {following ? "Following" : "Follow"}
+          </button>
+        )}
 
         {/* Menu */}
         <div className="relative" ref={menuRef}>

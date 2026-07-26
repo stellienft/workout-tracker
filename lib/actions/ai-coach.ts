@@ -444,3 +444,61 @@ export interface SupplementRecommendation {
   timing: string;
   foodSources: string;
 }
+
+// ============================================================
+// AI Muscle Balance Suggestions
+// ============================================================
+
+export async function getMuscleSuggestions(undertrainedMuscles: string[]) {
+  if (undertrainedMuscles.length === 0) {
+    return { ok: true as const, suggestions: "No undertrained muscles detected. Great balance!" };
+  }
+
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) {
+    return { ok: false as const, error: "AI Coach is not configured." };
+  }
+
+  const muscleList = undertrainedMuscles.join(", ");
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 600,
+        system:
+          "You are a fitness coach. The user has these undertrained muscle groups. " +
+          "Suggest 3-5 specific exercises to bring these up, with brief reasoning. " +
+          "Format: exercise name — one sentence why. Plain text only, no markdown.",
+        messages: [
+          {
+            role: "user",
+            content: `My undertrained muscle groups are: ${muscleList}. What exercises should I add to my program?`,
+          },
+        ],
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!res.ok) return { ok: false as const, error: "Could not generate suggestions." };
+
+    const data = (await res.json()) as { content?: { type: string; text?: string }[] };
+    const text = data.content
+      ?.filter((c) => c.type === "text")
+      .map((c) => c.text)
+      .join(" ")
+      .trim();
+
+    if (!text) return { ok: false as const, error: "No response from the coach." };
+
+    return { ok: true as const, suggestions: text };
+  } catch {
+    return { ok: false as const, error: "The coach is busy. Please try again." };
+  }
+}
