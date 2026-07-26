@@ -282,3 +282,144 @@ export async function askCoach(question: string) {
     return { ok: false as const, error: "The AI Coach is busy. Please try again." };
   }
 }
+
+// ============================================================
+// AI Supplement Advisor — educational recommendations
+// ============================================================
+
+const SUPPLEMENT_SYSTEM_PROMPT =
+  "You are Stellio Fit's Supplement Advisor — an evidence-based sports nutritionist. " +
+  "Your role is STRICTLY EDUCATIONAL. You recommend supplements based on a member's training profile. " +
+  "Cover categories: protein (whey, casein, plant-based), performance (creatine, beta-alanine, citrulline), " +
+  "recovery (magnesium, zinc, omega-3), and essential vitamins (D, B12, C, multivitamins). " +
+  "Rules:\n" +
+  "1. ALWAYS start with a clear disclaimer: 'This is educational information, not medical advice. Consult your doctor before starting any supplement.'\n" +
+  "2. Base recommendations on the member's training data provided.\n" +
+  "3. For each supplement, give: what it does, why it's relevant to their training, typical dosing, and timing.\n" +
+  "4. Prioritise supplements by relevance to their actual training (e.g. heavy lifters → creatine, endurance → electrolytes).\n" +
+  "5. Mention food sources where applicable.\n" +
+  "6. Never recommend banned or illegal substances.\n" +
+  "7. Keep it concise — 3-5 supplements max, short paragraphs.\n" +
+  "8. Use plain text — no markdown, no headers, no bullet lists.";
+
+export async function getSupplementAdvice() {
+  const { supabase, user } = await getAuthContext();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+
+  const { isPro } = await getUserPlan();
+  if (!isPro) return { ok: false as const, error: "AI Coach is a Pro feature." };
+
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) {
+    return { ok: false as const, error: "Supplement Advisor is not configured." };
+  }
+
+  // Build a training summary from the user's logged data
+  const cutoff = new Date(Date.now() - 120 * 86400000).toISOString();
+  const [{ data: sessions }, { data: logs }] = await Promise.all([
+    supabase
+      .from("workout_sessions")
+      .select("started_at")
+      .eq("user_id", user.id)
+      .eq("status", "completed")
+      .order("started_at", { ascending: false })
+      .limit(100),
+    supabase
+      .from("set_logs")
+      .select("exercise_id, weight_kg, reps, created_at")
+      .eq("user_id", user.id)
+      .gte("created_at", cutoff)
+      .limit(2000),
+  ]);
+
+  const sessionCount = sessions?.length ?? 0;
+  const logCount = logs?.length ?? 0;
+
+  // Get exercise names for muscle groups
+  const exerciseIds = Array.from(new Set((logs ?? []).map((l) => l.exercise_id as string))).slice(0, 20);
+  let muscleGroups: string[] = [];
+  if (exerciseIds.length) {
+    const { data: exRows } = await supabase
+      .from("exercises")
+      .select("id, name, primary_muscles, category")
+      .in("id", exerciseIds);
+    const muscles = new Set<string>();
+    for (const e of exRows ?? []) {
+      for (const m of (e.primary_muscles as string[]) ?? []) muscles.add(m);
+    }
+    muscleGroups = Array.from(muscles).slice(0, 10);
+  }
+
+  // Get user's goal from profile
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, goal, experience_level")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  // Get current split (training plan)
+  const { data: currentSplit } = await supabase
+    .from("custom_splits")
+    .select("name, description")
+    .eq("owner_user_id", user.id)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const trainingSummary = {
+    goal: profile?.goal ?? "general fitness",
+    experience: profile?.experience_level ?? "intermediate",
+    sessionsLast120d: sessionCount,
+    setsLast120d: logCount,
+    muscleGroupsTrained: muscleGroups,
+    currentSplit: currentSplit?.name ?? "No active split",
+    avgPerWeek: sessionCount > 0 ? (sessionCount / 17).toFixed(1) : "0",
+  };
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1000,
+        system: SUPPLEMENT_SYSTEM_PROMPT,
+        messages: [
+          {
+            role: "user",
+            content:
+              `Here is my training profile (JSON):\n${JSON.stringify(trainingSummary)}\n\n` +
+              `Based on this, recommend supplements that are relevant to my training. ` +
+              `Remember: educational only, include the disclaimer, and keep it concise.`,
+          },
+        ],
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!res.ok) {
+      return { ok: false as const, error: "Could not generate supplement advice." };
+    }
+
+    const data = (await res.json()) as {
+      content?: { type: string; text?: string }[];
+    };
+    const text = data.content
+      ?.filter((c) => c.type === "text")
+      .map((c) => c.text)
+      .join(" ")
+      .trim();
+
+    if (!text) {
+      return { ok: false as const, error: "No response from the advisor." };
+    }
+
+    return { ok: true as const, advice: text };
+  } catch {
+    return { ok: false as const, error: "The advisor is busy. Please try again." };
+  }
+}

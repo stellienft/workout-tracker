@@ -5,6 +5,7 @@ import { UpgradeWall } from "@/components/billing/upgrade-wall";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { GenerateProgram } from "@/components/coach/generate-program";
 import { AskCoach } from "@/components/coach/ask-coach";
+import { SupplementAdvisor } from "@/components/coach/supplement-advisor";
 import { getTrainingInsights } from "@/lib/actions/ai-coach";
 import { chooseDaysPerWeek } from "@/lib/ai/program-generator";
 import { Sparkles, TrendingUp, Minus, TrendingDown, Circle, Lock } from "lucide-react";
@@ -69,6 +70,11 @@ export default async function AiCoachPage() {
       {/* Ask the AI Coach — available to all Pro members */}
       <div className="mt-6">
         <AskCoach />
+      </div>
+
+      {/* AI Supplement Advisor — educational recommendations */}
+      <div className="mt-6">
+        <SupplementAdvisor />
       </div>
 
       {testMode && (
