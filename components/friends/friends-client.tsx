@@ -269,7 +269,10 @@ export function FriendsClient({
                       </button>
                     )}
                     <button
-                      onClick={() => act(() => removeFriend(f.friendship_id))}
+                      onClick={() => {
+                        if (confirm('Remove this friend?'))
+                          act(() => removeFriend(f.friendship_id));
+                      }}
                       disabled={pending}
                       className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)]"
                     >
@@ -318,7 +321,10 @@ export function FriendsClient({
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-[var(--text-muted)]">Pending…</span>
                   <button
-                    onClick={() => act(() => removeFriend(f.friendship_id))}
+                    onClick={() => {
+                      if (confirm('Cancel this friend request?'))
+                        act(() => removeFriend(f.friendship_id));
+                    }}
                     disabled={pending}
                     className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)]"
                   >

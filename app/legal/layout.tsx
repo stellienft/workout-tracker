@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { BackButton } from "@/components/legal/back-button";
 
 export default function LegalLayout({
   children,
@@ -13,12 +13,7 @@ export default function LegalLayout({
           <Link href="/dashboard" className="text-lg font-extrabold tracking-tight">
             Stellio<span className="text-[var(--accent-primary)]">Fit</span>
           </Link>
-          <Link
-            href="/settings"
-            className="inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-          >
-            <ArrowLeft className="h-4 w-4" /> Back
-          </Link>
+          <BackButton />
         </div>
       </header>
       <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">

@@ -20,6 +20,7 @@ export function MobileTopBar({
   isClient,
   isPro,
   unread,
+  navBadges,
   name,
   email,
   avatarUrl,
@@ -29,6 +30,7 @@ export function MobileTopBar({
   isClient: boolean;
   isPro: boolean;
   unread: number;
+  navBadges?: Record<string, number>;
   name: string;
   email: string;
   avatarUrl: string | null;
@@ -137,6 +139,11 @@ export function MobileTopBar({
                           >
                             <Icon className="h-5 w-5 shrink-0" />
                             <span className="flex-1">{item.label}</span>
+                            {navBadges && navBadges[item.href] > 0 && (
+                              <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--accent-primary)] px-1 text-[10px] font-bold text-black">
+                                {navBadges[item.href]}
+                              </span>
+                            )}
                             {item.pro && !isPro && (
                               <Lock className="h-3.5 w-3.5 text-[var(--text-muted)]" />
                             )}
