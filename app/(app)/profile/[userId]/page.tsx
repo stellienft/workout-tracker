@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
+import { getUserPlan } from "@/lib/entitlements";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
+import { FollowButton } from "@/components/feed/follow-button";
 import { Calendar, Dumbbell, Users } from "lucide-react";
 
 export const metadata = { title: "Profile" };
@@ -14,6 +16,7 @@ export default async function UserProfilePage({
 }) {
   const { userId } = await params;
   const { user } = await requireUser();
+  const { isPro } = await getUserPlan();
   const supabase = await createClient();
 
   const { data: profile } = await supabase
@@ -31,11 +34,15 @@ export default async function UserProfilePage({
     { count: postCount },
     { count: followersCount },
     { count: followingCount },
+    { data: isFollowingRow },
+    { data: isBlockedRow },
   ] = await Promise.all([
     supabase.from("workout_sessions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "completed"),
     supabase.from("social_posts").select("id", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("social_follows").select("id", { count: "exact", head: true }).eq("following_id", userId),
     supabase.from("social_follows").select("id", { count: "exact", head: true }).eq("follower_id", userId),
+    supabase.from("social_follows").select("id").eq("follower_id", user.id).eq("following_id", userId).maybeSingle(),
+    supabase.from("social_blocks").select("id").eq("blocker_id", user.id).eq("blocked_id", userId).maybeSingle(),
   ]);
 
   // Recent posts
@@ -68,12 +75,24 @@ export default async function UserProfilePage({
         )}
 
         <div className="flex-1">
-          <p className="text-lg font-bold">{(profile.full_name as string) ?? "Athlete"}</p>
-          {joinedDate && (
-            <p className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
-              <Calendar className="h-3 w-3" /> Joined {joinedDate}
-            </p>
-          )}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-lg font-bold">{(profile.full_name as string) ?? "Athlete"}</p>
+              {joinedDate && (
+                <p className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
+                  <Calendar className="h-3 w-3" /> Joined {joinedDate}
+                </p>
+              )}
+            </div>
+            {!isSelf && (
+              <FollowButton
+                targetUserId={userId}
+                isPro={isPro}
+                initialFollowing={!!isFollowingRow}
+                initialBlocked={!!isBlockedRow}
+              />
+            )}
+          </div>
 
           <div className="mt-4 grid grid-cols-4 gap-2">
             <Stat icon={<Dumbbell className="h-4 w-4" />} label="Workouts" value={sessionCount ?? 0} />
