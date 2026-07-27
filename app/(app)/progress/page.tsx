@@ -11,7 +11,6 @@ import {
 } from "@/components/progress/progress-photos";
 import { DEFAULT_TZ, startOfWeekInTz, zonedParts } from "@/lib/timezone";
 import { MuscleSuggestions } from "@/components/progress/muscle-suggestions";
-import { BodyScanUpload } from "@/components/progress/body-scan-upload";
 import { getUserPlan } from "@/lib/entitlements";
 import Link from "next/link";
 
@@ -217,12 +216,21 @@ export default async function ProgressPage() {
         <WeightProgress data={weightData} tz={tz} />
       </div>
 
-      {/* Body Composition Scan */}
+      {/* Body Composition Scan — Pro only */}
       <div className="mt-6">
         <h2 className="text-lg font-bold">Body Composition Scan</h2>
-        <div className="mt-4">
-          <BodyScanUpload isPro={isPro} />
-        </div>
+        {!isPro ? (
+          <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-6 text-center">
+            <p className="text-sm text-[var(--text-muted)]">
+              Body composition scanning is a Pro feature. Upgrade to upload InBody,
+              DEXA, or Evolt scan results.
+            </p>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-[var(--text-muted)]">
+            Upload coming soon.
+          </p>
+        )}
       </div>
 
       <div className="mt-4">
