@@ -11,6 +11,9 @@ import {
 } from "@/components/progress/progress-photos";
 import { DEFAULT_TZ, startOfWeekInTz, zonedParts } from "@/lib/timezone";
 import { MuscleSuggestions } from "@/components/progress/muscle-suggestions";
+import { BodyScanUpload } from "@/components/progress/body-scan-upload";
+import { BodyCompositionDisplay } from "@/components/progress/body-composition-display";
+import { getUserPlan } from "@/lib/entitlements";
 import Link from "next/link";
 
 export const metadata = { title: "Progress" };
@@ -18,6 +21,7 @@ export const metadata = { title: "Progress" };
 export default async function ProgressPage() {
   const { user } = await requireUser();
   const supabase = await createClient();
+  const { isPro } = await getUserPlan();
 
   const { data: prof } = await supabase
     .from("profiles")
@@ -32,6 +36,7 @@ export default async function ProgressPage() {
     { data: checkins },
     { count },
     { data: photoRows },
+    { data: latestScan },
   ] = await Promise.all([
     supabase
       .from("body_metrics")
@@ -64,6 +69,13 @@ export default async function ProgressPage() {
       .eq("user_id", user.id)
       .order("taken_on", { ascending: false })
       .limit(200),
+    supabase
+      .from("body_composition_scans")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("scan_date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   // Strength progress: set logs + exercise names, last 120 days.
@@ -204,6 +216,23 @@ export default async function ProgressPage() {
 
       <div className="mt-6">
         <WeightProgress data={weightData} tz={tz} />
+      </div>
+
+      {/* Body Composition Scan */}
+      <div className="mt-6">
+        <h2 className="text-lg font-bold">Body Composition Scan</h2>
+        {latestScan ? (
+          <div className="mt-3">
+            <BodyCompositionDisplay scan={latestScan as Record<string, unknown>} />
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-[var(--text-muted)]">
+            No body composition scan uploaded yet.
+          </p>
+        )}
+        <div className="mt-4">
+          <BodyScanUpload isPro={isPro} />
+        </div>
       </div>
 
       <div className="mt-4">

@@ -9,6 +9,7 @@ import { completeOnboarding } from "@/lib/actions/onboarding";
 import { processReferral } from "@/lib/actions/referrals";
 import type { FitnessGoal } from "@/lib/types";
 import { Check } from "lucide-react";
+import { BodyScanUpload } from "@/components/progress/body-scan-upload";
 
 const EQUIPMENT = [
   "dumbbell",
@@ -47,8 +48,9 @@ export function OnboardingWizard({
   const [trainingDays, setTrainingDays] = useState<string[]>(["Mon", "Wed", "Fri"]);
   const [medicationTracking, setMedicationTracking] = useState(false);
 
-  // Grouped into 5 quick screens instead of 10 one-question steps.
-  const totalSteps = 5;
+  // Grouped into 6 quick screens instead of 10 one-question steps.
+  // Step 5 (body composition scan upload) is optional.
+  const totalSteps = 6;
 
   function toggle(list: string[], value: string, set: (v: string[]) => void) {
     set(list.includes(value) ? list.filter((x) => x !== value) : [...list, value]);
@@ -278,6 +280,26 @@ export function OnboardingWizard({
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {step === 5 && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold">
+                Upload a body composition scan?
+              </h2>
+              <p className="mt-1 text-[var(--text-secondary)]">
+                If you&apos;ve had an InBody, DEXA, or Evolt scan, upload the
+                results and we&apos;ll populate your profile automatically. You
+                can skip this and add it later.
+              </p>
+            </div>
+            <BodyScanUpload isPro={false} />
+            <p className="text-xs text-[var(--text-muted)]">
+              This step is optional — you can always upload a scan later from
+              the Progress page.
+            </p>
           </div>
         )}
       </div>
