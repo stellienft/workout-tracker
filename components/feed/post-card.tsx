@@ -14,6 +14,9 @@ import {
   Ban,
   Flag,
   Dumbbell,
+  ChevronDown,
+  Plus,
+  Loader2,
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
@@ -77,6 +80,8 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
 
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [mediaLoading, setMediaLoading] = useState(false);
+  const [showWorkout, setShowWorkout] = useState(false);
+  const [savingWorkout, setSavingWorkout] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -292,6 +297,38 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
     });
   }
 
+  async function handleSaveWorkout() {
+    if (!post.workoutSummary) return;
+    setSavingWorkout(true);
+    try {
+      const supabase = createClient();
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+
+      const { error } = await supabase.from("saved_workouts").insert({
+        user_id: userData.user.id,
+        source_user_id: post.author.id,
+        source_session_id: post.workoutSessionId,
+        name: `${post.author.name ?? "Friend"}'s workout`,
+        estimated_minutes: post.workoutSummary.duration
+          ? Math.ceil(post.workoutSummary.duration / 60)
+          : 45,
+        exercises: JSON.stringify(post.workoutSummary.exercises),
+        total_volume: post.workoutSummary.totalVolume,
+      });
+
+      if (error) {
+        toast("Could not save workout.", "error");
+      } else {
+        toast("Saved to your workouts!", "success");
+      }
+    } catch {
+      toast("Could not save workout.", "error");
+    } finally {
+      setSavingWorkout(false);
+    }
+  }
+
   return (
     <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)]">
       {/* Header */}
@@ -418,10 +455,46 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
       )}
 
       {/* Linked workout session */}
-      {post.workoutSessionId && (
-        <div className="mx-4 mb-3 flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 py-2">
-          <Dumbbell className="h-4 w-4 text-[var(--accent-primary)]" />
-          <span className="text-sm text-[var(--text-secondary)]">Shared a workout session</span>
+      {post.workoutSessionId && post.workoutSummary && (
+        <div className="mx-4 mb-3">
+          <button
+            onClick={() => setShowWorkout(!showWorkout)}
+            className="flex w-full items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 py-2.5 text-left"
+          >
+            <span className="flex items-center gap-2">
+              <Dumbbell className="h-4 w-4 text-[var(--accent-primary)]" />
+              <span className="text-sm font-medium text-[var(--text-secondary)]">
+                {post.workoutSummary.exerciseCount} exercises · {post.workoutSummary.totalVolume.toLocaleString()} kg volume
+                {post.workoutSummary.duration ? ` · ${Math.floor(post.workoutSummary.duration / 60)} min` : ""}
+              </span>
+            </span>
+            <ChevronDown className={`h-4 w-4 text-[var(--text-muted)] transition-transform ${showWorkout ? "rotate-180" : ""}`} />
+          </button>
+
+          {showWorkout && (
+            <div className="mt-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-3">
+              <div className="space-y-2">
+                {post.workoutSummary.exercises.map((ex, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-[var(--text-primary)]">{ex.name}</span>
+                    <span className="text-[var(--text-muted)]">
+                      {ex.sets} × {ex.reps ?? "—"}{ex.weight ? ` @ ${ex.weight}kg` : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {isPro && post.author.id !== currentUserId && (
+                <button
+                  onClick={handleSaveWorkout}
+                  disabled={savingWorkout}
+                  className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--accent-primary)] hover:bg-[var(--accent-muted)] disabled:opacity-50"
+                >
+                  {savingWorkout ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                  {savingWorkout ? "Saving..." : "Add to my workouts"}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
