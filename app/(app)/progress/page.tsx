@@ -12,7 +12,7 @@ import {
 import { DEFAULT_TZ, startOfWeekInTz, zonedParts } from "@/lib/timezone";
 import { MuscleSuggestions } from "@/components/progress/muscle-suggestions";
 import { BodyScanUpload } from "@/components/progress/body-scan-upload";
-import { BodyCompositionDisplay } from "@/components/progress/body-composition-display";
+import { BodyCompositionDisplay, type BodyCompositionScan } from "@/components/progress/body-composition-display";
 import { getUserPlan } from "@/lib/entitlements";
 import Link from "next/link";
 
@@ -223,7 +223,7 @@ export default async function ProgressPage() {
         <h2 className="text-lg font-bold">Body Composition Scan</h2>
         {latestScan ? (
           <div className="mt-3">
-            <BodyCompositionDisplay scan={latestScan as Record<string, unknown>} />
+            <BodyCompositionDisplay scan={latestScan as unknown as BodyCompositionScan} />
           </div>
         ) : (
           <p className="mt-3 text-sm text-[var(--text-muted)]">
