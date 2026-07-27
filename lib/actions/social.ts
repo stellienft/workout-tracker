@@ -532,7 +532,7 @@ export async function getFeed(page = 1, perPage = 20): Promise<FeedPost[]> {
       workoutSessionId: p.workout_session_id as string | null,
       workoutSummary: wsid ? workoutSummaryMap.get(wsid) ?? null : null,
       aiModerationStatus: (p.ai_moderation_status ?? "pending") as "pending" | "approved" | "flagged" | "rejected",
-    } satisfies FeedPost;
+    } as FeedPost;
   });
 }
 
