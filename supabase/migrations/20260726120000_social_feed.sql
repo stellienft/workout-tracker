@@ -314,3 +314,10 @@ create policy "social-feed delete"
   );
 
 -- No SELECT policy: media served via signed URLs only.
+-- Actually, we NEED a SELECT policy for signed URLs to work.
+drop policy if exists "social-feed select" on storage.objects;
+create policy "social-feed select"
+  on storage.objects for select to authenticated
+  using (
+    bucket_id = 'social-feed'
+  );

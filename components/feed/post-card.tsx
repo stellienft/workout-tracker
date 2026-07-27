@@ -13,6 +13,7 @@ import {
   UserPlus,
   Ban,
   Flag,
+  Dumbbell,
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
@@ -414,6 +415,14 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
         <p className="px-4 pb-3 text-sm leading-relaxed text-[var(--text-primary)] whitespace-pre-wrap break-words">
           {post.caption}
         </p>
+      )}
+
+      {/* Linked workout session */}
+      {post.workoutSessionId && (
+        <div className="mx-4 mb-3 flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 py-2">
+          <Dumbbell className="h-4 w-4 text-[var(--accent-primary)]" />
+          <span className="text-sm text-[var(--text-secondary)]">Shared a workout session</span>
+        </div>
       )}
 
       {/* Media */}
