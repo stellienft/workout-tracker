@@ -9,7 +9,6 @@ import { completeOnboarding } from "@/lib/actions/onboarding";
 import { processReferral } from "@/lib/actions/referrals";
 import type { FitnessGoal } from "@/lib/types";
 import { Check } from "lucide-react";
-import { BodyScanUpload } from "@/components/progress/body-scan-upload";
 
 const EQUIPMENT = [
   "dumbbell",
@@ -290,12 +289,11 @@ export function OnboardingWizard({
                 Upload a body composition scan?
               </h2>
               <p className="mt-1 text-[var(--text-secondary)]">
-                If you&apos;ve had an InBody, DEXA, or Evolt scan, upload the
-                results and we&apos;ll populate your profile automatically. You
-                can skip this and add it later.
+                If you&apos;ve had an InBody, DEXA, or Evolt scan, you can upload
+                the results from the Progress page after subscribing to Pro.
+                You can skip this for now.
               </p>
             </div>
-            <BodyScanUpload isPro={false} />
             <p className="text-xs text-[var(--text-muted)]">
               This step is optional — you can always upload a scan later from
               the Progress page.
