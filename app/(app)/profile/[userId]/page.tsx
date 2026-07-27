@@ -36,6 +36,7 @@ export default async function UserProfilePage({
     { count: followingCount },
     { data: isFollowingRow },
     { data: isBlockedRow },
+    { data: latestScan },
   ] = await Promise.all([
     supabase.from("workout_sessions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "completed"),
     supabase.from("social_posts").select("id", { count: "exact", head: true }).eq("user_id", userId),
@@ -43,6 +44,7 @@ export default async function UserProfilePage({
     supabase.from("social_follows").select("id", { count: "exact", head: true }).eq("follower_id", userId),
     supabase.from("social_follows").select("id").eq("follower_id", user.id).eq("following_id", userId).maybeSingle(),
     supabase.from("social_blocks").select("id").eq("blocker_id", user.id).eq("blocked_id", userId).maybeSingle(),
+    supabase.from("body_composition_scans").select("scan_date, source, body_fat_pct, muscle_mass_kg, weight_kg, bmi").eq("user_id", userId).order("scan_date", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   // Recent posts
@@ -109,6 +111,32 @@ export default async function UserProfilePage({
         </div>
       </div>
 
+      {/* Body Composition */}
+      {latestScan && (
+        <div className="mt-6 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold">Body Composition</h2>
+            <span className="text-xs text-[var(--text-muted)]">
+              {(latestScan as Record<string, unknown>).source as string ?? "Scan"} · {new Date((latestScan as Record<string, unknown>).scan_date as string).toLocaleDateString()}
+            </span>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {(latestScan as Record<string, unknown>).body_fat_pct != null && (
+              <CompStat label="Body Fat" value={`${Number((latestScan as Record<string, unknown>).body_fat_pct).toFixed(1)}%`} />
+            )}
+            {(latestScan as Record<string, unknown>).muscle_mass_kg != null && (
+              <CompStat label="Muscle Mass" value={`${Number((latestScan as Record<string, unknown>).muscle_mass_kg).toFixed(1)} kg`} />
+            )}
+            {(latestScan as Record<string, unknown>).weight_kg != null && (
+              <CompStat label="Weight" value={`${Number((latestScan as Record<string, unknown>).weight_kg).toFixed(1)} kg`} />
+            )}
+            {(latestScan as Record<string, unknown>).bmi != null && (
+              <CompStat label="BMI" value={Number((latestScan as Record<string, unknown>).bmi).toFixed(1)} />
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="mt-6">
         <h2 className="text-lg font-bold">{isSelf ? "Your posts" : "Posts"}</h2>
         {(!postRows || postRows.length === 0) ? (
@@ -135,6 +163,15 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
     <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3 text-center">
       <div className="flex items-center justify-center text-[var(--accent-primary)]">{icon}</div>
       <p className="mt-1 text-lg font-bold">{value.toLocaleString()}</p>
+      <p className="text-[10px] text-[var(--text-muted)]">{label}</p>
+    </div>
+  );
+}
+
+function CompStat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3 text-center">
+      <p className="text-lg font-bold">{value}</p>
       <p className="text-[10px] text-[var(--text-muted)]">{label}</p>
     </div>
   );
