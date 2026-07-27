@@ -43,12 +43,6 @@ export interface FeedPost {
   commentCount: number;
   currentUserReactions: string[];
   workoutSessionId: string | null;
-  workoutSummary: {
-    duration: number | null;
-    exerciseCount: number;
-    totalVolume: number;
-    exercises: { name: string; sets: number; reps: number | null; weight: number | null }[];
-  } | null;
   aiModerationStatus: "pending" | "approved" | "flagged" | "rejected";
 }
 
@@ -453,67 +447,9 @@ export async function getFeed(page = 1, perPage = 20): Promise<FeedPost[]> {
   const followingSet = new Set<string>();
   (followsData?.data ?? []).forEach((f) => followingSet.add(f.following_id as string));
 
-  // --- 3b. Fetch workout session data for posts with workout_session_id ---
-  const workoutSessionIds = posts
-    .map((p) => p.workout_session_id as string | null)
-    .filter((id): id is string => Boolean(id));
-
-  let workoutSummaryMap = new Map<string, FeedPost["workoutSummary"]>();
-
-  if (workoutSessionIds.length > 0) {
-    const { data: sessionRows } = await supabase
-      .from("workout_sessions")
-      .select("id, total_seconds")
-      .in("id", workoutSessionIds);
-
-    const { data: setLogRows } = await supabase
-      .from("set_logs")
-      .select("session_id, exercise_id, weight_kg, reps, set_number")
-      .in("session_id", workoutSessionIds)
-      .eq("completed", true);
-
-    const { data: exerciseRows } = await supabase
-      .from("exercises")
-      .select("id, name")
-      .in(
-        "id",
-        Array.from(new Set((setLogRows ?? []).map((s) => s.exercise_id as string))).filter(Boolean),
-      );
-
-    const exNameMap = new Map<string, string>();
-    for (const e of exerciseRows ?? []) exNameMap.set(e.id as string, e.name as string);
-
-    for (const sid of workoutSessionIds) {
-      const session = (sessionRows ?? []).find((s) => s.id === sid);
-      const sets = (setLogRows ?? []).filter((s) => s.session_id === sid);
-      const exerciseMap = new Map<string, { name: string; sets: number; reps: number | null; weight: number | null }>();
-      let totalVolume = 0;
-      for (const s of sets) {
-        const exId = s.exercise_id as string;
-        const name = exNameMap.get(exId) ?? "Unknown";
-        const weight = s.weight_kg != null ? Number(s.weight_kg) : 0;
-        const reps = s.reps != null ? Number(s.reps) : 0;
-        totalVolume += weight * reps;
-        if (!exerciseMap.has(exId)) {
-          exerciseMap.set(exId, { name, sets: 1, reps: reps || null, weight: weight || null });
-        } else {
-          const ex = exerciseMap.get(exId)!;
-          ex.sets += 1;
-        }
-      }
-      workoutSummaryMap.set(sid, {
-        duration: session?.total_seconds ?? null,
-        exerciseCount: exerciseMap.size,
-        totalVolume: Math.round(totalVolume),
-        exercises: Array.from(exerciseMap.values()),
-      });
-    }
-  }
-
   // --- 4. Assemble final FeedPost[] ---
   return posts.map((p) => {
     const profile = profileMap.get(p.user_id as string);
-    const wsid = p.workout_session_id as string | null;
     return {
       id: p.id as string,
       caption: p.caption as string | null,
@@ -530,7 +466,6 @@ export async function getFeed(page = 1, perPage = 20): Promise<FeedPost[]> {
       commentCount: commentCountMap[p.id] ?? 0,
       currentUserReactions: userReactionsMap[p.id] ?? [],
       workoutSessionId: p.workout_session_id as string | null,
-      workoutSummary: wsid ? workoutSummaryMap.get(wsid) ?? null : null,
       aiModerationStatus: (p.ai_moderation_status ?? "pending") as "pending" | "approved" | "flagged" | "rejected",
     } as FeedPost;
   });

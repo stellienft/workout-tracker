@@ -82,6 +82,13 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
   const [mediaLoading, setMediaLoading] = useState(false);
   const [showWorkout, setShowWorkout] = useState(false);
   const [savingWorkout, setSavingWorkout] = useState(false);
+  const [workoutLoading, setWorkoutLoading] = useState(false);
+  const [workoutData, setWorkoutData] = useState<{
+    duration: number | null;
+    exerciseCount: number;
+    totalVolume: number;
+    exercises: { name: string; sets: number; reps: number | null; weight: number | null }[];
+  } | null>(null);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -297,8 +304,62 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
     });
   }
 
+  async function fetchWorkoutData() {
+    if (!post.workoutSessionId) return;
+    setWorkoutLoading(true);
+    try {
+      const supabase = createClient();
+      const { data: session } = await supabase
+        .from("workout_sessions")
+        .select("total_seconds")
+        .eq("id", post.workoutSessionId)
+        .maybeSingle();
+
+      const { data: setLogs } = await supabase
+        .from("set_logs")
+        .select("exercise_id, weight_kg, reps, set_number")
+        .eq("session_id", post.workoutSessionId)
+        .eq("completed", true);
+
+      const exIds = Array.from(new Set((setLogs ?? []).map((s) => s.exercise_id as string).filter(Boolean)));
+      const { data: exRows } = await supabase
+        .from("exercises")
+        .select("id, name")
+        .in("id", exIds.length > 0 ? exIds : ["00000000-0000-0000-0000-000000000000"]);
+
+      const exNameMap = new Map<string, string>();
+      for (const e of exRows ?? []) exNameMap.set(e.id as string, e.name as string);
+
+      const exerciseMap = new Map<string, { name: string; sets: number; reps: number | null; weight: number | null }>();
+      let totalVolume = 0;
+      for (const s of setLogs ?? []) {
+        const exId = s.exercise_id as string;
+        const name = exNameMap.get(exId) ?? "Unknown";
+        const weight = s.weight_kg != null ? Number(s.weight_kg) : 0;
+        const reps = s.reps != null ? Number(s.reps) : 0;
+        totalVolume += weight * reps;
+        if (!exerciseMap.has(exId)) {
+          exerciseMap.set(exId, { name, sets: 1, reps: reps || null, weight: weight || null });
+        } else {
+          exerciseMap.get(exId)!.sets += 1;
+        }
+      }
+
+      setWorkoutData({
+        duration: session?.total_seconds ?? null,
+        exerciseCount: exerciseMap.size,
+        totalVolume: Math.round(totalVolume),
+        exercises: Array.from(exerciseMap.values()),
+      });
+    } catch {
+      // ignore
+    } finally {
+      setWorkoutLoading(false);
+    }
+  }
+
   async function handleSaveWorkout() {
-    if (!post.workoutSummary) return;
+    if (!workoutData) return;
     setSavingWorkout(true);
     try {
       const supabase = createClient();
@@ -310,11 +371,11 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
         source_user_id: post.author.id,
         source_session_id: post.workoutSessionId,
         name: `${post.author.name ?? "Friend"}'s workout`,
-        estimated_minutes: post.workoutSummary.duration
-          ? Math.ceil(post.workoutSummary.duration / 60)
+        estimated_minutes: workoutData.duration
+          ? Math.ceil(workoutData.duration / 60)
           : 45,
-        exercises: JSON.stringify(post.workoutSummary.exercises),
-        total_volume: post.workoutSummary.totalVolume,
+        exercises: JSON.stringify(workoutData.exercises),
+        total_volume: workoutData.totalVolume,
       });
 
       if (error) {
@@ -455,17 +516,19 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
       )}
 
       {/* Linked workout session */}
-      {post.workoutSessionId && post.workoutSummary && (
+      {post.workoutSessionId && (
         <div className="mx-4 mb-3">
           <button
-            onClick={() => setShowWorkout(!showWorkout)}
+            onClick={() => {
+              setShowWorkout(!showWorkout);
+              if (!showWorkout && !workoutData) fetchWorkoutData();
+            }}
             className="flex w-full items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 py-2.5 text-left"
           >
             <span className="flex items-center gap-2">
               <Dumbbell className="h-4 w-4 text-[var(--accent-primary)]" />
               <span className="text-sm font-medium text-[var(--text-secondary)]">
-                {post.workoutSummary.exerciseCount} exercises · {post.workoutSummary.totalVolume.toLocaleString()} kg volume
-                {post.workoutSummary.duration ? ` · ${Math.floor(post.workoutSummary.duration / 60)} min` : ""}
+                {workoutLoading ? "Loading..." : workoutData ? `${workoutData.exerciseCount} exercises · ${workoutData.totalVolume.toLocaleString()} kg volume${workoutData.duration ? ` · ${Math.floor(workoutData.duration / 60)} min` : ""}` : "Shared a workout session"}
               </span>
             </span>
             <ChevronDown className={`h-4 w-4 text-[var(--text-muted)] transition-transform ${showWorkout ? "rotate-180" : ""}`} />
@@ -473,25 +536,35 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
 
           {showWorkout && (
             <div className="mt-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-3">
-              <div className="space-y-2">
-                {post.workoutSummary.exercises.map((ex, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-[var(--text-primary)]">{ex.name}</span>
-                    <span className="text-[var(--text-muted)]">
-                      {ex.sets} × {ex.reps ?? "—"}{ex.weight ? ` @ ${ex.weight}kg` : ""}
-                    </span>
+              {workoutLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-4 w-4 animate-spin text-[var(--text-muted)]" />
+                </div>
+              ) : workoutData ? (
+                <>
+                  <div className="space-y-2">
+                    {workoutData.exercises.map((ex, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-[var(--text-primary)]">{ex.name}</span>
+                        <span className="text-[var(--text-muted)]">
+                          {ex.sets} × {ex.reps ?? "—"}{ex.weight ? ` @ ${ex.weight}kg` : ""}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              {isPro && post.author.id !== currentUserId && (
-                <button
-                  onClick={handleSaveWorkout}
-                  disabled={savingWorkout}
-                  className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--accent-primary)] hover:bg-[var(--accent-muted)] disabled:opacity-50"
-                >
-                  {savingWorkout ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                  {savingWorkout ? "Saving..." : "Add to my workouts"}
-                </button>
+                  {isPro && post.author.id !== currentUserId && (
+                    <button
+                      onClick={handleSaveWorkout}
+                      disabled={savingWorkout}
+                      className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--accent-primary)] hover:bg-[var(--accent-muted)] disabled:opacity-50"
+                    >
+                      {savingWorkout ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                      {savingWorkout ? "Saving..." : "Add to my workouts"}
+                    </button>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-[var(--text-muted)]">Could not load workout details.</p>
               )}
             </div>
           )}
