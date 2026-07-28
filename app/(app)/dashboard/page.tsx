@@ -10,6 +10,7 @@ import { TodayHeroCard } from "@/components/dashboard/today-hero";
 import { WeeklyCompletionCard } from "@/components/dashboard/weekly-completion";
 import { StreakCard } from "@/components/dashboard/streak-card";
 import { WeeklyRecapCard } from "@/components/dashboard/weekly-recap-card";
+import { WellnessTrackers } from "@/components/dashboard/wellness-trackers";
 import { computeStreak } from "@/lib/streak";
 import { getCachedRecap } from "@/lib/actions/recap";
 import { quoteForDate } from "@/lib/quotes";
@@ -95,6 +96,21 @@ export default async function DashboardPage() {
     profile?.timezone || "Australia/Brisbane"
   );
 
+  // Today's wellness (water + sleep), keyed to the member's local day.
+  const tzLocal = profile?.timezone || "Australia/Brisbane";
+  const todayLocal = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tzLocal,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const { data: wellness } = await supabase
+    .from("daily_wellness")
+    .select("water_ml, sleep_hours")
+    .eq("user_id", user.id)
+    .eq("logged_on", todayLocal)
+    .maybeSingle();
+
   // Discovery: featured programs.
   const { data: featured } = await supabase
     .from("featured_content")
@@ -156,6 +172,14 @@ export default async function DashboardPage() {
           — {quote.author}
         </figcaption>
       </figure>
+
+      <div className="mt-4">
+        <WellnessTrackers
+          date={todayLocal}
+          initialWaterMl={Number(wellness?.water_ml ?? 0)}
+          initialSleepHours={wellness?.sleep_hours != null ? Number(wellness.sleep_hours) : null}
+        />
+      </div>
 
       {/* New-user nudge: try a ready-made starter split */}
       {showStarterNudge && (
