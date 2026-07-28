@@ -78,10 +78,23 @@ export async function processReferral() {
   if (!user) return { ok: false as const };
 
   const jar = await cookies();
-  const code = jar.get(REF_COOKIE)?.value?.toUpperCase();
+  // Prefer the cookie, but fall back to the code stamped on the auth user at
+  // signup — that survives email confirmation, a new tab, or a different device.
+  const metaCode = (user.user_metadata as { ref_code?: string } | undefined)?.ref_code;
+  const code = (jar.get(REF_COOKIE)?.value || metaCode)?.toUpperCase();
   if (!code) return { ok: true as const, referred: false };
 
   const svc = serviceSupabase();
+
+  // Once we've handled this code, forget it everywhere so it isn't reconsidered.
+  async function clear() {
+    jar.delete(REF_COOKIE);
+    if (metaCode) {
+      await svc.auth.admin
+        .updateUserById(user!.id, { user_metadata: { ...user!.user_metadata, ref_code: null } })
+        .catch(() => {});
+    }
+  }
 
   // Already referred? Nothing to do.
   const { data: existing } = await svc
@@ -90,7 +103,7 @@ export async function processReferral() {
     .eq("referred_user_id", user.id)
     .maybeSingle();
   if (existing) {
-    jar.delete(REF_COOKIE);
+    await clear();
     return { ok: true as const, referred: false };
   }
 
@@ -102,7 +115,7 @@ export async function processReferral() {
     .maybeSingle();
   const referrerId = referrer?.id as string | undefined;
   if (!referrerId || referrerId === user.id) {
-    jar.delete(REF_COOKIE);
+    await clear();
     return { ok: true as const, referred: false };
   }
 
@@ -112,13 +125,13 @@ export async function processReferral() {
     code,
   });
   if (error) {
-    jar.delete(REF_COOKIE);
+    await clear();
     return { ok: true as const, referred: false };
   }
 
   await extendFreeGrant(svc, user.id, "referred_signup");
   await extendFreeGrant(svc, referrerId, "referral_reward");
 
-  jar.delete(REF_COOKIE);
+  await clear();
   return { ok: true as const, referred: true };
 }
