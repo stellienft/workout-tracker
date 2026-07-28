@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Activity } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getAuthContext } from "@/lib/auth";
 import { getDashboardData } from "@/lib/dashboard";
@@ -164,22 +163,16 @@ export default async function DashboardPage() {
       </div>
 
       {/* Quote of the day */}
-      <figure className="mt-4 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4">
-        <blockquote className="text-sm italic text-[var(--text-secondary)]">
-          &ldquo;{quote.text}&rdquo;
-        </blockquote>
-        <figcaption className="mt-1 text-xs text-[var(--text-muted)]">
-          — {quote.author}
-        </figcaption>
-      </figure>
-
-      <div className="mt-4">
-        <WellnessTrackers
-          date={todayLocal}
-          initialWaterMl={Number(wellness?.water_ml ?? 0)}
-          initialSleepHours={wellness?.sleep_hours != null ? Number(wellness.sleep_hours) : null}
-        />
-      </div>
+      {profile?.daily_quote_enabled !== false && (
+        <figure className="mt-4 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4">
+          <blockquote className="text-sm italic text-[var(--text-secondary)]">
+            &ldquo;{quote.text}&rdquo;
+          </blockquote>
+          <figcaption className="mt-1 text-xs text-[var(--text-muted)]">
+            — {quote.author}
+          </figcaption>
+        </figure>
+      )}
 
       {/* New-user nudge: try a ready-made starter split */}
       {showStarterNudge && (
@@ -262,25 +255,13 @@ export default async function DashboardPage() {
         <WeeklyRecapCard initial={cachedRecap} />
       </div>
 
-      {(profile?.injury_areas?.length ?? 0) > 0 && (
-        <Link
-          href="/therapy"
-          className="mt-4 flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4 transition-colors hover:border-[var(--border-active)]"
-        >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--accent-muted)] text-[var(--accent-primary)]">
-            <Activity className="h-5 w-5" />
-          </span>
-          <span className="min-w-0 flex-1 text-sm">
-            <span className="block font-semibold">Recovery routines for you</span>
-            <span className="block text-[var(--text-muted)]">
-              Gentle mobility &amp; prehab for the areas you flagged.
-            </span>
-          </span>
-          <span className="shrink-0 text-sm font-semibold text-[var(--accent-primary)]">
-            Open
-          </span>
-        </Link>
-      )}
+      <div className="mt-4">
+        <WellnessTrackers
+          date={todayLocal}
+          initialWaterMl={Number(wellness?.water_ml ?? 0)}
+          initialSleepHours={wellness?.sleep_hours != null ? Number(wellness.sleep_hours) : null}
+        />
+      </div>
 
       {/* Small stats */}
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">

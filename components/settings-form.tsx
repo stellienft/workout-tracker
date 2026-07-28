@@ -17,6 +17,8 @@ export function SettingsForm({
     unitPreference: "metric" | "imperial";
     hapticsEnabled: boolean;
     medicationTracking: boolean;
+    dailyQuote: boolean;
+    motivationPush: boolean;
     injuryAreas: string[];
     considerations: string;
     timezone: string;
@@ -29,6 +31,8 @@ export function SettingsForm({
   const [unit, setUnit] = useState(initial.unitPreference);
   const [haptics, setHaptics] = useState(initial.hapticsEnabled);
   const [medication, setMedication] = useState(initial.medicationTracking);
+  const [dailyQuote, setDailyQuote] = useState(initial.dailyQuote);
+  const [motivationPush, setMotivationPush] = useState(initial.motivationPush);
   const [injuryAreas, setInjuryAreas] = useState<string[]>(initial.injuryAreas);
   const [considerations, setConsiderations] = useState(initial.considerations);
   const [timezone, setTimezone] = useState(initial.timezone);
@@ -64,6 +68,8 @@ export function SettingsForm({
         unitPreference: unit,
         hapticsEnabled: haptics,
         medicationTracking: medication,
+        dailyQuoteEnabled: dailyQuote,
+        motivationPushEnabled: motivationPush,
         injuryAreas,
         considerations,
         timezone,
@@ -146,6 +152,18 @@ export function SettingsForm({
         hint="Show the Health tab to track symptoms, vitals and medications."
         checked={medication}
         onChange={setMedication}
+      />
+      <Toggle
+        label="Daily motivation quote"
+        hint="Show a motivational quote on your dashboard each day."
+        checked={dailyQuote}
+        onChange={setDailyQuote}
+      />
+      <Toggle
+        label="Motivation push notifications"
+        hint="Get the daily quote as a morning push (needs reminders enabled)."
+        checked={motivationPush}
+        onChange={setMotivationPush}
       />
 
       <div>

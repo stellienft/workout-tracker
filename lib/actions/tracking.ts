@@ -145,6 +145,8 @@ export async function updateSettings(input: Record<string, unknown>) {
     unitPreference: z.enum(["metric", "imperial"]).optional(),
     hapticsEnabled: z.boolean().optional(),
     medicationTracking: z.boolean().optional(),
+    dailyQuoteEnabled: z.boolean().optional(),
+    motivationPushEnabled: z.boolean().optional(),
     injuryAreas: z.array(z.string()).max(20).optional(),
     considerations: z.string().max(1000).optional(),
     timezone: z.string().max(64).optional(),
@@ -160,6 +162,9 @@ export async function updateSettings(input: Record<string, unknown>) {
   if (d.hapticsEnabled !== undefined) update.haptics_enabled = d.hapticsEnabled;
   if (d.medicationTracking !== undefined)
     update.medication_tracking_enabled = d.medicationTracking;
+  if (d.dailyQuoteEnabled !== undefined) update.daily_quote_enabled = d.dailyQuoteEnabled;
+  if (d.motivationPushEnabled !== undefined)
+    update.motivation_push_enabled = d.motivationPushEnabled;
   if (d.injuryAreas !== undefined) update.injury_areas = d.injuryAreas;
   if (d.considerations !== undefined) update.considerations = d.considerations;
   if (d.themePreference !== undefined) update.theme_preference = d.themePreference;

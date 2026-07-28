@@ -39,6 +39,8 @@ export interface Profile {
   considerations: string | null;
   medication_tracking_enabled: boolean;
   haptics_enabled: boolean;
+  daily_quote_enabled: boolean;
+  motivation_push_enabled: boolean;
   unit_preference: "metric" | "imperial";
   timezone: string;
   account_type: "user" | "trainer";
