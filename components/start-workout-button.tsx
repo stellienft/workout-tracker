@@ -23,7 +23,6 @@ export function StartWorkoutButton({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
-  const [shoulder, setShoulder] = useState(0);
   const [energy, setEnergy] = useState(3);
   const [readiness, setReadiness] = useState(3);
 
@@ -31,7 +30,6 @@ export function StartWorkoutButton({
     startTransition(async () => {
       const res = await startWorkout({
         workoutTemplateId,
-        preShoulderPain: shoulder,
         preEnergy: energy,
         preReadiness: readiness,
       });
@@ -62,24 +60,9 @@ export function StartWorkoutButton({
           <div className="w-full max-w-md rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-6">
             <h3 className="text-lg font-bold">Quick check-in</h3>
             <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              Two seconds before you lift — this keeps your shoulder safe.
+              Two seconds before you lift — how are you feeling today?
             </p>
 
-            <Scale
-              label="Left shoulder pain"
-              value={shoulder}
-              min={0}
-              max={10}
-              onChange={setShoulder}
-              hint={
-                shoulder >= 5
-                  ? "That's high — we'll suggest gentler substitutes today."
-                  : shoulder >= 3
-                    ? "We'll flag pressing moves to watch."
-                    : "Good to go."
-              }
-              danger={shoulder >= 5}
-            />
             <Scale label="Energy" value={energy} min={1} max={5} onChange={setEnergy} />
             <Scale
               label="Readiness"

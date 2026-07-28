@@ -31,7 +31,7 @@ import {
 } from "@/lib/actions/workout";
 import { enqueue, flush, pendingCount } from "@/lib/offline-queue";
 import type { LoadedVideo, AltOption } from "@/lib/workout-loader";
-import { parseConcerns, exerciseConcern } from "@/lib/injury";
+import { combineConcerns, exerciseConcern } from "@/lib/injury";
 import { cn, formatDuration } from "@/lib/utils";
 
 interface SubDetail {
@@ -87,6 +87,7 @@ export function WorkoutMode({
   programName,
   workoutName,
   considerations,
+  injuryAreas,
   exercises,
   initialLogs,
 }: {
@@ -94,10 +95,10 @@ export function WorkoutMode({
   startedAt: string;
   programName: string;
   workoutName: string;
-  // Accepted for compatibility with the caller; injury caution is now driven by
-  // the member's own considerations, not a global shoulder signal.
-  preShoulderPain?: number | null;
+  // Injury caution is driven by the member's own reported areas + note, not a
+  // global shoulder signal.
   considerations?: string | null;
+  injuryAreas?: string[] | null;
   exercises: WorkoutExerciseVM[];
   initialLogs: {
     exerciseId: string;
@@ -156,7 +157,10 @@ export function WorkoutMode({
     () => exercises.filter((e) => !removed.has(e.exerciseId)),
     [exercises, removed]
   );
-  const concerns = useMemo(() => parseConcerns(considerations), [considerations]);
+  const concerns = useMemo(
+    () => combineConcerns(injuryAreas, considerations),
+    [injuryAreas, considerations]
+  );
   const safeIndex = Math.min(index, Math.max(0, workingExercises.length - 1));
   const current = workingExercises[safeIndex];
   const haptics = true;
@@ -475,14 +479,15 @@ export function WorkoutMode({
             </p>
           )}
 
-          {considerations?.trim() && showInjuryNote && (
+          {concerns.length > 0 && showInjuryNote && (
             <div className="mt-3 flex items-start gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3">
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-primary)]" />
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold">Your injury notes</p>
-                <p className="text-xs text-[var(--text-secondary)]">
-                  {considerations.trim()} — tap Replace on any exercise that
-                  doesn&apos;t feel right.
+                <p className="text-xs font-semibold">Your sore / injured areas</p>
+                <p className="text-xs capitalize text-[var(--text-secondary)]">
+                  {concerns.map((c) => c.label).join(", ")}
+                  {considerations?.trim() ? ` — ${considerations.trim()}` : ""}. Tap
+                  Replace on any exercise that doesn&apos;t feel right.
                 </p>
               </div>
               <button

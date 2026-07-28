@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { updateSettings } from "@/lib/actions/tracking";
 import { TIMEZONE_OPTIONS } from "@/lib/timezone";
-import { MapPin } from "lucide-react";
+import { INJURY_AREAS } from "@/lib/injury";
+import { MapPin, Check } from "lucide-react";
 
 export function SettingsForm({
   initial,
@@ -16,6 +17,7 @@ export function SettingsForm({
     unitPreference: "metric" | "imperial";
     hapticsEnabled: boolean;
     medicationTracking: boolean;
+    injuryAreas: string[];
     considerations: string;
     timezone: string;
   };
@@ -27,8 +29,15 @@ export function SettingsForm({
   const [unit, setUnit] = useState(initial.unitPreference);
   const [haptics, setHaptics] = useState(initial.hapticsEnabled);
   const [medication, setMedication] = useState(initial.medicationTracking);
+  const [injuryAreas, setInjuryAreas] = useState<string[]>(initial.injuryAreas);
   const [considerations, setConsiderations] = useState(initial.considerations);
   const [timezone, setTimezone] = useState(initial.timezone);
+
+  function toggleArea(value: string) {
+    setInjuryAreas((cur) =>
+      cur.includes(value) ? cur.filter((x) => x !== value) : [...cur, value]
+    );
+  }
 
   // Ensure the current value is always selectable, even if it isn't one of
   // the curated options (e.g. detected from an unusual device timezone).
@@ -55,6 +64,7 @@ export function SettingsForm({
         unitPreference: unit,
         hapticsEnabled: haptics,
         medicationTracking: medication,
+        injuryAreas,
         considerations,
         timezone,
       });
@@ -138,13 +148,40 @@ export function SettingsForm({
         onChange={setMedication}
       />
 
+      <div>
+        <span className="text-sm font-medium">Sore or injured areas</span>
+        <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+          We flag exercises that load these areas and suggest safer swaps.
+        </p>
+        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {INJURY_AREAS.map((a) => {
+            const active = injuryAreas.includes(a.value);
+            return (
+              <button
+                key={a.value}
+                type="button"
+                onClick={() => toggleArea(a.value)}
+                className={`flex items-center justify-between rounded-xl border p-2.5 text-left text-sm transition-colors ${
+                  active
+                    ? "border-[var(--border-active)] bg-[var(--accent-muted)]"
+                    : "border-[var(--border-subtle)] bg-[var(--surface-secondary)]"
+                }`}
+              >
+                <span className="font-medium">{a.label}</span>
+                {active && <Check className="h-4 w-4 text-[var(--accent-primary)]" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium">Movement considerations</span>
+        <span className="text-sm font-medium">Anything else to note</span>
         <textarea
           value={considerations}
           onChange={(e) => setConsiderations(e.target.value)}
-          rows={3}
-          placeholder="e.g. Sore left shoulder — avoid overhead pressing."
+          rows={2}
+          placeholder="e.g. Recovering from surgery — keep impact low."
           className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
         />
       </label>

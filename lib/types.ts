@@ -35,6 +35,7 @@ export interface Profile {
   session_minutes: number | null;
   equipment: string[];
   training_days: string[];
+  injury_areas: string[];
   considerations: string | null;
   medication_tracking_enabled: boolean;
   haptics_enabled: boolean;

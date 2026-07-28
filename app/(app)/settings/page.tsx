@@ -115,6 +115,7 @@ export default async function SettingsPage() {
             unitPreference: profile?.unit_preference ?? "metric",
             hapticsEnabled: profile?.haptics_enabled ?? true,
             medicationTracking: profile?.medication_tracking_enabled ?? false,
+            injuryAreas: profile?.injury_areas ?? [],
             considerations: profile?.considerations ?? "",
             timezone: profile?.timezone ?? "Australia/Brisbane",
           }}

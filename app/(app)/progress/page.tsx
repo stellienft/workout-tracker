@@ -33,7 +33,6 @@ export default async function ProgressPage() {
   const [
     { data: metrics },
     { data: sessions },
-    { data: checkins },
     { count },
     { data: photoRows },
     { data: latestScan },
@@ -51,13 +50,6 @@ export default async function ProgressPage() {
       .eq("status", "completed")
       .order("completed_at", { ascending: true })
       .limit(120),
-    supabase
-      .from("checkins")
-      .select("checked_on, shoulder_pain")
-      .eq("user_id", user.id)
-      .not("shoulder_pain", "is", null)
-      .order("checked_on", { ascending: true })
-      .limit(60),
     supabase
       .from("workout_sessions")
       .select("id", { count: "exact", head: true })
@@ -165,11 +157,6 @@ export default async function ProgressPage() {
   const weightData = (metrics ?? [])
     .filter((m) => m.weight_kg != null)
     .map((m) => ({ x: m.recorded_on, y: Number(m.weight_kg) }));
-  const shoulderData = (checkins ?? []).map((c) => ({
-    x: c.checked_on,
-    y: Number(c.shoulder_pain),
-  }));
-
   // Weekly workout counts (last 8 weeks).
   const weeklyCounts = buildWeeklyCounts(sessions ?? [], tz);
 
@@ -207,11 +194,6 @@ export default async function ProgressPage() {
           value={String(countThisMonth(sessions ?? [], tz))}
           sub="sessions"
         />
-        <StatCard
-          label="Shoulder"
-          value={shoulderData.at(-1) ? `${shoulderData.at(-1)!.y}/10` : "—"}
-          sub="latest pain"
-        />
       </div>
 
       <div className="mt-6">
@@ -233,10 +215,6 @@ export default async function ProgressPage() {
 
       <div className="mt-4">
         <ProgressPhotos photos={photos} />
-      </div>
-
-      <div className="mt-4 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
-        <LineChart data={shoulderData} label="Left shoulder pain" unit="/10" />
       </div>
 
       <div className="mt-4 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
