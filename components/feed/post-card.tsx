@@ -190,28 +190,31 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
     setCommentsLoading(true);
     try {
       const supabase = createClient();
+      // social_comments.user_id points at auth.users, not profiles, so a
+      // `profiles!...` embed is invalid and errors the whole query (leaving the
+      // comment invisible even though the count shows). Fetch plainly, then
+      // resolve commenter names via the same definer function the feed uses.
       const { data } = await supabase
         .from("social_comments")
-        .select("id, body, user_id, created_at, profiles!social_comments_user_id_fkey(full_name)")
+        .select("id, body, user_id, created_at")
         .eq("post_id", post.id)
         .order("created_at", { ascending: true });
       if (data) {
-        const mapped = data.map((c) => {
-          const row = c as unknown as {
-            id: string;
-            body: string;
-            user_id: string;
-            created_at: string;
-            profiles: { full_name: string | null } | null;
-          };
-          return {
-            id: row.id,
-            body: row.body,
-            authorId: row.user_id,
-            authorName: row.profiles?.full_name ?? null,
-            createdAt: row.created_at,
-          } satisfies Comment;
-        });
+        const ids = Array.from(new Set(data.map((c) => c.user_id as string)));
+        const { data: profs } = ids.length
+          ? await supabase.rpc("feed_author_profiles", { p_ids: ids })
+          : { data: [] as { id: string; full_name: string | null }[] };
+        const nameById = new Map<string, string | null>();
+        for (const p of (profs ?? []) as { id: string; full_name: string | null }[]) {
+          nameById.set(p.id, p.full_name);
+        }
+        const mapped = data.map((c) => ({
+          id: c.id as string,
+          body: c.body as string,
+          authorId: c.user_id as string,
+          authorName: nameById.get(c.user_id as string) ?? null,
+          createdAt: c.created_at as string,
+        } satisfies Comment));
         setComments(mapped);
       }
     } catch {

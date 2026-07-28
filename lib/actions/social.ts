@@ -124,7 +124,7 @@ export async function deletePost(postId: string) {
 // ---------------------------------------------------------------------------
 
 export async function addComment(postId: string, body: string) {
-  const { supabase, user } = await getAuthContext();
+  const { supabase, user, profile } = await getAuthContext();
   if (!user) return { ok: false as const, error: "Not authenticated" };
 
   const { isPro } = await getUserPlan();
@@ -142,6 +142,25 @@ export async function addComment(postId: string, body: string) {
   });
 
   if (error) return { ok: false as const, error: error.message };
+
+  // Notify the post owner (unless they commented on their own post).
+  const { data: post } = await supabase
+    .from("social_posts")
+    .select("user_id")
+    .eq("id", parsed.data.postId)
+    .maybeSingle();
+  if (post && post.user_id !== user.id) {
+    const { notifyUser } = await import("@/lib/notify");
+    const name = profile?.full_name ?? "Someone";
+    await notifyUser({
+      userId: post.user_id as string,
+      type: "post_comment",
+      title: `${name} commented on your post`,
+      body: parsed.data.body.slice(0, 100),
+      link: "/feed",
+    });
+  }
+
   revalidatePath("/feed");
   revalidatePath(`/feed/${parsed.data.postId}`);
   return { ok: true as const };
