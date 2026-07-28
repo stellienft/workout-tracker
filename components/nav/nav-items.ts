@@ -25,6 +25,7 @@ import {
   Gift,
   UserPlus,
   FlaskConical,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 
@@ -70,6 +71,7 @@ export const navSections: NavSection[] = [
       { label: "Friends", href: "/friends", icon: UserPlus },
       { label: "Nutrition", href: "/nutrition", icon: Utensils, pro: true },
       { label: "Check-ins", href: "/check-ins", icon: ClipboardCheck },
+      { label: "Recovery", href: "/therapy", icon: Activity },
       { label: "Health", href: "/health", icon: HeartPulse, pro: true },
     ],
   },
