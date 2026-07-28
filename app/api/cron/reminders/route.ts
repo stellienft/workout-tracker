@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { serviceSupabase, sendToSubscriptions } from "@/lib/push";
+import { computeStreak } from "@/lib/streak";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -74,16 +75,29 @@ export async function GET(req: Request) {
     const dates = sessionsByUser.get(uid) ?? [];
     if (dates.some((d) => localDate(new Date(d), tz) === today)) continue; // trained today
 
+    // A live streak (trained yesterday, not yet today) gets a stronger,
+    // loss-averse nudge — that's the moment most worth saving.
+    const streak = computeStreak(dates, tz, now);
     const trainedThisWeek = dates.filter(
       (d) => now.getTime() - new Date(d).getTime() <= 7 * DAY
     ).length;
-    const body =
-      trainedThisWeek > 0
-        ? "Keep the momentum going — time for today's session 💪"
-        : "Your workout is waiting. Let's move 💪";
+
+    const { title, body } =
+      streak.atRisk && streak.current >= 2
+        ? {
+            title: `Don't break your ${streak.current}-day streak 🔥`,
+            body: "One session today keeps it alive.",
+          }
+        : {
+            title: "Time to train",
+            body:
+              trainedThisWeek > 0
+                ? "Keep the momentum going — time for today's session 💪"
+                : "Your workout is waiting. Let's move 💪",
+          };
 
     const res = await sendToSubscriptions(supabase, subsByUser.get(uid) ?? [], {
-      title: "Time to train",
+      title,
       body,
       url: "/dashboard",
       tag: "daily-reminder",

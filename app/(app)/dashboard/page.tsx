@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PageShell } from "@/components/ui/page-header";
 import { TodayHeroCard } from "@/components/dashboard/today-hero";
 import { WeeklyCompletionCard } from "@/components/dashboard/weekly-completion";
+import { StreakCard } from "@/components/dashboard/streak-card";
+import { computeStreak } from "@/lib/streak";
 import { StatCard } from "@/components/ui/card";
 import { ProgramCard } from "@/components/program-card";
 import { CoverImage } from "@/components/ui/cover-image";
@@ -75,6 +77,19 @@ export default async function DashboardPage() {
   ) {
     latestWeight = scanRow.weight_kg as number;
   }
+
+  // Workout streak: completed-session dates over the last ~6 weeks.
+  const { data: streakSessions } = await supabase
+    .from("workout_sessions")
+    .select("completed_at")
+    .eq("user_id", user.id)
+    .eq("status", "completed")
+    .gte("completed_at", new Date(Date.now() - 45 * 86_400_000).toISOString())
+    .order("completed_at", { ascending: false });
+  const streak = computeStreak(
+    (streakSessions ?? []).map((s) => s.completed_at as string),
+    profile?.timezone || "Australia/Brisbane"
+  );
 
   // Discovery: featured programs.
   const { data: featured } = await supabase
@@ -200,6 +215,8 @@ export default async function DashboardPage() {
           ) : null}
         </div>
       </div>
+
+      <StreakCard streak={streak} />
 
       {/* Small stats */}
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
