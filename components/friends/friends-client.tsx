@@ -270,8 +270,13 @@ export function FriendsClient({
                     )}
                     <button
                       onClick={() => {
-                        if (confirm('Remove this friend?'))
-                          act(() => removeFriend(f.friendship_id));
+                        if (
+                          confirm(
+                            `Remove ${f.other_name || f.other_email || "this friend"}? You'll need to add each other again to reconnect.`
+                          )
+                        ) {
+                          act(() => removeFriend(f.friendship_id), "Friend removed.");
+                        }
                       }}
                       disabled={pending}
                       className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)]"

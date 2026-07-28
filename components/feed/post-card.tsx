@@ -309,48 +309,31 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
     setWorkoutLoading(true);
     try {
       const supabase = createClient();
-      const { data: session } = await supabase
-        .from("workout_sessions")
-        .select("total_seconds")
-        .eq("id", post.workoutSessionId)
-        .maybeSingle();
-
-      const { data: setLogs } = await supabase
-        .from("set_logs")
-        .select("exercise_id, weight_kg, reps, set_number")
-        .eq("session_id", post.workoutSessionId)
-        .eq("completed", true);
-
-      const exIds = Array.from(new Set((setLogs ?? []).map((s) => s.exercise_id as string).filter(Boolean)));
-      const { data: exRows } = await supabase
-        .from("exercises")
-        .select("id, name")
-        .in("id", exIds.length > 0 ? exIds : ["00000000-0000-0000-0000-000000000000"]);
-
-      const exNameMap = new Map<string, string>();
-      for (const e of exRows ?? []) exNameMap.set(e.id as string, e.name as string);
-
-      const exerciseMap = new Map<string, { name: string; sets: number; reps: number | null; weight: number | null }>();
-      let totalVolume = 0;
-      for (const s of setLogs ?? []) {
-        const exId = s.exercise_id as string;
-        const name = exNameMap.get(exId) ?? "Unknown";
-        const weight = s.weight_kg != null ? Number(s.weight_kg) : 0;
-        const reps = s.reps != null ? Number(s.reps) : 0;
-        totalVolume += weight * reps;
-        if (!exerciseMap.has(exId)) {
-          exerciseMap.set(exId, { name, sets: 1, reps: reps || null, weight: weight || null });
-        } else {
-          exerciseMap.get(exId)!.sets += 1;
-        }
-      }
-
-      setWorkoutData({
-        duration: session?.total_seconds ?? null,
-        exerciseCount: exerciseMap.size,
-        totalVolume: Math.round(totalVolume),
-        exercises: Array.from(exerciseMap.values()),
+      // workout_sessions/set_logs are owner-only under RLS, so a viewer can't
+      // read the author's sets directly. This SECURITY DEFINER function returns
+      // the summary for a session that's been shared to the feed.
+      const { data } = await supabase.rpc("feed_workout_summary", {
+        p_session_id: post.workoutSessionId,
       });
+      const summary = data as {
+        duration: number | null;
+        exerciseCount: number;
+        totalVolume: number;
+        exercises: { name: string; sets: number; reps: number | null; weight: number | null }[];
+      } | null;
+      if (summary) {
+        setWorkoutData({
+          duration: summary.duration ?? null,
+          exerciseCount: summary.exerciseCount ?? 0,
+          totalVolume: summary.totalVolume ?? 0,
+          exercises: (summary.exercises ?? []).map((e) => ({
+            name: e.name,
+            sets: e.sets,
+            reps: e.reps != null ? Number(e.reps) : null,
+            weight: e.weight != null ? Number(e.weight) : null,
+          })),
+        });
+      }
     } catch {
       // ignore
     } finally {
@@ -404,24 +387,26 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
           </div>
         </Link>
 
-        {/* Inline follow button (not shown for own posts) */}
-        {!isAuthor && (
-          <button
-            onClick={handleFollow}
-            disabled={pending || !isPro}
-            title={isPro ? (following ? "Unfollow" : "Follow") : "Pro feature"}
-            className={`hidden shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors sm:inline-flex ${
-              following
-                ? "border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--danger)] hover:text-[var(--danger)]"
-                : "bg-[var(--accent-primary)] text-black"
-            } ${!isPro ? "cursor-not-allowed opacity-50" : ""}`}
-          >
-            {following ? "Following" : "Follow"}
-          </button>
-        )}
+        {/* Actions: follow + menu, grouped on the right */}
+        <div className="flex shrink-0 items-center gap-2">
+          {/* Inline follow button (not shown for own posts) */}
+          {!isAuthor && (
+            <button
+              onClick={handleFollow}
+              disabled={pending || !isPro}
+              title={isPro ? (following ? "Unfollow" : "Follow") : "Pro feature"}
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${
+                following
+                  ? "border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--danger)] hover:text-[var(--danger)]"
+                  : "bg-[var(--accent-primary)] text-black"
+              } ${!isPro ? "cursor-not-allowed opacity-50" : ""}`}
+            >
+              {following ? "Following" : "Follow"}
+            </button>
+          )}
 
-        {/* Menu */}
-        <div className="relative" ref={menuRef}>
+          {/* Menu */}
+          <div className="relative" ref={menuRef}>
           <button
             onClick={() => setMenuOpen((v) => !v)}
             disabled={pending}
@@ -473,6 +458,7 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
               )}
             </div>
           )}
+          </div>
         </div>
       </div>
 

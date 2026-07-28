@@ -237,7 +237,7 @@ export async function toggleFollow(targetUserId: string) {
     .from("social_follows")
     .select("id")
     .eq("follower_id", user.id)
-    .eq("followee_id", target)
+    .eq("following_id", target)
     .maybeSingle();
 
   if (existing) {
@@ -251,7 +251,7 @@ export async function toggleFollow(targetUserId: string) {
   } else {
     const { error } = await supabase.from("social_follows").insert({
       follower_id: user.id,
-      followee_id: target,
+      following_id: target,
     });
     if (error) return { ok: false as const, error: error.message };
     revalidatePath("/feed");
@@ -300,7 +300,7 @@ export async function toggleBlock(targetUserId: string) {
     await supabase
       .from("social_follows")
       .delete()
-      .or(`and(follower_id.eq.${user.id},followee_id.eq.${target}),and(follower_id.eq.${target},followee_id.eq.${user.id})`);
+      .or(`and(follower_id.eq.${user.id},following_id.eq.${target}),and(follower_id.eq.${target},following_id.eq.${user.id})`);
 
     revalidatePath("/feed");
     return { ok: true as const, blocked: true };
@@ -380,16 +380,17 @@ export async function getFeed(page = 1, perPage = 20): Promise<FeedPost[]> {
   const postIds = posts.map((p) => p.id);
   const userIds = Array.from(new Set(posts.map((p) => p.user_id as string)));
 
-  // Fetch profiles separately (no FK from social_posts to profiles)
-  const { data: profileRows } = await supabase
-    .from("profiles")
-    .select("id, full_name, avatar_url")
-    .in("id", userIds);
+  // Author names/avatars come via a SECURITY DEFINER function: profiles are
+  // owner-only under RLS, so a direct select can't read other users' rows
+  // (which made every author show as "Someone").
+  const { data: profileRows } = await supabase.rpc("feed_author_profiles", {
+    p_ids: userIds,
+  });
   const profileMap = new Map<string, { full_name: string | null; avatar_url: string | null }>();
-  for (const p of profileRows ?? []) {
-    profileMap.set(p.id as string, {
-      full_name: p.full_name as string | null,
-      avatar_url: p.avatar_url as string | null,
+  for (const p of (profileRows ?? []) as { id: string; full_name: string | null; avatar_url: string | null }[]) {
+    profileMap.set(p.id, {
+      full_name: p.full_name,
+      avatar_url: p.avatar_url,
     });
   }
 
