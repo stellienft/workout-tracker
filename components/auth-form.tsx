@@ -5,6 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
+function readRefCookie(): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const m = document.cookie.match(/(?:^|;\s*)ref_code=([^;]+)/);
+  return m ? decodeURIComponent(m[1]).toUpperCase().slice(0, 12) : undefined;
+}
+
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -39,6 +45,11 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
     try {
       if (mode === "signup") {
+        // Capture a referral code from the URL (or the cookie CaptureRef set) and
+        // stamp it onto the auth user, so the referral survives email
+        // confirmation / a new tab rather than relying on the cookie alone.
+        const refCode =
+          params.get("ref")?.toUpperCase().slice(0, 12) || readRefCookie();
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -46,6 +57,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             data: {
               full_name: fullName,
               account_type: accountType,
+              ...(refCode ? { ref_code: refCode } : {}),
             },
             emailRedirectTo: `${window.location.origin}/auth/callback`,
           },

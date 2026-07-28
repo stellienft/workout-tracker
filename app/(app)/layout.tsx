@@ -16,6 +16,14 @@ export default async function AppLayout({
   const { user, profile, roles } = await getAuthContext();
   if (!user) redirect("/login");
 
+  // Safety net: redeem a referral stamped on the account at signup, in case the
+  // end-of-onboarding redemption didn't run (e.g. trainer signup, interrupted
+  // flow). Cleared once handled, so this is a no-op on later loads.
+  if ((user.user_metadata as { ref_code?: string } | undefined)?.ref_code) {
+    const { processReferral } = await import("@/lib/actions/referrals");
+    await processReferral().catch(() => {});
+  }
+
   const isAdmin = isAdminRole(roles);
   const isTrainer = isTrainerRole(roles);
 
