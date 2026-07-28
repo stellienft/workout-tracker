@@ -10,6 +10,7 @@ import { TodayHeroCard } from "@/components/dashboard/today-hero";
 import { WeeklyCompletionCard } from "@/components/dashboard/weekly-completion";
 import { StreakCard } from "@/components/dashboard/streak-card";
 import { computeStreak } from "@/lib/streak";
+import { quoteForDate } from "@/lib/quotes";
 import { StatCard } from "@/components/ui/card";
 import { ProgramCard } from "@/components/program-card";
 import { CoverImage } from "@/components/ui/cover-image";
@@ -123,6 +124,7 @@ export default async function DashboardPage() {
   }
 
   const firstName = (profile?.full_name || "Athlete").split(" ")[0];
+  const quote = quoteForDate();
 
   return (
     <PageShell>
@@ -141,6 +143,16 @@ export default async function DashboardPage() {
           </Link>
         )}
       </div>
+
+      {/* Quote of the day */}
+      <figure className="mt-4 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4">
+        <blockquote className="text-sm italic text-[var(--text-secondary)]">
+          &ldquo;{quote.text}&rdquo;
+        </blockquote>
+        <figcaption className="mt-1 text-xs text-[var(--text-muted)]">
+          — {quote.author}
+        </figcaption>
+      </figure>
 
       {/* New-user nudge: try a ready-made starter split */}
       {showStarterNudge && (
