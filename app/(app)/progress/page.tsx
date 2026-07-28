@@ -13,6 +13,7 @@ import { DEFAULT_TZ, startOfWeekInTz, zonedParts } from "@/lib/timezone";
 import { MuscleSuggestions } from "@/components/progress/muscle-suggestions";
 import { BodyScanUpload } from "@/components/progress/body-scan-upload";
 import { BodyCompCard } from "@/components/progress/body-comp-card";
+import { BodyCompTrends } from "@/components/progress/body-comp-trends";
 import { getUserPlan } from "@/lib/entitlements";
 import Link from "next/link";
 
@@ -35,7 +36,7 @@ export default async function ProgressPage() {
     { data: sessions },
     { count },
     { data: photoRows },
-    { data: latestScan },
+    { data: scanRows },
   ] = await Promise.all([
     supabase
       .from("body_metrics")
@@ -66,9 +67,10 @@ export default async function ProgressPage() {
       .select("*")
       .eq("user_id", user.id)
       .order("scan_date", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+      .limit(60),
   ]);
+  const scans = (scanRows ?? []) as Record<string, unknown>[];
+  const latestScan = scans[0] ?? null;
 
   // Strength progress: set logs + exercise names, last 120 days.
   const sinceDate = new Date(Date.now() - 120 * 86_400_000).toISOString();
@@ -208,6 +210,7 @@ export default async function ProgressPage() {
             <BodyCompCard scan={latestScan as Record<string, unknown>} />
           </div>
         )}
+        {scans.length >= 2 && <BodyCompTrends scans={scans} />}
         <div className="mt-4">
           <BodyScanUpload isPro={isPro} />
         </div>
