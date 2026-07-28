@@ -36,7 +36,7 @@ export default async function AppLayout({
     supabase
       .from("friendships")
       .select("id", { count: "exact", head: true })
-      .eq("responder_id", user.id)
+      .eq("addressee_id", user.id)
       .eq("status", "pending"),
   ]);
 
@@ -51,6 +51,7 @@ export default async function AppLayout({
       .from("chat_messages")
       .select("id", { count: "exact", head: true })
       .is("read_at", null)
+      .neq("sender_id", user.id) // only messages from the coach, not my own
       .in("thread_id", myThreads.map((t: { id: string }) => t.id));
     unreadCoach = count ?? 0;
   }
