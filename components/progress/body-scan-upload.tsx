@@ -39,10 +39,30 @@ export function BodyScanUpload({ isPro = false }: { isPro?: boolean } = {}) {
         return;
       }
       setImagePath(path);
+      // Read the uploaded file straight away so the member doesn't also have to
+      // paste the text — the server extracts the metrics from the image/PDF.
+      await parseUploadedFile(path);
     } catch {
       alert("Upload failed. Please try again.");
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function parseUploadedFile(path: string) {
+    setParsing(true);
+    try {
+      const { parseScanImage } = await import("@/lib/actions/body-composition");
+      const res = await parseScanImage(path);
+      if (res.ok && res.data) {
+        setParsed(res.data as Record<string, number | string | undefined>);
+      } else {
+        alert(res.error ?? "Couldn't read that file. Paste the scan text instead.");
+      }
+    } catch {
+      alert("Couldn't read that file. Paste the scan text instead.");
+    } finally {
+      setParsing(false);
     }
   }
 
@@ -150,7 +170,13 @@ export function BodyScanUpload({ isPro = false }: { isPro?: boolean } = {}) {
             />
             <UploadCloud className="mx-auto h-8 w-8 text-[var(--text-muted)]" />
             <p className="mt-2 text-sm text-[var(--text-secondary)]">
-              {uploading ? "Uploading..." : imagePath ? "File uploaded ✓" : "Drag & drop or click to upload scan"}
+              {uploading
+                ? "Uploading..."
+                : parsing
+                  ? "Reading your scan with AI…"
+                  : imagePath
+                    ? "File uploaded ✓"
+                    : "Drag & drop or click to upload scan"}
             </p>
             <p className="text-xs text-[var(--text-muted)]">PNG, JPG, WebP, or PDF (max 10 MB)</p>
           </div>

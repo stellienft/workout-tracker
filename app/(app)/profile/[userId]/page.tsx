@@ -19,29 +19,35 @@ export default async function UserProfilePage({
   const { isPro } = await getUserPlan();
   const supabase = await createClient();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, avatar_url, experience_level, created_at")
-    .eq("id", userId)
-    .maybeSingle();
+  // profiles is owner-only under RLS, so read the public view via a definer
+  // function (a direct select returns null for other users → 404).
+  const { data: profileRows } = await supabase.rpc("public_profile", { p_id: userId });
+  const profile = (profileRows as
+    | {
+        full_name: string | null;
+        avatar_url: string | null;
+        experience_level: string | null;
+        created_at: string | null;
+        workout_count: number;
+        post_count: number;
+        followers_count: number;
+        following_count: number;
+      }[]
+    | null)?.[0];
 
   if (!profile) notFound();
 
   const isSelf = userId === user.id;
+  const sessionCount = Number(profile.workout_count ?? 0);
+  const postCount = Number(profile.post_count ?? 0);
+  const followersCount = Number(profile.followers_count ?? 0);
+  const followingCount = Number(profile.following_count ?? 0);
 
   const [
-    { count: sessionCount },
-    { count: postCount },
-    { count: followersCount },
-    { count: followingCount },
     { data: isFollowingRow },
     { data: isBlockedRow },
     { data: latestScan },
   ] = await Promise.all([
-    supabase.from("workout_sessions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "completed"),
-    supabase.from("social_posts").select("id", { count: "exact", head: true }).eq("user_id", userId),
-    supabase.from("social_follows").select("id", { count: "exact", head: true }).eq("following_id", userId),
-    supabase.from("social_follows").select("id", { count: "exact", head: true }).eq("follower_id", userId),
     supabase.from("social_follows").select("id").eq("follower_id", user.id).eq("following_id", userId).maybeSingle(),
     supabase.from("social_blocks").select("id").eq("blocker_id", user.id).eq("blocked_id", userId).maybeSingle(),
     supabase.from("body_composition_scans").select("scan_date, source, body_fat_pct, muscle_mass_kg, weight_kg, bmi").eq("user_id", userId).order("scan_date", { ascending: false }).limit(1).maybeSingle(),

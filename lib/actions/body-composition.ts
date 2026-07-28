@@ -21,11 +21,16 @@ export interface ParsedScanData {
   rightLegMass?: number;
 }
 
-export async function parseScanResult(scanText: string) {
-  if (!scanText || scanText.trim().length === 0) {
-    return { ok: false as const, error: "No scan text provided." };
-  }
+const EXTRACT_SYSTEM =
+  "You are a fitness data extraction assistant. Extract body composition metrics from the scan " +
+  "(which may be provided as text, an image, or a PDF). " +
+  "Return ONLY valid JSON with these fields: scanDate (YYYY-MM-DD), source (inbody/dexa/evolt/other), " +
+  "weightKg, bodyFatPct, muscleMassKg, waterPct, bmr, bmi, visceralFat, boneMassKg, proteinKg, " +
+  "leftArmMass, rightArmMass, trunkMass, leftLegMass, rightLegMass. " +
+  "Use null for fields not found. No markdown or explanation.";
 
+/** Send content blocks to Claude and map the returned JSON to ParsedScanData. */
+async function extractMetrics(content: unknown[]) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) {
     return { ok: false as const, error: "AI parsing is not configured." };
@@ -42,15 +47,10 @@ export async function parseScanResult(scanText: string) {
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 1000,
-        system:
-          "You are a fitness data extraction assistant. Extract body composition metrics from scan results text. " +
-          "Return ONLY valid JSON with these fields: scanDate (YYYY-MM-DD), source (inbody/dexa/evolt/other), " +
-          "weightKg, bodyFatPct, muscleMassKg, waterPct, bmr, bmi, visceralFat, boneMassKg, proteinKg, " +
-          "leftArmMass, rightArmMass, trunkMass, leftLegMass, rightLegMass. " +
-          "Use null for fields not found. No markdown or explanation.",
-        messages: [{ role: "user", content: scanText }],
+        system: EXTRACT_SYSTEM,
+        messages: [{ role: "user", content }],
       }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(30000),
     });
 
     if (!res.ok) return { ok: false as const, error: "Could not reach AI parser." };
@@ -64,7 +64,7 @@ export async function parseScanResult(scanText: string) {
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
     } catch {
-      return { ok: false as const, error: "Could not parse scan data." };
+      return { ok: false as const, error: "Could not read the scan. Try a clearer image, or paste the text." };
     }
 
     const num = (v: unknown): number | undefined => {
@@ -92,10 +92,67 @@ export async function parseScanResult(scanText: string) {
       rightLegMass: num(parsed.rightLegMass),
     };
 
+    const hasAny = Object.values(result).some((v) => v !== undefined);
+    if (!hasAny) {
+      return { ok: false as const, error: "No body-composition data found in that file." };
+    }
+
     return { ok: true as const, data: result };
   } catch {
     return { ok: false as const, error: "AI parser is busy. Please try again." };
   }
+}
+
+/** Parse metrics from pasted scan-results text. */
+export async function parseScanResult(scanText: string) {
+  if (!scanText || scanText.trim().length === 0) {
+    return { ok: false as const, error: "No scan text provided." };
+  }
+  return extractMetrics([{ type: "text", text: scanText.trim() }]);
+}
+
+/**
+ * Parse metrics directly from an uploaded scan file (image or PDF) that the
+ * browser already stored in the private body-scans bucket. The file is read
+ * server-side and passed to Claude's vision/document parsing, so a member can
+ * just upload their scan without also pasting the text.
+ */
+export async function parseScanImage(storagePath: string) {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) return { ok: false as const, error: "AI parsing is not configured." };
+
+  const { createClient } = await import("@/lib/supabase/server");
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+  if (!storagePath.startsWith(`${user.id}/`)) {
+    return { ok: false as const, error: "Invalid upload path." };
+  }
+
+  const { data: file, error: dlErr } = await supabase.storage
+    .from("body-scans")
+    .download(storagePath);
+  if (dlErr || !file) return { ok: false as const, error: "Could not read the uploaded file." };
+
+  const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+  const isPdf =
+    file.type === "application/pdf" || storagePath.toLowerCase().endsWith(".pdf");
+
+  const fileBlock = isPdf
+    ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } }
+    : {
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: file.type || "image/jpeg",
+          data: base64,
+        },
+      };
+
+  return extractMetrics([
+    fileBlock,
+    { type: "text", text: "Extract the body composition metrics from this scan." },
+  ]);
 }
 
 export async function saveScanResult(data: {
