@@ -248,17 +248,19 @@ export default async function ProgressPage() {
       <div className="mt-6">
         <h2 className="text-lg font-bold">Strength Progress</h2>
         {strengthCharts.length > 0 ? (
-          <div className="mt-3 space-y-4">
-            {strengthCharts.map((ex, i) => (
-              <div
-                key={i}
-                className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5"
-              >
-                <LineChart data={ex.data} label={ex.name} unit=" kg" />
-              </div>
-            ))}
+          <div className="mt-3 space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {strengthCharts.map((ex, i) => (
+                <div
+                  key={i}
+                  className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4"
+                >
+                  <LineChart data={ex.data} label={ex.name} unit=" kg" height={130} />
+                </div>
+              ))}
+            </div>
             <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
-              <LineChart data={volumeData} label="Total volume" unit=" kg" />
+              <LineChart data={volumeData} label="Total volume" unit=" kg" height={160} />
             </div>
           </div>
         ) : (
