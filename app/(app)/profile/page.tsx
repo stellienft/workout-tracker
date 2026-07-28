@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { requireUser, getAuthContext, isAdminRole } from "@/lib/auth";
 import { getPrimaryGoal } from "@/lib/queries";
+import { createClient } from "@/lib/supabase/server";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { AvatarUploader } from "@/components/profile/avatar-uploader";
+import { BodyCompCard } from "@/components/progress/body-comp-card";
 import { signOut } from "@/lib/actions/auth";
 import {
   BookOpen,
@@ -24,6 +26,15 @@ export default async function ProfilePage() {
   const { profile, roles } = await getAuthContext();
   const goal = await getPrimaryGoal(user.id);
   const isAdmin = isAdminRole(roles);
+
+  const supabase = await createClient();
+  const { data: latestScan } = await supabase
+    .from("body_composition_scans")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("scan_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
   const name = profile?.full_name || "Athlete";
   const email = profile?.email || user.email || "";
 
@@ -60,6 +71,12 @@ export default async function ProfilePage() {
           )}
         </div>
       </div>
+
+      {latestScan && (
+        <div className="mt-4">
+          <BodyCompCard scan={latestScan as Record<string, unknown>} />
+        </div>
+      )}
 
       <div className="mt-4 divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)]">
         {links.map((l) => {
