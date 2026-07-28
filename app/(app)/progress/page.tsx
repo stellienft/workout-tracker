@@ -192,6 +192,11 @@ export default async function ProgressPage() {
         />
         <StatCard label="Workouts" value={String(count ?? 0)} sub="completed" />
         <StatCard
+          label="This week"
+          value={String(weeklyCounts.at(-1)?.count ?? 0)}
+          sub="sessions"
+        />
+        <StatCard
           label="This month"
           value={String(countThisMonth(sessions ?? [], tz))}
           sub="sessions"
