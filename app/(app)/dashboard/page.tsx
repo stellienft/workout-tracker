@@ -9,7 +9,9 @@ import { PageShell } from "@/components/ui/page-header";
 import { TodayHeroCard } from "@/components/dashboard/today-hero";
 import { WeeklyCompletionCard } from "@/components/dashboard/weekly-completion";
 import { StreakCard } from "@/components/dashboard/streak-card";
+import { WeeklyRecapCard } from "@/components/dashboard/weekly-recap-card";
 import { computeStreak } from "@/lib/streak";
+import { getCachedRecap } from "@/lib/actions/recap";
 import { quoteForDate } from "@/lib/quotes";
 import { StatCard } from "@/components/ui/card";
 import { ProgramCard } from "@/components/program-card";
@@ -125,6 +127,7 @@ export default async function DashboardPage() {
 
   const firstName = (profile?.full_name || "Athlete").split(" ")[0];
   const quote = quoteForDate();
+  const cachedRecap = await getCachedRecap();
 
   return (
     <PageShell>
@@ -230,6 +233,10 @@ export default async function DashboardPage() {
       </div>
 
       <StreakCard streak={streak} />
+
+      <div className="mt-4">
+        <WeeklyRecapCard initial={cachedRecap} />
+      </div>
 
       {(profile?.injury_areas?.length ?? 0) > 0 && (
         <Link
