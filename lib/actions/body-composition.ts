@@ -191,11 +191,17 @@ export async function saveScanResult(data: {
   const validSources = ["inbody", "dexa", "evolt", "other"];
   const source = data.source && validSources.includes(data.source) ? data.source : null;
 
+  // AI may return an odd/blank date — only trust a strict YYYY-MM-DD, else today.
+  const today = new Date().toISOString().slice(0, 10);
+  const scanDate = /^\d{4}-\d{2}-\d{2}$/.test(data.scanDate ?? "")
+    ? (data.scanDate as string)
+    : today;
+
   const { data: row, error } = await supabase
     .from("body_composition_scans")
     .upsert({
       user_id: user.id,
-      scan_date: data.scanDate || new Date().toISOString().slice(0, 10),
+      scan_date: scanDate,
       source,
       weight_kg: data.weightKg ?? null,
       body_fat_pct: data.bodyFatPct ?? null,
@@ -219,6 +225,27 @@ export async function saveScanResult(data: {
 
   if (error || !row) return { ok: false as const, error: error?.message ?? "Could not save scan." };
 
+  // Mirror the scan weight into body_metrics so it flows to the dashboard and
+  // weight graph. Merge into any existing row for that date so we don't wipe
+  // measurements already logged (body_metrics upsert would replace the row).
+  if (data.weightKg != null) {
+    const { data: existing } = await supabase
+      .from("body_metrics")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("recorded_on", scanDate)
+      .maybeSingle();
+    if (existing) {
+      await supabase.from("body_metrics").update({ weight_kg: data.weightKg }).eq("id", existing.id as string);
+    } else {
+      await supabase
+        .from("body_metrics")
+        .insert({ user_id: user.id, recorded_on: scanDate, weight_kg: data.weightKg });
+    }
+  }
+
   revalidatePath("/progress");
+  revalidatePath("/dashboard");
+  revalidatePath("/profile");
   return { ok: true as const, scanId: row.id as string };
 }
