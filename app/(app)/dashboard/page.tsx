@@ -27,7 +27,7 @@ export default async function DashboardPage() {
   ]);
 
   // Body-weight trend + workout count stats + split count (for new-user nudge).
-  const [{ data: metrics }, { count: totalWorkouts }, { count: splitCount }] =
+  const [{ data: metrics }, { count: totalWorkouts }, { count: splitCount }, { data: scanWeights }] =
     await Promise.all([
       supabase
         .from("body_metrics")
@@ -45,6 +45,16 @@ export default async function DashboardPage() {
         .from("custom_splits")
         .select("id", { count: "exact", head: true })
         .eq("owner_user_id", user.id),
+      // Body-composition scans also carry a weight; surface it if it's the most
+      // recent reading (a scan saved before we mirrored weight into body_metrics
+      // would otherwise never show here).
+      supabase
+        .from("body_composition_scans")
+        .select("weight_kg, scan_date")
+        .eq("user_id", user.id)
+        .not("weight_kg", "is", null)
+        .order("scan_date", { ascending: false })
+        .limit(1),
     ]);
 
   // Show a gentle "get started" nudge to brand-new members with nothing set up.
@@ -54,7 +64,17 @@ export default async function DashboardPage() {
     (totalWorkouts ?? 0) === 0 &&
     (splitCount ?? 0) === 0;
 
-  const latestWeight = metrics?.[0]?.weight_kg ?? null;
+  // Current weight = the most recent reading from either body_metrics or a body
+  // composition scan (dates are YYYY-MM-DD, so string compare is chronological).
+  const metricRow = metrics?.[0] ?? null;
+  const scanRow = scanWeights?.[0] ?? null;
+  let latestWeight = (metricRow?.weight_kg as number | null) ?? null;
+  if (
+    scanRow?.weight_kg != null &&
+    (!metricRow || String(scanRow.scan_date) >= String(metricRow.recorded_on))
+  ) {
+    latestWeight = scanRow.weight_kg as number;
+  }
 
   // Discovery: featured programs.
   const { data: featured } = await supabase
