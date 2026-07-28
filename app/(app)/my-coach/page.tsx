@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PlayCircle, Youtube } from "lucide-react";
+import { PlayCircle, Youtube, CalendarClock } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
@@ -160,11 +160,53 @@ export default async function MyCoachPage() {
     coachMessages = (msgs ?? []) as typeof coachMessages;
   }
 
+  const { data: upcomingSessions } = await supabase
+    .from("coaching_sessions")
+    .select("id, scheduled_at, duration_min, type, location, notes")
+    .eq("client_user_id", user.id)
+    .eq("tenant_id", tenantId)
+    .eq("status", "scheduled")
+    .gte("scheduled_at", new Date().toISOString())
+    .order("scheduled_at", { ascending: true })
+    .limit(10);
+  const sessions = upcomingSessions ?? [];
+
   return (
     // Scope the coach's accent to this page so their brand colour drives the
     // highlights here without changing the member's own app theme.
     <div style={{ ["--accent-primary" as string]: accent } as React.CSSProperties}>
       <PageShell>
+        {sessions.length > 0 && (
+          <div className="mb-4 rounded-[var(--radius-card)] border border-[var(--border-active)] bg-[var(--surface-primary)] p-5">
+            <p className="flex items-center gap-2 font-semibold">
+              <CalendarClock className="h-4 w-4 text-[var(--accent-primary)]" /> Upcoming
+              with your coach
+            </p>
+            <div className="mt-3 space-y-2">
+              {sessions.map((s) => (
+                <div
+                  key={s.id as string}
+                  className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3"
+                >
+                  <p className="text-sm font-medium">
+                    {s.type === "check_in" ? "Check-in" : "Session"} ·{" "}
+                    {new Date(s.scheduled_at as string).toLocaleString()}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                    {s.duration_min as number} min
+                    {s.location ? ` · ${s.location as string}` : ""}
+                  </p>
+                  {s.notes && (
+                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                      {s.notes as string}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Branded header */}
         <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-active)] bg-[var(--accent-muted)] p-6">
           <div className="flex items-center gap-4">

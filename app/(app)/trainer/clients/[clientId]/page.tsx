@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { serviceSupabase } from "@/lib/push";
 import { PageShell } from "@/components/ui/page-header";
 import { WeightProgress } from "@/components/progress/weight-progress";
+import { SessionScheduler, type SessionRow } from "@/components/trainer/session-scheduler";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata = { title: "Client" };
@@ -49,11 +50,20 @@ export default async function TrainerClientDetailPage({
     .maybeSingle();
   if (!rel) notFound();
 
-  const [{ data: profile }, { data: metrics }, { data: photoRows }] = await Promise.all([
-    supabase.from("profiles").select("full_name, email, timezone").eq("id", clientId).maybeSingle(),
-    supabase.rpc("trainer_client_metrics", { p_client_user_id: clientId }),
-    supabase.rpc("trainer_client_photos", { p_client_user_id: clientId }),
-  ]);
+  const [{ data: profile }, { data: metrics }, { data: photoRows }, { data: sessionRows }] =
+    await Promise.all([
+      supabase.from("profiles").select("full_name, email, timezone").eq("id", clientId).maybeSingle(),
+      supabase.rpc("trainer_client_metrics", { p_client_user_id: clientId }),
+      supabase.rpc("trainer_client_photos", { p_client_user_id: clientId }),
+      supabase
+        .from("coaching_sessions")
+        .select("id, scheduled_at, duration_min, type, location, notes, status")
+        .eq("tenant_id", tenant.id)
+        .eq("client_user_id", clientId)
+        .eq("status", "scheduled")
+        .gte("scheduled_at", new Date().toISOString())
+        .order("scheduled_at", { ascending: true }),
+    ]);
 
   const name =
     (rel.display_name as string) ||
@@ -101,6 +111,13 @@ export default async function TrainerClientDetailPage({
       </Link>
       <h1 className="mt-3 text-2xl font-bold">{name}</h1>
       <p className="text-sm text-[var(--text-muted)]">{profile?.email as string}</p>
+
+      <div className="mt-6">
+        <SessionScheduler
+          clientUserId={clientId}
+          upcoming={(sessionRows ?? []) as SessionRow[]}
+        />
+      </div>
 
       <div className="mt-6">
         <h2 className="mb-3 text-lg font-bold">Weight</h2>
