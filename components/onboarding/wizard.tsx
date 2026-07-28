@@ -7,6 +7,7 @@ import { CoverImage } from "@/components/ui/cover-image";
 import { cn } from "@/lib/utils";
 import { completeOnboarding } from "@/lib/actions/onboarding";
 import { processReferral } from "@/lib/actions/referrals";
+import { INJURY_AREAS } from "@/lib/injury";
 import type { FitnessGoal } from "@/lib/types";
 import { Check } from "lucide-react";
 
@@ -43,6 +44,7 @@ export function OnboardingWizard({
   const [weeklyFrequency, setWeeklyFrequency] = useState(3);
   const [sessionMinutes, setSessionMinutes] = useState(45);
   const [equipment, setEquipment] = useState<string[]>(["dumbbell", "bodyweight"]);
+  const [injuryAreas, setInjuryAreas] = useState<string[]>([]);
   const [considerations, setConsiderations] = useState("");
   const [trainingDays, setTrainingDays] = useState<string[]>(["Mon", "Wed", "Fri"]);
   const [medicationTracking, setMedicationTracking] = useState(false);
@@ -70,6 +72,7 @@ export function OnboardingWizard({
       weeklyFrequency,
       sessionMinutes,
       equipment,
+      injuryAreas,
       considerations,
       trainingDays,
       medicationTracking,
@@ -240,12 +243,38 @@ export function OnboardingWizard({
                 })}
               </div>
             </Field>
-            <Field label="Injuries or areas to consider (optional)">
+            <Field label="Any areas currently sore or injured? (optional)">
+              <p className="-mt-1 mb-2 text-xs text-[var(--text-muted)]">
+                We&apos;ll flag exercises that load these areas and suggest safer
+                swaps.
+              </p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {INJURY_AREAS.map((a) => {
+                  const active = injuryAreas.includes(a.value);
+                  return (
+                    <button
+                      key={a.value}
+                      onClick={() => toggle(injuryAreas, a.value, setInjuryAreas)}
+                      className={cn(
+                        "flex items-center justify-between rounded-xl border p-3 text-left text-sm transition-colors",
+                        active
+                          ? "border-[var(--border-active)] bg-[var(--accent-muted)]"
+                          : "border-[var(--border-subtle)] bg-[var(--surface-primary)]"
+                      )}
+                    >
+                      <span className="font-medium">{a.label}</span>
+                      {active && <Check className="h-4 w-4 text-[var(--accent-primary)]" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
+            <Field label="Anything else to note? (optional)">
               <textarea
                 value={considerations}
                 onChange={(e) => setConsiderations(e.target.value)}
-                rows={3}
-                placeholder="e.g. Sore left knee — avoid deep lunges and high-impact jumps."
+                rows={2}
+                placeholder="e.g. Recovering from surgery — keep impact low."
                 className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4 text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--border-active)] focus:outline-none"
               />
             </Field>

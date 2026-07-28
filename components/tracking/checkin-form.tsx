@@ -15,7 +15,6 @@ export function CheckinForm({
     soreness: number;
     sleepQuality: number;
     mood: number;
-    shoulderPain: number;
     recovery: number;
   } | null;
 }) {
@@ -26,7 +25,6 @@ export function CheckinForm({
   const [soreness, setSoreness] = useState(existing?.soreness ?? 1);
   const [sleep, setSleep] = useState(existing?.sleepQuality ?? 3);
   const [mood, setMood] = useState(existing?.mood ?? 3);
-  const [shoulder, setShoulder] = useState(existing?.shoulderPain ?? 0);
   const [recovery, setRecovery] = useState(existing?.recovery ?? 3);
   const [notes, setNotes] = useState("");
 
@@ -38,7 +36,6 @@ export function CheckinForm({
         soreness,
         sleepQuality: sleep,
         mood,
-        shoulderPain: shoulder,
         recovery,
         notes,
       });
@@ -63,15 +60,6 @@ export function CheckinForm({
       <ScaleInput label="Sleep quality" value={sleep} onChange={setSleep} />
       <ScaleInput label="Mood" value={mood} onChange={setMood} />
       <ScaleInput label="Recovery" value={recovery} onChange={setRecovery} />
-      <ScaleInput
-        label="Left shoulder pain"
-        value={shoulder}
-        onChange={setShoulder}
-        min={0}
-        max={10}
-        danger={shoulder >= 5}
-        hint={shoulder >= 5 ? "Consider a lighter/recovery session" : "0 = none"}
-      />
       <label className="block">
         <span className="text-sm font-medium">Notes</span>
         <textarea

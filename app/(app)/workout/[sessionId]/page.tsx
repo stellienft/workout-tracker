@@ -104,7 +104,7 @@ export default async function WorkoutSessionPage({
       .select("*")
       .eq("session_id", sessionId)
       .order("set_number"),
-    supabase.from("profiles").select("considerations").eq("id", user.id).maybeSingle(),
+    supabase.from("profiles").select("considerations, injury_areas").eq("id", user.id).maybeSingle(),
   ]);
 
   return (
@@ -113,8 +113,8 @@ export default async function WorkoutSessionPage({
       startedAt={session.started_at}
       programName={programName}
       workoutName={workoutName}
-      preShoulderPain={session.pre_shoulder_pain}
       considerations={profile?.considerations ?? null}
+      injuryAreas={(profile?.injury_areas as string[] | null) ?? null}
       exercises={vmExercises}
       initialLogs={(existingLogs ?? []).map((l) => ({
         exerciseId: l.exercise_id,

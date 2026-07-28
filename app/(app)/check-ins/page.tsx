@@ -29,7 +29,7 @@ export default async function CheckinsPage() {
     <PageShell>
       <PageHeader
         title="Check-ins"
-        subtitle="A quick daily pulse on energy, soreness and shoulder health."
+        subtitle="A quick daily pulse on energy, soreness and recovery."
       />
       <div className="mt-6">
         <CheckinForm
@@ -40,7 +40,6 @@ export default async function CheckinsPage() {
                   soreness: todayCheckin.soreness ?? 1,
                   sleepQuality: todayCheckin.sleep_quality ?? 3,
                   mood: todayCheckin.mood ?? 3,
-                  shoulderPain: todayCheckin.shoulder_pain ?? 0,
                   recovery: todayCheckin.recovery ?? 3,
                 }
               : null
@@ -64,15 +63,7 @@ export default async function CheckinsPage() {
                 <div className="flex gap-3 text-xs text-[var(--text-muted)]">
                   {c.energy != null && <span>Energy {c.energy}</span>}
                   {c.soreness != null && <span>Sore {c.soreness}</span>}
-                  {c.shoulder_pain != null && (
-                    <span
-                      className={
-                        c.shoulder_pain >= 5 ? "text-[var(--danger)]" : undefined
-                      }
-                    >
-                      Shoulder {c.shoulder_pain}/10
-                    </span>
-                  )}
+                  {c.recovery != null && <span>Recovery {c.recovery}</span>}
                 </div>
               </div>
             ))}

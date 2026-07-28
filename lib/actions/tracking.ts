@@ -78,7 +78,6 @@ export async function saveCheckin(input: Record<string, unknown>) {
     sleepQuality: scale,
     soreness: scale,
     mood: scale,
-    shoulderPain: scale,
     recovery: scale,
     notes: z.string().max(500).optional(),
   });
@@ -95,7 +94,6 @@ export async function saveCheckin(input: Record<string, unknown>) {
       sleep_quality: d.sleepQuality ?? null,
       soreness: d.soreness ?? null,
       mood: d.mood ?? null,
-      shoulder_pain: d.shoulderPain ?? null,
       recovery: d.recovery ?? null,
       notes: d.notes ?? null,
     },
@@ -147,6 +145,7 @@ export async function updateSettings(input: Record<string, unknown>) {
     unitPreference: z.enum(["metric", "imperial"]).optional(),
     hapticsEnabled: z.boolean().optional(),
     medicationTracking: z.boolean().optional(),
+    injuryAreas: z.array(z.string()).max(20).optional(),
     considerations: z.string().max(1000).optional(),
     timezone: z.string().max(64).optional(),
     themePreference: z.enum(["light", "dark", "system"]).optional(),
@@ -161,6 +160,7 @@ export async function updateSettings(input: Record<string, unknown>) {
   if (d.hapticsEnabled !== undefined) update.haptics_enabled = d.hapticsEnabled;
   if (d.medicationTracking !== undefined)
     update.medication_tracking_enabled = d.medicationTracking;
+  if (d.injuryAreas !== undefined) update.injury_areas = d.injuryAreas;
   if (d.considerations !== undefined) update.considerations = d.considerations;
   if (d.themePreference !== undefined) update.theme_preference = d.themePreference;
   if (d.timezone !== undefined) {

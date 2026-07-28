@@ -288,7 +288,7 @@ export default async function DashboardPage() {
           <div>
             <h3 className="font-bold">How are you recovering?</h3>
             <p className="text-sm text-[var(--text-secondary)]">
-              Log today&apos;s energy, soreness and shoulder status.
+              Log today&apos;s energy, soreness and recovery.
             </p>
           </div>
           <span className="rounded-xl bg-[var(--surface-secondary)] px-4 py-2 text-sm">

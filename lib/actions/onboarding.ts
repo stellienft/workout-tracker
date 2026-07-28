@@ -15,6 +15,7 @@ const onboardingSchema = z.object({
   weeklyFrequency: z.coerce.number().int().min(1).max(7),
   sessionMinutes: z.coerce.number().int().min(10).max(180),
   equipment: z.array(z.string()).default([]),
+  injuryAreas: z.array(z.string()).max(20).default([]),
   considerations: z.string().max(1000).optional().default(""),
   trainingDays: z.array(z.string()).default([]),
   medicationTracking: z.boolean().default(false),
@@ -47,6 +48,7 @@ export async function completeOnboarding(raw: OnboardingInput) {
       session_minutes: data.sessionMinutes,
       equipment: data.equipment,
       training_days: data.trainingDays,
+      injury_areas: data.injuryAreas,
       considerations: data.considerations,
       medication_tracking_enabled: data.medicationTracking,
     })
