@@ -135,7 +135,7 @@ export function BodyScanUpload({ isPro = false }: { isPro?: boolean } = {}) {
         </p>
         <button
           onClick={() => router.push("/billing")}
-          className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black"
+          className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)]"
         >
           Upgrade to Pro
         </button>
@@ -195,7 +195,7 @@ export function BodyScanUpload({ isPro = false }: { isPro?: boolean } = {}) {
           <button
             onClick={handleParse}
             disabled={parsing || !scanText.trim()}
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)] disabled:opacity-50"
           >
             {parsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             {parsing ? "Parsing..." : "Parse with AI"}
@@ -222,7 +222,7 @@ export function BodyScanUpload({ isPro = false }: { isPro?: boolean } = {}) {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)] disabled:opacity-50"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               {saving ? "Saving..." : "Save scan"}

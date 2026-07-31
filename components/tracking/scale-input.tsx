@@ -35,7 +35,7 @@ export function ScaleInput({
                 active
                   ? danger
                     ? "border-[var(--danger)] bg-[var(--danger)] text-white"
-                    : "border-[var(--border-active)] bg-[var(--accent-primary)] text-black"
+                    : "border-[var(--border-active)] bg-[var(--accent-primary)] text-[var(--accent-ink)]"
                   : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
               }`}
             >

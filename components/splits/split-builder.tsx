@@ -235,7 +235,7 @@ export function SplitBuilder({
                 <button
                   onClick={() => start(day.id)}
                   disabled={pending}
-                  className="ml-auto inline-flex items-center gap-1.5 rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black disabled:opacity-60"
+                  className="ml-auto inline-flex items-center gap-1.5 rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)] disabled:opacity-60"
                 >
                   <Play className="h-4 w-4" /> Start workout
                 </button>

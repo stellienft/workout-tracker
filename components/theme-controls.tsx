@@ -89,7 +89,7 @@ export function ThemeControls({
               </span>
               {active && (
                 <span className="absolute right-2.5 top-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent-primary)]">
-                  <Check className="h-3.5 w-3.5 text-black" />
+                  <Check className="h-3.5 w-3.5 text-[var(--accent-ink)]" />
                 </span>
               )}
             </button>

@@ -31,11 +31,11 @@ export function ProgramCard({
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
           {program.featured && (
-            <span className="absolute left-3 top-3 rounded-full bg-[var(--accent-primary)] px-2.5 py-1 text-[11px] font-bold text-black">
+            <span className="absolute left-3 top-3 rounded-full bg-[var(--accent-primary)] px-2.5 py-1 text-[11px] font-bold text-[var(--accent-ink)]">
               Featured
             </span>
           )}
-          <div className="absolute inset-x-0 bottom-0 p-4">
+          <div className="on-media absolute inset-x-0 bottom-0 p-4">
             {goalName && (
               <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--accent-primary)]">
                 {goalName}

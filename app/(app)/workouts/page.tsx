@@ -49,11 +49,11 @@ export default async function WorkoutsPage() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 to-transparent" />
                   {isNext && (
-                    <span className="absolute left-3 top-3 rounded-full bg-[var(--accent-primary)] px-2.5 py-1 text-[11px] font-bold text-black">
+                    <span className="absolute left-3 top-3 rounded-full bg-[var(--accent-primary)] px-2.5 py-1 text-[11px] font-bold text-[var(--accent-ink)]">
                       Up next
                     </span>
                   )}
-                  <div className="absolute inset-x-0 bottom-0 p-4">
+                  <div className="on-media absolute inset-x-0 bottom-0 p-4">
                     <p className="text-lg font-bold">{t.name}</p>
                     <p className="text-xs text-[var(--text-secondary)]">
                       {t.estimated_minutes} min ·{" "}

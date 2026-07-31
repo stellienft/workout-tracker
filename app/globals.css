@@ -39,6 +39,10 @@
   --accent-primary: var(--accent-base);
   --accent-hover: color-mix(in srgb, var(--accent-primary) 88%, #000);
   --accent-muted: color-mix(in srgb, var(--accent-primary) 14%, transparent);
+  /* Text/icon colour that sits ON an accent fill (buttons, chips). Bright
+     accents (lime/peach) take near-black ink; deeper accents (blue/grey) take
+     white. Set per accent below. */
+  --accent-ink: #0d0d0d;
   --text-primary: #ffffff;
   --text-secondary: #a9a9a9;
   --text-muted: #737373;
@@ -74,18 +78,31 @@
 :root[data-accent="lime"] {
   --accent-base: #ccff30;
   --accent-primary: #ccff30;
+  --accent-ink: #0d0d0d;
 }
 :root[data-accent="peach"] {
   --accent-base: #ffb27a;
   --accent-primary: #ffb27a;
+  --accent-ink: #0d0d0d;
 }
 :root[data-accent="blue"] {
   --accent-base: #3b82f6;
   --accent-primary: #3b82f6;
+  --accent-ink: #ffffff;
 }
 :root[data-accent="grey"] {
   --accent-base: #64748b;
   --accent-primary: #64748b;
+  --accent-ink: #ffffff;
+}
+
+/* Content overlaid on a dark cover image must read light in BOTH themes —
+   otherwise light-theme text tokens (dark ink) vanish against the photo. */
+.on-media {
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.78);
+  --text-muted: rgba(255, 255, 255, 0.6);
+  color: var(--text-primary);
 }
 
 /* Inputs hardcode a light-on-dark colour; in light mode they must read dark.

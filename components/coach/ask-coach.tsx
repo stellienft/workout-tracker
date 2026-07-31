@@ -101,7 +101,7 @@ export function AskCoach() {
             <div
               className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${
                 m.role === "user"
-                  ? "bg-[var(--accent-primary)] text-black"
+                  ? "bg-[var(--accent-primary)] text-[var(--accent-ink)]"
                   : "bg-[var(--surface-secondary)] text-[var(--text-primary)]"
               }`}
             >

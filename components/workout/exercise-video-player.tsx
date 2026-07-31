@@ -49,7 +49,7 @@ export function ExerciseVideoPlayer({
             }
           >
             <div className="absolute inset-0 bg-black/40" />
-            <span className="relative flex items-center gap-2 rounded-full bg-[var(--accent-primary)] px-4 py-2 font-semibold text-black">
+            <span className="relative flex items-center gap-2 rounded-full bg-[var(--accent-primary)] px-4 py-2 font-semibold text-[var(--accent-ink)]">
               <Youtube className="h-5 w-5" />
               {video?.embedUrl ? "Play video" : "No embed available"}
             </span>

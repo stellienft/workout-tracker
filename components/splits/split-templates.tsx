@@ -88,7 +88,7 @@ export function SplitTemplates() {
                 <button
                   onClick={() => use(t.key)}
                   disabled={pending}
-                  className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--accent-primary)] py-2.5 text-sm font-semibold text-black disabled:opacity-60"
+                  className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--accent-primary)] py-2.5 text-sm font-semibold text-[var(--accent-ink)] disabled:opacity-60"
                 >
                   <Wand2 className="h-4 w-4" />
                   {busyKey === t.key ? "Adding…" : "Use this split"}

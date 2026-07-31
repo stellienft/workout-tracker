@@ -124,7 +124,7 @@ export default async function WorkoutSummaryPage({
         }`}
       >
         {programComplete ? (
-          <PartyPopper className="h-10 w-10 text-black" />
+          <PartyPopper className="h-10 w-10 text-[var(--accent-ink)]" />
         ) : (
           <Trophy className="h-10 w-10 text-[var(--accent-primary)]" />
         )}
@@ -189,7 +189,7 @@ export default async function WorkoutSummaryPage({
           <>
             <Link
               href="/programs"
-              className="flex items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] py-3.5 font-semibold text-black"
+              className="flex items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] py-3.5 font-semibold text-[var(--accent-ink)]"
             >
               <PartyPopper className="h-5 w-5" /> Choose your next program
             </Link>
@@ -204,7 +204,7 @@ export default async function WorkoutSummaryPage({
           <>
             <Link
               href="/dashboard"
-              className="flex items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] py-3.5 font-semibold text-black"
+              className="flex items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] py-3.5 font-semibold text-[var(--accent-ink)]"
             >
               <Check className="h-5 w-5" /> Back to dashboard
             </Link>
@@ -238,7 +238,7 @@ function DeltaBadge({ delta }: { delta: number }) {
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${
         positive
-          ? "bg-[var(--accent-primary)] text-black"
+          ? "bg-[var(--accent-primary)] text-[var(--accent-ink)]"
           : "bg-[var(--surface-secondary)] text-[var(--text-muted)]"
       }`}
     >

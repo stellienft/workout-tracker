@@ -453,11 +453,11 @@ function StepGoal({
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
               {active && (
-                <span className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--accent-primary)] text-black">
+                <span className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--accent-primary)] text-[var(--accent-ink)]">
                   <Check className="h-4 w-4" />
                 </span>
               )}
-              <div className="absolute inset-x-0 bottom-0 p-4">
+              <div className="on-media absolute inset-x-0 bottom-0 p-4">
                 <p className="text-lg font-bold">{g.name}</p>
                 <p className="line-clamp-1 text-xs text-[var(--text-secondary)]">
                   {g.short_description}

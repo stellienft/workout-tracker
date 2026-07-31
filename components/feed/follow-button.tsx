@@ -121,7 +121,7 @@ export function FollowButton({
         className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${
           following
             ? "border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--danger)] hover:text-[var(--danger)]"
-            : "bg-[var(--accent-primary)] text-black"
+            : "bg-[var(--accent-primary)] text-[var(--accent-ink)]"
         } ${!isPro ? "cursor-not-allowed opacity-50" : ""}`}
       >
         <UserPlus className="h-3.5 w-3.5" />

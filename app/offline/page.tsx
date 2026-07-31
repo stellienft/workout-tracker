@@ -16,7 +16,7 @@ export default function OfflinePage() {
       </p>
       <a
         href="/dashboard"
-        className="mt-6 rounded-2xl bg-[var(--accent-primary)] px-5 py-3 font-semibold text-black"
+        className="mt-6 rounded-2xl bg-[var(--accent-primary)] px-5 py-3 font-semibold text-[var(--accent-ink)]"
       >
         Try again
       </a>

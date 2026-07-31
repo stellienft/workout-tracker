@@ -76,7 +76,7 @@ export function GiftSubscription({
           onClick={() => setDays(d)}
           className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
             days === d
-              ? "bg-[var(--accent-primary)] text-black"
+              ? "bg-[var(--accent-primary)] text-[var(--accent-ink)]"
               : "bg-[var(--surface-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           }`}
         >

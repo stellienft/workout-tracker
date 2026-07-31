@@ -137,7 +137,7 @@ export function FriendsClient({
                   <button
                     onClick={() => act(() => respondFriendRequest(f.friendship_id, true), "Friend added!")}
                     disabled={pending}
-                    className="inline-flex items-center gap-1 rounded-xl bg-[var(--accent-primary)] px-3 py-2 text-sm font-semibold text-black"
+                    className="inline-flex items-center gap-1 rounded-xl bg-[var(--accent-primary)] px-3 py-2 text-sm font-semibold text-[var(--accent-ink)]"
                   >
                     <Check className="h-4 w-4" /> Accept
                   </button>
@@ -168,7 +168,7 @@ export function FriendsClient({
             </p>
             <Link
               href="/billing"
-              className="mt-3 inline-flex items-center justify-center rounded-2xl bg-[var(--accent-primary)] px-5 py-2.5 text-sm font-semibold text-black"
+              className="mt-3 inline-flex items-center justify-center rounded-2xl bg-[var(--accent-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--accent-ink)]"
             >
               Upgrade to Pro
             </Link>
@@ -231,7 +231,7 @@ export function FriendsClient({
                 <button
                   onClick={() => act(() => importSharedWorkout(s.id), "Added to your splits.")}
                   disabled={pending}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--accent-primary)] px-3 py-2 text-sm font-semibold text-black"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--accent-primary)] px-3 py-2 text-sm font-semibold text-[var(--accent-ink)]"
                 >
                   <Download className="h-4 w-4" /> Add
                 </button>

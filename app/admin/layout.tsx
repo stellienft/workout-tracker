@@ -58,7 +58,7 @@ export default async function AdminLayout({
               </p>
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-primary)] px-3.5 py-1.5 text-sm font-semibold text-black"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-primary)] px-3.5 py-1.5 text-sm font-semibold text-[var(--accent-ink)]"
               >
                 <ArrowLeft className="h-4 w-4" /> Exit
               </Link>

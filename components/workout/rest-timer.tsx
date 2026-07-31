@@ -83,7 +83,7 @@ export function RestTimer({
       <div className="flex items-center gap-3">
         <button
           onClick={toggleRunning}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-primary)] text-black"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-primary)] text-[var(--accent-ink)]"
           aria-label={running ? "Pause timer" : "Resume timer"}
         >
           {running ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}

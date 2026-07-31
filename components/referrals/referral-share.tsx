@@ -51,7 +51,7 @@ export function ReferralShare({ link }: { link: string }) {
       </div>
       <button
         onClick={share}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] px-5 py-3 font-semibold text-black sm:w-auto sm:px-8"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] px-5 py-3 font-semibold text-[var(--accent-ink)] sm:w-auto sm:px-8"
       >
         <Share2 className="h-4 w-4" /> Share your invite
       </button>
