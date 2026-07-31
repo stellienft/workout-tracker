@@ -137,6 +137,7 @@ export default async function AchievementsPage() {
                       </div>
                       <ShareAchievement
                         group={a.group}
+                        icon={a.icon}
                         title={a.title}
                         description={a.description}
                         dateLabel={fmtDate(a.shownAt)}

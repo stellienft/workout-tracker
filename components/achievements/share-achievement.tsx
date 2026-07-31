@@ -4,15 +4,17 @@ import { useState } from "react";
 import { Share2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { drawAchievementCard, shareOrDownload } from "@/lib/share-card";
-import type { AchGroup } from "@/lib/achievements";
+import type { AchGroup, AchIcon } from "@/lib/achievements";
 
-const EMOJI: Record<AchGroup, string> = {
-  Streaks: "🔥",
-  Attendance: "🎖️",
-  "Personal records": "🏆",
-  Milestones: "🏋️",
-  Body: "⚖️",
-  Cardio: "🏃",
+// Fallback icon per group, used when a specific achievement icon isn't passed
+// (e.g. the workout-summary share).
+const GROUP_ICON: Record<AchGroup, AchIcon> = {
+  Streaks: "flame",
+  Attendance: "medal",
+  "Personal records": "trophy",
+  Milestones: "layers",
+  Body: "scale",
+  Cardio: "footprints",
 };
 
 const KICKER: Record<AchGroup, string> = {
@@ -26,12 +28,14 @@ const KICKER: Record<AchGroup, string> = {
 
 export function ShareAchievement({
   group,
+  icon,
   title,
   description,
   dateLabel,
   label,
 }: {
   group: AchGroup;
+  icon?: AchIcon;
   title: string;
   description: string;
   dateLabel?: string;
@@ -44,7 +48,7 @@ export function ShareAchievement({
     setBusy(true);
     try {
       const blob = await drawAchievementCard({
-        emoji: EMOJI[group],
+        icon: icon ?? GROUP_ICON[group],
         kicker: KICKER[group],
         title,
         subtitle: description,
