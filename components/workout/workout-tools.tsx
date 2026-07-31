@@ -13,18 +13,20 @@ import {
   type Unit,
 } from "@/lib/gym-math";
 
-type Tab = "plates" | "onerm" | "warmup";
+export type Tab = "plates" | "onerm" | "warmup";
 
 export function WorkoutTools({
   onClose,
   defaultWeight,
   unit: initialUnit = "kg",
+  initialTab = "plates",
 }: {
   onClose: () => void;
   defaultWeight?: number | null;
   unit?: Unit;
+  initialTab?: Tab;
 }) {
-  const [tab, setTab] = useState<Tab>("plates");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [unit, setUnit] = useState<Unit>(initialUnit);
 
   return (
