@@ -161,6 +161,7 @@ export async function updateExercise(
     instructions: z.string().max(2000).optional(),
     shoulder_safe: z.boolean().optional(),
     shoulder_notes: z.string().max(1000).optional(),
+    tracking_type: z.enum(["reps", "time"]).optional(),
     status: z.enum(["draft", "review", "published", "archived"]).optional(),
     cover_image_path: z.string().max(400).optional(),
   });

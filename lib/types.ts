@@ -143,6 +143,7 @@ export interface Exercise {
   technique_cues: string[];
   shoulder_safe: boolean;
   shoulder_notes: string | null;
+  tracking_type: "reps" | "time";
   cover_image_path: string | null;
   status: ContentStatus;
 }
