@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
+import { presetFromProfile } from "@/lib/themes";
 
 /**
- * Applies the member's saved appearance (from their profile) on any device.
- * The no-FOUC script in the root layout reads localStorage for the fast path;
- * this reconciles that with the account's stored preference so a freshly
- * signed-in device picks up the right theme + accent.
+ * Applies the member's saved theme (from their profile) on any device. The
+ * no-FOUC script in the root layout reads localStorage for the fast path; this
+ * reconciles that with the account's stored preference so a freshly signed-in
+ * device picks up the right theme + accent.
  */
 export function ThemeSync({
   theme,
@@ -17,18 +18,12 @@ export function ThemeSync({
 }) {
   useEffect(() => {
     try {
-      localStorage.setItem("stellio-theme", theme);
-      localStorage.setItem("stellio-accent", accent);
+      const preset = presetFromProfile(theme, accent);
+      localStorage.setItem("stellio-theme", preset.mode);
+      localStorage.setItem("stellio-accent", preset.accentKey);
       const root = document.documentElement;
-      const resolved =
-        theme === "system"
-          ? window.matchMedia("(prefers-color-scheme: light)").matches
-            ? "light"
-            : "dark"
-          : theme;
-      root.dataset.theme = resolved;
-      root.style.setProperty("--accent-base", accent);
-      root.style.setProperty("--color-accent", accent);
+      root.dataset.theme = preset.mode;
+      root.dataset.accent = preset.accentKey;
     } catch {
       // ignore storage/DOM access issues
     }

@@ -57,7 +57,7 @@ export const viewport: Viewport = {
 };
 
 // Applies the saved theme + accent before first paint to avoid a flash.
-const themeInit = `(function(){try{var r=document.documentElement;var t=localStorage.getItem('stellio-theme')||'dark';var d=t==='system'?(window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):t;r.dataset.theme=d;var a=localStorage.getItem('stellio-accent');if(a){r.style.setProperty('--accent-base',a);r.style.setProperty('--color-accent',a);}}catch(e){}})();`;
+const themeInit = `(function(){try{var r=document.documentElement;var t=localStorage.getItem('stellio-theme')||'dark';var d=(t==='light')?'light':(t==='dark')?'dark':(window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');r.dataset.theme=d;var a=(localStorage.getItem('stellio-accent')||'').toLowerCase();var m={'#ccff30':'lime','#ffb27a':'peach','#3b82f6':'blue','#64748b':'grey'};var k=m[a]||(['lime','peach','blue','grey'].indexOf(a)>=0?a:'');if(!k)k=(d==='light'?'blue':'lime');r.dataset.accent=k;}catch(e){}})();`;
 
 export default function RootLayout({
   children,
