@@ -27,7 +27,7 @@ export function UpgradeWall({ feature }: { feature: Feature }) {
         </ul>
 
         <div className="mt-8">
-          <UpgradeButton className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] px-5 py-3.5 font-semibold text-black disabled:opacity-60" />
+          <UpgradeButton className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] px-5 py-3.5 font-semibold text-[var(--accent-ink)] disabled:opacity-60" />
         </div>
       </div>
     </PageShell>

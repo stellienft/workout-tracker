@@ -49,7 +49,7 @@ export function WorkoutTools({
                   className={cn(
                     "rounded-full px-2.5 py-1 font-medium",
                     unit === u
-                      ? "bg-[var(--accent-primary)] text-black"
+                      ? "bg-[var(--accent-primary)] text-[var(--accent-ink)]"
                       : "text-[var(--text-secondary)]"
                   )}
                 >

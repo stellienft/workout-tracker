@@ -134,7 +134,7 @@ export default async function BillingPage({
                 {billingReady ? (
                   <UpgradeButton
                     label={`Start Trainer plan — ${TRAINER_PRICE_LABEL}`}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] px-5 py-3.5 font-semibold text-black disabled:opacity-60"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] px-5 py-3.5 font-semibold text-[var(--accent-ink)] disabled:opacity-60"
                   />
                 ) : (
                   <p className="rounded-xl bg-[var(--surface-secondary)] px-4 py-3 text-sm text-[var(--text-secondary)]">
@@ -199,7 +199,7 @@ export default async function BillingPage({
 
               <div className="mt-6 flex flex-col gap-3">
                 {billingReady ? (
-                  <UpgradeButton className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] px-5 py-3.5 font-semibold text-black disabled:opacity-60" />
+                  <UpgradeButton className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] px-5 py-3.5 font-semibold text-[var(--accent-ink)] disabled:opacity-60" />
                 ) : (
                   <p className="rounded-xl bg-[var(--surface-secondary)] px-4 py-3 text-sm text-[var(--text-secondary)]">
                     Online upgrades aren&apos;t switched on yet — check back soon.

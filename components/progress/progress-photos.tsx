@@ -96,7 +96,7 @@ export function ProgressPhotos({ photos }: { photos: ProgressPhoto[] }) {
           )}
           <button
             onClick={() => setAdding((a) => !a)}
-            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-primary)] px-3.5 py-2 text-xs font-semibold text-black"
+            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-primary)] px-3.5 py-2 text-xs font-semibold text-[var(--accent-ink)]"
           >
             <Plus className="h-4 w-4" /> Add
           </button>
@@ -168,7 +168,7 @@ export function ProgressPhotos({ photos }: { photos: ProgressPhoto[] }) {
                     </p>
                   </div>
                   {compare && selNum && (
-                    <span className="absolute left-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent-primary)] text-[10px] font-bold text-black">
+                    <span className="absolute left-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent-primary)] text-[10px] font-bold text-[var(--accent-ink)]">
                       {selNum}
                     </span>
                   )}
@@ -421,7 +421,7 @@ function UploadPanel({
         <button
           type="submit"
           disabled={busy}
-          className="rounded-full bg-[var(--accent-primary)] px-4 py-1.5 text-xs font-semibold text-black disabled:opacity-50"
+          className="rounded-full bg-[var(--accent-primary)] px-4 py-1.5 text-xs font-semibold text-[var(--accent-ink)] disabled:opacity-50"
         >
           {busy ? "Uploading…" : "Save photo"}
         </button>

@@ -79,7 +79,7 @@ export default async function TrainerPage() {
         action={
           <Link
             href="/trainer/clients"
-            className="rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black"
+            className="rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)]"
           >
             View Clients
           </Link>

@@ -312,7 +312,7 @@ export default async function MyCoachPage() {
                     href={tenant.payment_url as string}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-3 inline-flex items-center justify-center rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black"
+                    className="mt-3 inline-flex items-center justify-center rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)]"
                   >
                     Pay {tenant.name as string} online
                   </a>
@@ -363,7 +363,7 @@ export default async function MyCoachPage() {
                       {p.dayCount} {p.dayCount === 1 ? "day" : "days"}
                       {p.description ? ` · ${p.description}` : ""}
                     </p>
-                    <span className="mt-3 inline-block rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black">
+                    <span className="mt-3 inline-block rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)]">
                       Start training
                     </span>
                   </div>

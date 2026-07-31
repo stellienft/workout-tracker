@@ -129,7 +129,7 @@ export function PushToggle() {
         className={`rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50 ${
           enabled
             ? "border border-[var(--border-subtle)] text-[var(--text-secondary)]"
-            : "bg-[var(--accent-primary)] text-black"
+            : "bg-[var(--accent-primary)] text-[var(--accent-ink)]"
         }`}
       >
         {busy ? "…" : enabled ? "Turn off" : "Enable"}

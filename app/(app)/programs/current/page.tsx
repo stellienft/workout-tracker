@@ -35,7 +35,7 @@ export default async function CurrentProgramPage() {
         <div className="relative h-40 w-full">
           <CoverImage path={p.cover_image_path} alt={p.name} sizes="100vw" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 p-5">
+          <div className="on-media absolute inset-x-0 bottom-0 p-5">
             <p className="text-xs uppercase tracking-wide text-[var(--accent-primary)]">
               Week {enrolment.current_week} of {p.duration_weeks} ·{" "}
               <span className="capitalize">{enrolment.status}</span>
@@ -50,7 +50,7 @@ export default async function CurrentProgramPage() {
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Link
               href="/dashboard"
-              className="rounded-2xl bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-semibold text-black"
+              className="rounded-2xl bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-semibold text-[var(--accent-ink)]"
             >
               Go to today&apos;s workout
             </Link>

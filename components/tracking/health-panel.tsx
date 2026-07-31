@@ -190,7 +190,7 @@ function TrackerRow({
                 className={cn(
                   "h-10 flex-1 rounded-xl border text-sm font-medium",
                   value.b === o.val
-                    ? "border-[var(--border-active)] bg-[var(--accent-primary)] text-black"
+                    ? "border-[var(--border-active)] bg-[var(--accent-primary)] text-[var(--accent-ink)]"
                     : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
                 )}
               >
@@ -227,7 +227,7 @@ function ScaleRow({
             className={cn(
               "h-10 flex-1 rounded-xl border text-sm font-medium",
               value === s
-                ? "border-[var(--border-active)] bg-[var(--accent-primary)] text-black"
+                ? "border-[var(--border-active)] bg-[var(--accent-primary)] text-[var(--accent-ink)]"
                 : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
             )}
           >

@@ -66,7 +66,7 @@ function WaterCard({ date, initial }: { date: string; initial: number }) {
         <button
           onClick={() => change(CUP_ML)}
           disabled={pending}
-          className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-[var(--accent-primary)] py-1.5 text-xs font-semibold text-black disabled:opacity-60"
+          className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-[var(--accent-primary)] py-1.5 text-xs font-semibold text-[var(--accent-ink)] disabled:opacity-60"
         >
           <Plus className="h-3 w-3" /> {CUP_ML}
         </button>
@@ -132,7 +132,7 @@ function SleepCard({ date, initial }: { date: string; initial: number | null }) 
           <button
             onClick={save}
             disabled={pending || draft === ""}
-            className="shrink-0 rounded-lg bg-[var(--accent-primary)] px-3 py-2 text-xs font-semibold text-black disabled:opacity-60"
+            className="shrink-0 rounded-lg bg-[var(--accent-primary)] px-3 py-2 text-xs font-semibold text-[var(--accent-ink)] disabled:opacity-60"
           >
             {pending ? "…" : "Save"}
           </button>

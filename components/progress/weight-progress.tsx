@@ -129,7 +129,7 @@ export function WeightProgress({
         <button
           onClick={share}
           disabled={busy || !hasData || data.length < 2}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--accent-primary)] px-3.5 py-2 text-sm font-semibold text-black disabled:opacity-50"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--accent-primary)] px-3.5 py-2 text-sm font-semibold text-[var(--accent-ink)] disabled:opacity-50"
         >
           <Share2 className="h-4 w-4" /> {busy ? "…" : "Share"}
         </button>
@@ -143,7 +143,7 @@ export function WeightProgress({
             onClick={() => setRange(r.key)}
             className={`rounded-full py-1.5 text-xs font-semibold transition-colors ${
               range === r.key
-                ? "bg-[var(--accent-primary)] text-black"
+                ? "bg-[var(--accent-primary)] text-[var(--accent-ink)]"
                 : "text-[var(--text-secondary)]"
             }`}
           >

@@ -177,7 +177,7 @@ export function TrainerProgramEditor({
           <button
             onClick={publish}
             disabled={pending || rows.length === 0}
-            className="shrink-0 rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+            className="shrink-0 rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)] disabled:opacity-50"
           >
             Publish
           </button>

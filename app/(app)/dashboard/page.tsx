@@ -224,7 +224,7 @@ export default async function DashboardPage() {
           <div className="mt-3 flex flex-wrap gap-2">
             <Link
               href="/splits"
-              className="rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black"
+              className="rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)]"
             >
               Browse starter splits
             </Link>
@@ -253,7 +253,7 @@ export default async function DashboardPage() {
               {splitDay?.name ?? "In progress"} — pick up where you left off.
             </p>
           </div>
-          <span className="rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black">
+          <span className="rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)]">
             Continue
           </span>
         </Link>
@@ -273,7 +273,7 @@ export default async function DashboardPage() {
               You have a workout in progress — pick up where you left off.
             </p>
           </div>
-          <span className="rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black">
+          <span className="rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)]">
             Continue
           </span>
         </Link>
@@ -341,7 +341,7 @@ export default async function DashboardPage() {
                     {s.dayCount} day{s.dayCount === 1 ? "" : "s"}
                   </p>
                 </div>
-                <span className="shrink-0 rounded-xl bg-[var(--accent-primary)] px-3 py-1.5 text-xs font-semibold text-black">
+                <span className="shrink-0 rounded-xl bg-[var(--accent-primary)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-ink)]">
                   Start
                 </span>
               </Link>
@@ -454,7 +454,7 @@ function NoProgramHero() {
     <div className="relative h-72 overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)]">
       <CoverImage path={null} alt="Get started" className="" sizes="100vw" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-black/30" />
-      <div className="absolute inset-0 flex flex-col justify-end p-6">
+      <div className="on-media absolute inset-0 flex flex-col justify-end p-6">
         <h2 className="text-2xl font-bold">Ready to start?</h2>
         <p className="mt-1 max-w-md text-sm text-[var(--text-secondary)]">
           Pick a program that fits your goal and we&apos;ll build your week around
@@ -462,7 +462,7 @@ function NoProgramHero() {
         </p>
         <Link
           href="/programs"
-          className="mt-4 inline-flex w-fit items-center gap-2 rounded-2xl bg-[var(--accent-primary)] px-5 py-3 font-semibold text-black"
+          className="mt-4 inline-flex w-fit items-center gap-2 rounded-2xl bg-[var(--accent-primary)] px-5 py-3 font-semibold text-[var(--accent-ink)]"
         >
           Browse programs
         </Link>

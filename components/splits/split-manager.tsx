@@ -85,7 +85,7 @@ export function SplitManager({ splits }: { splits: SplitRow[] }) {
       ) : (
         <button
           onClick={() => setCreating(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] bg-[var(--accent-primary)] py-4 text-sm font-semibold text-black"
+          className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] bg-[var(--accent-primary)] py-4 text-sm font-semibold text-[var(--accent-ink)]"
         >
           <Plus className="h-4 w-4" /> New split
         </button>

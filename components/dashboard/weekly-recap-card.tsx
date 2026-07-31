@@ -69,7 +69,7 @@ export function WeeklyRecapCard({ initial }: { initial: Recap | null }) {
           <button
             onClick={generate}
             disabled={pending}
-            className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black disabled:opacity-60"
+            className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)] disabled:opacity-60"
           >
             <Sparkles className="h-4 w-4" />
             {pending ? "Writing your recap…" : "Generate my recap"}

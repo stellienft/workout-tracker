@@ -33,7 +33,7 @@ export function UpgradeButton({
       disabled={pending}
       className={
         className ??
-        "inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] px-5 py-3 font-semibold text-black disabled:opacity-60"
+        "inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] px-5 py-3 font-semibold text-[var(--accent-ink)] disabled:opacity-60"
       }
     >
       <Sparkles className="h-4 w-4" />
