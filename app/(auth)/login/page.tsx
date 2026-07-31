@@ -4,7 +4,12 @@ import { AuthForm } from "@/components/auth-form";
 
 export const metadata = { title: "Sign in" };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ deleted?: string }>;
+}) {
+  const { deleted } = await searchParams;
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 py-12">
       <div className="mb-10">
@@ -15,6 +20,11 @@ export default function LoginPage() {
           Train Smarter. Build Stronger.
         </p>
       </div>
+      {deleted && (
+        <div className="mb-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3 text-sm text-[var(--text-secondary)]">
+          Your account and all your data have been permanently deleted.
+        </div>
+      )}
       <Suspense fallback={<div className="skeleton h-64 w-full" />}>
         <AuthForm mode="login" />
       </Suspense>
