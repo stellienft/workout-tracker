@@ -118,7 +118,10 @@ export default async function WorkoutSessionPage({
   return (
     <WorkoutMode
       sessionId={sessionId}
-      startedAt={session.started_at}
+      initialSeconds={
+        session.total_seconds ??
+        Math.max(0, Math.floor((Date.now() - new Date(session.started_at).getTime()) / 1000))
+      }
       programName={programName}
       workoutName={workoutName}
       considerations={profile?.considerations ?? null}
