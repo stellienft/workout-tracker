@@ -258,6 +258,31 @@ export async function removeSplitDayExercise(rowId: string, splitId: string) {
   return { ok: true as const };
 }
 
+/** Group (or ungroup) a split-day exercise into a superset/circuit. */
+export async function setSplitExerciseSuperset(input: {
+  rowId: string;
+  splitId: string;
+  group: number | null;
+}) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+  const parsed = z
+    .object({
+      rowId: z.string().uuid(),
+      splitId: z.string().uuid(),
+      group: z.number().int().min(1).max(12).nullable(),
+    })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false as const, error: "Invalid input" };
+  const { error } = await supabase
+    .from("custom_split_day_exercises")
+    .update({ superset_group: parsed.data.group })
+    .eq("id", parsed.data.rowId);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath(`/splits/${parsed.data.splitId}`);
+  return { ok: true as const };
+}
+
 /** Start (or resume) a workout session for a custom split day. */
 export async function startSplitWorkout(dayId: string) {
   const { supabase, user } = await auth();

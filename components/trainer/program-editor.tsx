@@ -18,8 +18,10 @@ import {
   addExerciseToTrainerProgram,
   removeTrainerProgramExercise,
   swapTrainerProgramExercise,
+  setTrainerProgramExerciseSuperset,
   publishTrainerProgram,
 } from "@/lib/actions/trainer";
+import { SupersetSelect } from "@/components/workout/superset-select";
 
 const MUSCLES = [
   "chest",
@@ -50,6 +52,7 @@ interface Row {
   sets: number | null;
   reps: string | null;
   restSeconds: number | null;
+  supersetGroup: number | null;
   name: string;
   muscles: string[];
 }
@@ -132,6 +135,18 @@ export function TrainerProgramEditor({
     });
   }
 
+  function changeGroup(rowId: string, group: number | null) {
+    startTransition(async () => {
+      const res = await setTrainerProgramExerciseSuperset({
+        rowId,
+        trainerProgramId: programId,
+        group,
+      });
+      if (res.ok) router.refresh();
+      else toast(res.error ?? "Could not update superset", "error");
+    });
+  }
+
   function publish() {
     startTransition(async () => {
       const res = await publishTrainerProgram(programId);
@@ -150,7 +165,8 @@ export function TrainerProgramEditor({
         <div className="min-w-0">
           <h1 className="text-2xl font-bold">{programName}</h1>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            Add training days and fill each with exercises for your clients.
+            Add training days and fill each with exercises for your clients. Give
+            adjacent exercises the same superset letter to pair them.
           </p>
         </div>
         {published ? (
@@ -186,13 +202,25 @@ export function TrainerProgramEditor({
                 {day.items.map((ex) => (
                   <div key={ex.id} className="flex items-center gap-3 px-4 py-2.5">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{ex.name}</p>
+                      <p className="truncate text-sm font-medium">
+                        {ex.name}
+                        {ex.supersetGroup != null && (
+                          <span className="ml-2 rounded bg-[var(--accent-muted)] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[var(--accent-primary)]">
+                            {String.fromCharCode(64 + ex.supersetGroup)}
+                          </span>
+                        )}
+                      </p>
                       <p className="text-xs text-[var(--text-muted)]">
                         {ex.sets ?? 3} sets
                         {ex.reps ? ` · ${ex.reps}` : ""}
                         {ex.restSeconds ? ` · ${ex.restSeconds}s rest` : ""}
                       </p>
                     </div>
+                    <SupersetSelect
+                      value={ex.supersetGroup}
+                      onChange={(g) => changeGroup(ex.id, g)}
+                      disabled={pending}
+                    />
                     <button
                       onClick={() => setSwapFor(ex.id)}
                       disabled={pending}
