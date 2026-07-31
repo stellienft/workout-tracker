@@ -9,6 +9,7 @@ import {
   Dumbbell,
   ChevronDown,
   CheckCircle2,
+  Repeat,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -16,6 +17,7 @@ import { cn } from "@/lib/utils";
 import {
   addExerciseToTrainerProgram,
   removeTrainerProgramExercise,
+  swapTrainerProgramExercise,
   publishTrainerProgram,
 } from "@/lib/actions/trainer";
 
@@ -69,6 +71,7 @@ export function TrainerProgramEditor({
   const toast = useToast();
   const [pending, startTransition] = useTransition();
   const [pickerFor, setPickerFor] = useState<string | null>(null);
+  const [swapFor, setSwapFor] = useState<string | null>(null);
   const [addingDay, setAddingDay] = useState(false);
   const [newDay, setNewDay] = useState("");
   // Day labels created this session that don't have exercises yet.
@@ -107,6 +110,25 @@ export function TrainerProgramEditor({
       });
       if (res.ok) router.refresh();
       else toast(res.error ?? "Could not remove", "error");
+    });
+  }
+
+  function swapExercise(exerciseId: string) {
+    if (!swapFor) return;
+    const rowId = swapFor;
+    startTransition(async () => {
+      const res = await swapTrainerProgramExercise({
+        rowId,
+        exerciseId,
+        trainerProgramId: programId,
+      });
+      if (res.ok) {
+        toast("Exercise swapped.", "success");
+        setSwapFor(null);
+        router.refresh();
+      } else {
+        toast(res.error ?? "Could not swap", "error");
+      }
     });
   }
 
@@ -172,6 +194,14 @@ export function TrainerProgramEditor({
                       </p>
                     </div>
                     <button
+                      onClick={() => setSwapFor(ex.id)}
+                      disabled={pending}
+                      aria-label="Swap exercise"
+                      className="text-[var(--text-muted)] hover:text-[var(--accent-primary)]"
+                    >
+                      <Repeat className="h-4 w-4" />
+                    </button>
+                    <button
                       onClick={() => removeExercise(ex.id)}
                       disabled={pending}
                       aria-label="Remove exercise"
@@ -228,6 +258,16 @@ export function TrainerProgramEditor({
         </button>
       )}
 
+      {swapFor && (
+        <ExercisePicker
+          catalog={catalog}
+          swap
+          onClose={() => setSwapFor(null)}
+          onPick={(exerciseId) => swapExercise(exerciseId)}
+          onAdd={() => {}}
+        />
+      )}
+
       {pickerFor && (
         <ExercisePicker
           catalog={catalog}
@@ -264,6 +304,8 @@ function ExercisePicker({
   catalog,
   onClose,
   onAdd,
+  swap,
+  onPick,
 }: {
   catalog: CatalogExercise[];
   onClose: () => void;
@@ -273,6 +315,8 @@ function ExercisePicker({
     reps: string,
     restSeconds: number
   ) => void;
+  swap?: boolean;
+  onPick?: (exerciseId: string) => void;
 }) {
   const [q, setQ] = useState("");
   const [muscle, setMuscle] = useState<string | null>(null);
@@ -302,7 +346,9 @@ function ExercisePicker({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] p-4">
-          <p className="font-bold">{selected ? "Set details" : "Add exercise"}</p>
+          <p className="font-bold">
+            {swap ? "Swap exercise" : selected ? "Set details" : "Add exercise"}
+          </p>
           <button onClick={onClose} aria-label="Close">
             <X className="h-5 w-5 text-[var(--text-muted)]" />
           </button>
@@ -414,7 +460,14 @@ function ExercisePicker({
                   {filtered.map((e) => (
                     <li key={e.id}>
                       <button
-                        onClick={() => setSelected(e)}
+                        onClick={() => {
+                          if (swap) {
+                            onPick?.(e.id);
+                            onClose();
+                          } else {
+                            setSelected(e);
+                          }
+                        }}
                         className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[var(--surface-secondary)]"
                       >
                         <div className="min-w-0 flex-1">
