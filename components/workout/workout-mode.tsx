@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   X,
@@ -16,6 +16,7 @@ import {
   Trash2,
   Play,
   Square,
+  Pause,
   Calculator,
 } from "lucide-react";
 import { ExerciseImage } from "@/components/ui/exercise-image";
@@ -93,7 +94,7 @@ function fmtSecs(s: number): string {
 
 export function WorkoutMode({
   sessionId,
-  startedAt,
+  initialSeconds,
   programName,
   workoutName,
   considerations,
@@ -102,7 +103,7 @@ export function WorkoutMode({
   initialLogs,
 }: {
   sessionId: string;
-  startedAt: string;
+  initialSeconds: number;
   programName: string;
   workoutName: string;
   // Injury caution is driven by the member's own reported areas + note, not a
@@ -123,9 +124,10 @@ export function WorkoutMode({
 }) {
   const router = useRouter();
   const [index, setIndex] = useState(0);
-  const [elapsed, setElapsed] = useState(() =>
-    Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)
-  );
+  // Resume from the active seconds already banked (paused time doesn't count),
+  // then keep counting forward from this mount — background-accurate.
+  const resumeBaseRef = useRef(Date.now() - Math.max(0, initialSeconds) * 1000);
+  const [elapsed, setElapsed] = useState(Math.max(0, initialSeconds));
   const [showRest, setShowRest] = useState(false);
   const [restSeconds, setRestSeconds] = useState(90);
   const [showInjuryNote, setShowInjuryNote] = useState(true);
@@ -192,8 +194,8 @@ export function WorkoutMode({
   // counter) so it stays accurate when the app is backgrounded — mobile
   // browsers suspend setInterval, so we also resync on return to foreground.
   useEffect(() => {
-    const start = new Date(startedAt).getTime();
-    const compute = () => setElapsed(Math.max(0, Math.floor((Date.now() - start) / 1000)));
+    const compute = () =>
+      setElapsed(Math.max(0, Math.floor((Date.now() - resumeBaseRef.current) / 1000)));
     compute();
     const t = setInterval(compute, 1000);
     const onVisible = () => {
@@ -206,7 +208,7 @@ export function WorkoutMode({
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onVisible);
     };
-  }, [startedAt]);
+  }, []);
 
   // Flush any queued offline logs on mount + when we come back online.
   useEffect(() => {
@@ -468,16 +470,16 @@ export function WorkoutMode({
         <div className="flex items-center justify-between">
           <button
             onClick={onSaveExit}
-            aria-label="Save and exit"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface-secondary)]"
+            aria-label="Pause workout and exit"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--surface-secondary)] px-3 text-xs font-semibold text-[var(--text-secondary)]"
           >
-            <X className="h-4 w-4" />
+            <Pause className="h-4 w-4" /> Pause
           </button>
-          <div className="text-center">
-            <p className="text-xs text-[var(--text-muted)]">{programName}</p>
-            <p className="text-sm font-semibold">{workoutName}</p>
+          <div className="min-w-0 text-center">
+            <p className="truncate text-xs text-[var(--text-muted)]">{programName}</p>
+            <p className="truncate text-sm font-semibold">{workoutName}</p>
           </div>
-          <div className="w-9 text-right text-sm font-mono tabular-nums">
+          <div className="text-right text-sm font-mono tabular-nums">
             {formatDuration(elapsed)}
           </div>
         </div>
