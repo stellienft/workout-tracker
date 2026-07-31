@@ -30,7 +30,7 @@ export default async function AdminProgramEditPage({
     ? await supabase
         .from("workout_template_exercises")
         .select(
-          "id, workout_template_id, position, sets, rep_target, exercise:exercises(id, name, primary_muscles, source)"
+          "id, workout_template_id, position, sets, rep_target, superset_group, exercise:exercises(id, name, primary_muscles, source)"
         )
         .in("workout_template_id", templateIds)
         .order("position", { ascending: true })
@@ -42,6 +42,7 @@ export default async function AdminProgramEditPage({
     position: number | null;
     sets: number | null;
     rep_target: string | null;
+    superset_group: number | null;
     exercise: { id: string; name: string; primary_muscles: string[]; source: string | null } | null;
   };
   const exByTemplate = new Map<string, TER[]>();

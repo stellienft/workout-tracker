@@ -19,6 +19,7 @@ import {
   Pause,
   Calculator,
   TrendingUp,
+  Link2,
 } from "lucide-react";
 import { ExerciseImage } from "@/components/ui/exercise-image";
 import { RestTimer } from "@/components/workout/rest-timer";
@@ -67,6 +68,7 @@ export interface WorkoutExerciseVM {
   restSeconds: number;
   notes: string | null;
   isOptional: boolean;
+  supersetGroup: number | null;
   video: LoadedVideo | null;
   alternatives: AltOption[];
   moreAlternatives: AltOption[];
@@ -185,6 +187,50 @@ export function WorkoutMode({
     () => exercises.filter((e) => !removed.has(e.exerciseId)),
     [exercises, removed]
   );
+
+  // Superset / circuit grouping: runs of 2+ consecutive exercises that share a
+  // non-null supersetGroup. Keyed by index into workingExercises.
+  const groupMeta = useMemo(() => {
+    interface Meta {
+      letter: string;
+      idx: number; // 0-based position within the group
+      size: number;
+      firstIndex: number;
+      lastIndex: number;
+      type: "superset" | "circuit";
+      members: string[];
+    }
+    const map = new Map<number, Meta>();
+    let letterIdx = 0;
+    let i = 0;
+    while (i < workingExercises.length) {
+      const g = workingExercises[i].supersetGroup;
+      let j = i;
+      while (j < workingExercises.length && g != null && workingExercises[j].supersetGroup === g)
+        j++;
+      const size = j - i;
+      if (g != null && size >= 2) {
+        const letter = String.fromCharCode(65 + letterIdx);
+        letterIdx++;
+        const members = workingExercises.slice(i, j).map((e) => e.name);
+        for (let k = i; k < j; k++) {
+          map.set(k, {
+            letter,
+            idx: k - i,
+            size,
+            firstIndex: i,
+            lastIndex: j - 1,
+            type: size >= 3 ? "circuit" : "superset",
+            members,
+          });
+        }
+        i = j;
+      } else {
+        i += 1;
+      }
+    }
+    return map;
+  }, [workingExercises]);
   const concerns = useMemo(
     () => combineConcerns(injuryAreas, considerations),
     [injuryAreas, considerations]
@@ -288,8 +334,25 @@ export function WorkoutMode({
     if (done) {
       if (haptics && "vibrate" in navigator) navigator.vibrate?.(30);
       persistSet(ex, { ...row, done: true });
+
+      const meta = groupMeta.get(safeIndex);
+      if (meta && meta.idx < meta.size - 1) {
+        // Superset: no rest between movements — jump straight to the next one.
+        setShowRest(false);
+        setIndex(safeIndex + 1);
+        return;
+      }
+
       setRestSeconds(ex.restSeconds || 90);
       if (ex.restSeconds > 0) setShowRest(true);
+
+      if (meta) {
+        // Finished the last movement of a round — loop back to the first
+        // movement for the next round if any of its sets are still pending.
+        const firstEx = workingExercises[meta.firstIndex];
+        const hasNextRound = (state[firstEx.exerciseId] ?? []).some((r) => !r.done);
+        if (hasNextRound) setIndex(meta.firstIndex);
+      }
     }
   }
 
@@ -447,6 +510,7 @@ export function WorkoutMode({
     : exerciseConcern(concerns, active.primaryMuscles);
   const rows = state[current.exerciseId] ?? [];
   const timed = current.trackingType === "time";
+  const groupInfo = groupMeta.get(safeIndex) ?? null;
 
   // Progressive-overload suggestion from last session's working sets. Big
   // compound lifts jump 5 kg, everything else 2.5 kg. Not shown for timed moves
@@ -559,6 +623,43 @@ export function WorkoutMode({
             <p className="mt-1 text-xs text-[var(--accent-primary)]">
               Substituted for {current.name}
             </p>
+          )}
+
+          {groupInfo && (
+            <div className="mt-3 rounded-2xl border border-[var(--accent-primary)]/40 bg-[var(--accent-muted)] p-3">
+              <div className="flex items-center gap-1.5">
+                <Link2 className="h-4 w-4 text-[var(--accent-primary)]" />
+                <p className="text-sm font-semibold text-[var(--accent-primary)]">
+                  {groupInfo.type === "circuit" ? "Circuit" : "Superset"}{" "}
+                  {groupInfo.letter} · move {groupInfo.idx + 1} of {groupInfo.size}
+                </p>
+              </div>
+              <ol className="mt-1.5 space-y-0.5">
+                {groupInfo.members.map((name, i) => (
+                  <li
+                    key={i}
+                    className={cn(
+                      "text-xs capitalize",
+                      i === groupInfo.idx
+                        ? "font-semibold text-[var(--text-primary)]"
+                        : "text-[var(--text-secondary)]"
+                    )}
+                  >
+                    {groupInfo.letter}
+                    {i + 1}. {name}
+                    {i === groupInfo.idx && (
+                      <span className="ml-1 not-italic text-[var(--accent-primary)]">
+                        ← now
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-1.5 text-[11px] text-[var(--text-muted)]">
+                One set of each back-to-back, then rest. Completing a set jumps to
+                the next movement automatically.
+              </p>
+            </div>
           )}
 
           {concerns.length > 0 && showInjuryNote && (
@@ -881,7 +982,10 @@ export function WorkoutMode({
               onClick={() => setIndex(safeIndex + 1)}
               className="flex h-12 flex-1 items-center justify-center gap-1 rounded-2xl bg-[var(--surface-secondary)] font-semibold"
             >
-              Next exercise <ChevronRight className="h-5 w-5" />
+              {groupInfo && groupInfo.idx < groupInfo.size - 1
+                ? "Next in superset"
+                : "Next exercise"}{" "}
+              <ChevronRight className="h-5 w-5" />
             </button>
           ) : (
             <button

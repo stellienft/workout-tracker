@@ -194,6 +194,33 @@ export async function swapTemplateExercise(
   return { ok: true as const };
 }
 
+/**
+ * Assign (or clear) an exercise's superset group. Exercises in the same
+ * workout that share a group value and sit next to each other are performed as
+ * a superset/circuit. Pass null to remove it from any group.
+ */
+export async function setTemplateExerciseSuperset(
+  templateExerciseId: string,
+  group: number | null
+) {
+  const { supabase, isAdmin } = await requireAdminAction();
+  if (!isAdmin) return { ok: false as const, error: "Forbidden" };
+  const parsed = z
+    .object({
+      wteId: z.string().uuid(),
+      group: z.number().int().min(1).max(12).nullable(),
+    })
+    .safeParse({ wteId: templateExerciseId, group });
+  if (!parsed.success) return { ok: false as const, error: "Invalid input" };
+  const { error } = await supabase
+    .from("workout_template_exercises")
+    .update({ superset_group: parsed.data.group })
+    .eq("id", parsed.data.wteId);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath("/admin/programs", "layout");
+  return { ok: true as const };
+}
+
 export async function updateExercise(
   exerciseId: string,
   fields: Record<string, unknown>
