@@ -8,6 +8,7 @@ import {
   pauseEnrolment,
   resumeEnrolment,
   restartEnrolment,
+  cancelEnrolment,
 } from "@/lib/actions/enrolment";
 
 export function EnrolmentControls({
@@ -60,6 +61,21 @@ export function EnrolmentControls({
         }}
       >
         Restart
+      </Button>
+      <Button
+        variant="ghost"
+        disabled={pending}
+        className="text-[var(--danger)]"
+        onClick={() => {
+          if (
+            confirm(
+              "Cancel this program? You'll leave it and it'll clear from your dashboard. Your logged workouts are kept, and you can enrol again anytime."
+            )
+          )
+            run(() => cancelEnrolment(enrolmentId), "Program cancelled");
+        }}
+      >
+        Cancel program
       </Button>
     </div>
   );

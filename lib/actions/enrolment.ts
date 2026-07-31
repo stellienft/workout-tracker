@@ -130,6 +130,21 @@ export async function resumeEnrolment(enrolmentId: string) {
   return { ok: true };
 }
 
+/** Cancel (leave) a program. Marks the enrolment abandoned; history is kept. */
+export async function cancelEnrolment(enrolmentId: string) {
+  const { supabase, user } = await currentUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+  const { error } = await supabase
+    .from("program_enrolments")
+    .update({ status: "abandoned" })
+    .eq("id", enrolmentId)
+    .eq("user_id", user.id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/dashboard");
+  revalidatePath("/programs/current");
+  return { ok: true };
+}
+
 export async function restartEnrolment(enrolmentId: string) {
   const { supabase, user } = await currentUser();
   if (!user) return { ok: false, error: "Not authenticated" };
