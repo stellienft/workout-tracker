@@ -229,6 +229,25 @@ export async function addExerciseToTrainerProgram(input: {
   return { ok: true };
 }
 
+/** Swap the exercise used in a trainer-program slot (keeps sets/reps/rest). */
+export async function swapTrainerProgramExercise(input: {
+  rowId: string;
+  exerciseId: string;
+  trainerProgramId: string;
+}) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("trainer_program_exercises")
+    .update({ exercise_id: input.exerciseId })
+    .eq("id", input.rowId);
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/trainer/programs/${input.trainerProgramId}`);
+  return { ok: true };
+}
+
 export async function removeTrainerProgramExercise(input: {
   rowId: string;
   trainerProgramId: string;
