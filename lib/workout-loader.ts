@@ -226,6 +226,7 @@ export interface LoadedSplitDayExercise extends Enrichment {
   rep_target: string | null;
   rest_seconds: number;
   notes: string | null;
+  superset_group: number | null;
   exercise: Exercise;
 }
 
@@ -257,7 +258,9 @@ export async function loadCustomSplitDay(
 
   const { data: rows } = await supabase
     .from("custom_split_day_exercises")
-    .select("id, exercise_id, sets, rep_target, rest_seconds, notes, exercise:exercises(*)")
+    .select(
+      "id, exercise_id, sets, rep_target, rest_seconds, notes, superset_group, exercise:exercises(*)"
+    )
     .eq("split_day_id", dayId)
     .order("position");
 

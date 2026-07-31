@@ -10,15 +10,17 @@ import {
   updateProgramStatus,
   searchExercises,
   swapTemplateExercise,
+  setTemplateExerciseSuperset,
 } from "@/lib/actions/admin";
 import type { Program, WorkoutTemplate } from "@/lib/types";
-import { ArrowLeft, Repeat, Search } from "lucide-react";
+import { ArrowLeft, Link2, Repeat, Search } from "lucide-react";
 
 interface TemplateExercise {
   id: string;
   position: number | null;
   sets: number | null;
   rep_target: string | null;
+  superset_group: number | null;
   exercise: {
     id: string;
     name: string;
@@ -271,8 +273,8 @@ export function ProgramEditor({
       <div className="mt-8">
         <h2 className="text-lg font-bold">Workouts ({templates.length})</h2>
         <p className="mt-0.5 text-sm text-[var(--text-muted)]">
-          Swap any exercise for another — use this to fine-tune the GIF exercise
-          picks.
+          Swap any exercise for another, or group adjacent exercises into a
+          superset/circuit by giving them the same letter.
         </p>
         <div className="mt-3 space-y-3">
           {templates.map((t) => (
@@ -341,6 +343,15 @@ function ExerciseRow({ te }: { te: TemplateExercise }) {
     });
   }
 
+  function changeGroup(value: string) {
+    const group = value === "" ? null : Number(value);
+    startTransition(async () => {
+      const res = await setTemplateExerciseSuperset(te.id, group);
+      if (res.ok) router.refresh();
+      else toast(res.error ?? "Could not update superset", "error");
+    });
+  }
+
   const legacy = te.exercise?.source !== "exercisedb";
 
   return (
@@ -349,6 +360,12 @@ function ExerciseRow({ te }: { te: TemplateExercise }) {
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">
             {te.exercise?.name ?? "Unknown exercise"}
+            {te.superset_group != null && (
+              <span className="ml-2 inline-flex items-center gap-0.5 rounded bg-[var(--accent-muted)] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[var(--accent-primary)]">
+                <Link2 className="h-2.5 w-2.5" />
+                {String.fromCharCode(64 + te.superset_group)}
+              </span>
+            )}
             {legacy && (
               <span className="ml-2 rounded bg-[var(--surface-secondary)] px-1.5 py-0.5 text-[10px] uppercase text-[var(--warning)]">
                 no GIF
@@ -361,12 +378,29 @@ function ExerciseRow({ te }: { te: TemplateExercise }) {
             {te.rep_target ? ` × ${te.rep_target}` : ""}
           </p>
         </div>
-        <button
-          onClick={() => (open ? setOpen(false) : openPanel())}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium hover:border-[var(--border-active)]"
-        >
-          <Repeat className="h-3.5 w-3.5" /> Swap
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <select
+            value={te.superset_group ?? ""}
+            onChange={(e) => changeGroup(e.target.value)}
+            disabled={pending}
+            aria-label="Superset group"
+            title="Group with adjacent exercises into a superset/circuit"
+            className="h-8 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-2 text-xs focus:border-[var(--border-active)] focus:outline-none"
+          >
+            <option value="">No superset</option>
+            {[1, 2, 3, 4].map((g) => (
+              <option key={g} value={g}>
+                Superset {String.fromCharCode(64 + g)}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => (open ? setOpen(false) : openPanel())}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium hover:border-[var(--border-active)]"
+          >
+            <Repeat className="h-3.5 w-3.5" /> Swap
+          </button>
+        </div>
       </div>
 
       {open && (
