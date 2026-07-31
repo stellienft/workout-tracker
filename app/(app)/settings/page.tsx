@@ -18,6 +18,7 @@ import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { SettingsForm } from "@/components/settings-form";
 import { ThemeControls } from "@/components/theme-controls";
 import { PushToggle } from "@/components/settings/push-toggle";
+import { AccountDataControls } from "@/components/settings/account-data";
 
 export const metadata = { title: "Settings" };
 
@@ -152,6 +153,12 @@ export default async function SettingsPage() {
             external
           />
         </div>
+      </div>
+
+      {/* Account & data */}
+      <div className="mt-6">
+        <h2 className="mb-3 text-lg font-bold">Account &amp; data</h2>
+        <AccountDataControls />
       </div>
     </PageShell>
   );
