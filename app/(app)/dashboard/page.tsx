@@ -95,6 +95,41 @@ export default async function DashboardPage() {
     profile?.timezone || "Australia/Brisbane"
   );
 
+  // Splits aren't part of the program engine, so surface them separately: any
+  // in-progress split session (to resume) plus the member's splits to launch.
+  const [{ data: mySplits }, { data: splitSession }] = await Promise.all([
+    supabase
+      .from("custom_splits")
+      .select("id, name, custom_split_days(id)")
+      .eq("owner_user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(8),
+    supabase
+      .from("workout_sessions")
+      .select("id, started_at, custom_split_days(name, custom_splits(name))")
+      .eq("user_id", user.id)
+      .eq("status", "in_progress")
+      .not("custom_split_day_id", "is", null)
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  const splits = (mySplits ?? []).map((s) => ({
+    id: s.id as string,
+    name: s.name as string,
+    dayCount: Array.isArray(s.custom_split_days) ? s.custom_split_days.length : 0,
+  }));
+  const splitDay = splitSession
+    ? Array.isArray(splitSession.custom_split_days)
+      ? splitSession.custom_split_days[0]
+      : splitSession.custom_split_days
+    : null;
+  const splitParent = splitDay
+    ? Array.isArray(splitDay.custom_splits)
+      ? splitDay.custom_splits[0]
+      : splitDay.custom_splits
+    : null;
+
   // Today's wellness (water + sleep), keyed to the member's local day.
   const tzLocal = profile?.timezone || "Australia/Brisbane";
   const todayLocal = new Intl.DateTimeFormat("en-CA", {
@@ -203,6 +238,27 @@ export default async function DashboardPage() {
         </div>
       )}
 
+      {/* Resume an in-progress split workout (outside the program engine) */}
+      {splitSession && (
+        <Link
+          href={`/workout/${splitSession.id}`}
+          className="mt-5 flex items-center justify-between rounded-[var(--radius-card)] border border-[var(--border-active)] bg-[var(--accent-muted)] p-4"
+        >
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--accent-primary)]">
+              Resume split workout
+            </p>
+            <p className="text-sm text-[var(--text-secondary)]">
+              {splitParent?.name ? `${splitParent.name} · ` : ""}
+              {splitDay?.name ?? "In progress"} — pick up where you left off.
+            </p>
+          </div>
+          <span className="rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-black">
+            Continue
+          </span>
+        </Link>
+      )}
+
       {/* Continue unfinished */}
       {dash.inProgressSession && (
         <Link
@@ -262,6 +318,37 @@ export default async function DashboardPage() {
           initialSleepHours={wellness?.sleep_hours != null ? Number(wellness.sleep_hours) : null}
         />
       </div>
+
+      {/* Your splits */}
+      {splits.length > 0 && (
+        <section className="mt-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold">Your splits</h2>
+            <Link href="/splits" className="text-sm text-[var(--accent-primary)]">
+              Manage
+            </Link>
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {splits.map((s) => (
+              <Link
+                key={s.id}
+                href={`/splits/${s.id}`}
+                className="flex items-center justify-between rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4 transition-colors hover:border-[var(--border-active)]"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-semibold">{s.name}</p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {s.dayCount} day{s.dayCount === 1 ? "" : "s"}
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-xl bg-[var(--accent-primary)] px-3 py-1.5 text-xs font-semibold text-black">
+                  Start
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Small stats */}
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
