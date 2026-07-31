@@ -18,11 +18,13 @@ import {
   Square,
   Pause,
   Calculator,
+  TrendingUp,
 } from "lucide-react";
 import { ExerciseImage } from "@/components/ui/exercise-image";
 import { RestTimer } from "@/components/workout/rest-timer";
 import { VideoSheet } from "@/components/workout/video-sheet";
-import { WorkoutTools } from "@/components/workout/workout-tools";
+import { WorkoutTools, type Tab as ToolsTab } from "@/components/workout/workout-tools";
+import { progressionSuggestion } from "@/lib/gym-math";
 import {
   logSet,
   completeWorkout,
@@ -134,7 +136,10 @@ export function WorkoutMode({
   const [videoOpen, setVideoOpen] = useState(false);
   const [showCues, setShowCues] = useState(false);
   const [showReplace, setShowReplace] = useState(false);
-  const [showTools, setShowTools] = useState(false);
+  // Tools sheet: which tab to open on, and the weight to seed it with.
+  const [tools, setTools] = useState<{ tab: ToolsTab; weight: number | null } | null>(
+    null
+  );
   const [finishing, setFinishing] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
   const [pending, setPending] = useState(0);
@@ -442,6 +447,36 @@ export function WorkoutMode({
     : exerciseConcern(concerns, active.primaryMuscles);
   const rows = state[current.exerciseId] ?? [];
   const timed = current.trackingType === "time";
+
+  // Progressive-overload suggestion from last session's working sets. Big
+  // compound lifts jump 5 kg, everything else 2.5 kg. Not shown for timed moves
+  // or when a substitute is active (the history is for the original).
+  const bigLift = active.primaryMuscles.some((m) =>
+    ["quads", "quadriceps", "hamstrings", "glutes", "back", "lats"].includes(
+      m.toLowerCase()
+    )
+  );
+  const suggestion =
+    timed || sub
+      ? null
+      : progressionSuggestion(current.previous, current.repTarget, bigLift ? 5 : 2.5);
+  // Weight to seed the Tools sheet with, preferring what's already typed.
+  const toolWeight =
+    Number(rows.find((r) => r.weight)?.weight) ||
+    suggestion?.weightKg ||
+    current.previous[0]?.weight_kg ||
+    null;
+
+  function applySuggestion() {
+    if (!suggestion) return;
+    setState((prev) => {
+      const rs = (prev[current.exerciseId] ?? []).map((r) =>
+        r.done || r.weight ? r : { ...r, weight: String(suggestion.weightKg) }
+      );
+      return { ...prev, [current.exerciseId]: rs };
+    });
+  }
+
   const timerActive = (setIdx: number) =>
     timer != null && timer.exerciseId === current.exerciseId && timer.setIdx === setIdx;
   const timerSecs = (setIdx: number) => {
@@ -591,7 +626,7 @@ export function WorkoutMode({
               <Info className="h-4 w-4" /> Technique
             </button>
             <button
-              onClick={() => setShowTools(true)}
+              onClick={() => setTools({ tab: "plates", weight: toolWeight })}
               className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-sm"
             >
               <Calculator className="h-4 w-4" /> Tools
@@ -651,6 +686,43 @@ export function WorkoutMode({
             <p className="mt-3 rounded-xl bg-[var(--surface-secondary)] p-3 text-xs text-[var(--warning)]">
               {current.notes}
             </p>
+          )}
+
+          {/* Progressive-overload coach — target for today from last session. */}
+          {suggestion && (
+            <div className="mt-4 rounded-2xl border border-[var(--accent-primary)]/30 bg-[var(--accent-muted)] p-3">
+              <div className="flex items-start gap-2">
+                <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-primary)]" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-[var(--accent-primary)]">
+                    {suggestion.headline}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                    {suggestion.detail}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      onClick={applySuggestion}
+                      className="rounded-full bg-[var(--accent-primary)] px-3 py-1 text-xs font-semibold text-black"
+                    >
+                      Use target
+                    </button>
+                    <button
+                      onClick={() => setTools({ tab: "warmup", weight: suggestion.weightKg })}
+                      className="rounded-full border border-[var(--border-subtle)] px-3 py-1 text-xs"
+                    >
+                      Warm-up
+                    </button>
+                    <button
+                      onClick={() => setTools({ tab: "plates", weight: suggestion.weightKg })}
+                      className="rounded-full border border-[var(--border-subtle)] px-3 py-1 text-xs"
+                    >
+                      Plates
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Sets table */}
@@ -832,14 +904,11 @@ export function WorkoutMode({
         />
       )}
 
-      {showTools && (
+      {tools && (
         <WorkoutTools
-          onClose={() => setShowTools(false)}
-          defaultWeight={
-            Number(rows.find((r) => r.weight)?.weight) ||
-            current.previous[0]?.weight_kg ||
-            null
-          }
+          onClose={() => setTools(null)}
+          initialTab={tools.tab}
+          defaultWeight={tools.weight}
         />
       )}
 
