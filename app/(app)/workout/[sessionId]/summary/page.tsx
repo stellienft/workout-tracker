@@ -103,9 +103,9 @@ export default async function WorkoutSummaryPage({
       })
     : undefined;
 
-  // Share-card copy. The ShareAchievement component maps group='Milestones'
-  // to emoji 🏋️ and kicker "Milestone reached"; we feed the stats in as the
-  // title/subtitle and the date as the footnote.
+  // Share-card copy. group='Milestones' gives the kicker "Milestone reached";
+  // we feed the stats in as the title/subtitle and the date as the footnote,
+  // and show a dumbbell icon on the medallion.
   const shareTitle =
     totalVolume > 0 ? `${Math.round(totalVolume).toLocaleString()}kg` : "Workout done";
   const shareSubtitle = [
@@ -178,6 +178,7 @@ export default async function WorkoutSummaryPage({
         {/* Always-available share card for the session stats. */}
         <ShareAchievement
           group="Milestones"
+          icon="dumbbell"
           title={shareTitle}
           description={shareSubtitle}
           dateLabel={dateLabel}
