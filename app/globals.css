@@ -62,11 +62,30 @@
   --text-secondary: #52525b;
   --text-muted: #8a8a93;
   --border-subtle: rgba(0, 0, 0, 0.1);
-  /* The bright accent is unreadable on light surfaces, so darken it here.
-     Derived from --accent-base, this works for any accent the user picks and
-     still keeps black-on-accent buttons (e.g. primary CTAs) legible. */
-  --accent-primary: color-mix(in srgb, var(--accent-base) 55%, #000);
   color-scheme: light;
+}
+
+/* Curated accent palette. The theme switcher sets data-accent alongside
+   data-theme; there are only four combinations (two dark, two light). Accents
+   are chosen so black-on-accent buttons stay legible in every theme, so no
+   per-mode darkening is needed. --accent-hover/-muted/-border-active and the
+   focus ring all derive from --accent-primary in :root, so overriding it here
+   recolours the whole app. */
+:root[data-accent="lime"] {
+  --accent-base: #ccff30;
+  --accent-primary: #ccff30;
+}
+:root[data-accent="peach"] {
+  --accent-base: #ffb27a;
+  --accent-primary: #ffb27a;
+}
+:root[data-accent="blue"] {
+  --accent-base: #3b82f6;
+  --accent-primary: #3b82f6;
+}
+:root[data-accent="grey"] {
+  --accent-base: #64748b;
+  --accent-primary: #64748b;
 }
 
 /* Inputs hardcode a light-on-dark colour; in light mode they must read dark.
