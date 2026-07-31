@@ -19,7 +19,13 @@ function toRecord(sub: Stripe.Subscription): SubRecord | null {
   const userId = (sub.metadata?.userId as string | undefined) ?? null;
   if (!userId) return null;
   const active = sub.status === "active" || sub.status === "trialing";
-  const periodEnd = (sub as unknown as { current_period_end?: number }).current_period_end;
+  // current_period_end sits on the subscription in older API versions and on the
+  // first subscription item in newer ones (basil+) — read whichever is present.
+  const s = sub as unknown as {
+    current_period_end?: number;
+    items?: { data?: { current_period_end?: number }[] };
+  };
+  const periodEnd = s.current_period_end ?? s.items?.data?.[0]?.current_period_end;
   return {
     user_id: userId,
     plan: active ? "pro" : "free",

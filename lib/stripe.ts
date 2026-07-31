@@ -7,7 +7,10 @@ let client: Stripe | null = null;
 export function stripeClient(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return null;
-  if (!client) client = new Stripe(key);
+  // Pin the API version to the one this SDK targets, so responses match the
+  // types we code against regardless of the account's dashboard default (e.g.
+  // where current_period_end lives on the subscription).
+  if (!client) client = new Stripe(key, { apiVersion: "2025-02-24.acacia" });
   return client;
 }
 
