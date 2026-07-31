@@ -29,7 +29,7 @@ export default async function SplitDetailPage({
     supabase
       .from("custom_split_days")
       .select(
-        "id, day_number, name, focus_muscles, notes, custom_split_day_exercises(id, exercise_id, sets, rep_target, rest_seconds, position, exercise:exercises(name, primary_muscles))"
+        "id, day_number, name, focus_muscles, notes, custom_split_day_exercises(id, exercise_id, sets, rep_target, rest_seconds, position, superset_group, exercise:exercises(name, primary_muscles))"
       )
       .eq("split_id", id)
       .order("day_number"),
@@ -55,6 +55,7 @@ export default async function SplitDetailPage({
         rep_target: string | null;
         rest_seconds: number;
         position: number;
+        superset_group: number | null;
         exercise: { name: string; primary_muscles: string[] } | null;
       }[]
     )
@@ -67,6 +68,7 @@ export default async function SplitDetailPage({
         sets: e.sets,
         repTarget: e.rep_target,
         restSeconds: e.rest_seconds,
+        supersetGroup: e.superset_group ?? null,
       })),
   }));
 

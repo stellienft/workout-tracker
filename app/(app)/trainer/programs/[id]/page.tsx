@@ -38,7 +38,7 @@ export default async function TrainerProgramDetailPage({
     supabase
       .from("trainer_program_exercises")
       .select(
-        "id, exercise_id, day_label, position, sets, reps, rest_seconds, exercise:exercises(name, primary_muscles)"
+        "id, exercise_id, day_label, position, sets, reps, rest_seconds, superset_group, exercise:exercises(name, primary_muscles)"
       )
       .eq("trainer_program_id", id)
       .order("day_label", { ascending: true })
@@ -60,6 +60,7 @@ export default async function TrainerProgramDetailPage({
       sets: number | null;
       reps: string | null;
       rest_seconds: number | null;
+      superset_group: number | null;
       exercise: { name: string; primary_muscles: string[] } | null;
     }[]
   ).map((r) => ({
@@ -70,6 +71,7 @@ export default async function TrainerProgramDetailPage({
     sets: r.sets,
     reps: r.reps,
     restSeconds: r.rest_seconds,
+    supersetGroup: r.superset_group ?? null,
     name: r.exercise?.name ?? "Exercise",
     muscles: r.exercise?.primary_muscles ?? [],
   }));

@@ -19,8 +19,10 @@ import {
   deleteSplitDay,
   addExerciseToSplitDay,
   removeSplitDayExercise,
+  setSplitExerciseSuperset,
   startSplitWorkout,
 } from "@/lib/actions/splits";
+import { SupersetSelect } from "@/components/workout/superset-select";
 
 const MUSCLES = [
   "chest",
@@ -51,6 +53,7 @@ interface DayExercise {
   sets: number;
   repTarget: string | null;
   restSeconds: number;
+  supersetGroup: number | null;
 }
 interface Day {
   id: string;
@@ -122,6 +125,14 @@ export function SplitBuilder({
     });
   }
 
+  function changeGroup(rowId: string, group: number | null) {
+    startTransition(async () => {
+      const res = await setSplitExerciseSuperset({ rowId, splitId, group });
+      if (res.ok) router.refresh();
+      else toast(res.error ?? "Could not update superset", "error");
+    });
+  }
+
   function start(dayId: string) {
     startTransition(async () => {
       const res = await startSplitWorkout(dayId);
@@ -137,7 +148,8 @@ export function SplitBuilder({
     <div>
       <h1 className="text-2xl font-bold">{splitName}</h1>
       <p className="mt-1 text-sm text-[var(--text-secondary)]">
-        Add training days and fill each with the exercises you choose.
+        Add training days and fill each with the exercises you choose. Give
+        adjacent exercises the same superset letter to pair them.
       </p>
 
       <div className="mt-6 space-y-4">
@@ -180,13 +192,25 @@ export function SplitBuilder({
                 {day.exercises.map((ex) => (
                   <div key={ex.id} className="flex items-center gap-3 px-4 py-2.5">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{ex.name}</p>
+                      <p className="truncate text-sm font-medium">
+                        {ex.name}
+                        {ex.supersetGroup != null && (
+                          <span className="ml-2 rounded bg-[var(--accent-muted)] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[var(--accent-primary)]">
+                            {String.fromCharCode(64 + ex.supersetGroup)}
+                          </span>
+                        )}
+                      </p>
                       <p className="text-xs text-[var(--text-muted)]">
                         {ex.sets} sets
                         {ex.repTarget ? ` · ${ex.repTarget}` : ""} ·{" "}
                         {ex.restSeconds}s rest
                       </p>
                     </div>
+                    <SupersetSelect
+                      value={ex.supersetGroup}
+                      onChange={(g) => changeGroup(ex.id, g)}
+                      disabled={pending}
+                    />
                     <button
                       onClick={() => removeExercise(ex.id)}
                       disabled={pending}

@@ -248,6 +248,33 @@ export async function swapTrainerProgramExercise(input: {
   return { ok: true };
 }
 
+/** Group (or ungroup) a trainer-program exercise into a superset/circuit. */
+export async function setTrainerProgramExerciseSuperset(input: {
+  rowId: string;
+  trainerProgramId: string;
+  group: number | null;
+}) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false, error: "Not authenticated" };
+  const parsed = z
+    .object({
+      rowId: z.string().uuid(),
+      trainerProgramId: z.string().uuid(),
+      group: z.number().int().min(1).max(12).nullable(),
+    })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+
+  const { error } = await supabase
+    .from("trainer_program_exercises")
+    .update({ superset_group: parsed.data.group })
+    .eq("id", parsed.data.rowId);
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/trainer/programs/${parsed.data.trainerProgramId}`);
+  return { ok: true };
+}
+
 export async function removeTrainerProgramExercise(input: {
   rowId: string;
   trainerProgramId: string;
