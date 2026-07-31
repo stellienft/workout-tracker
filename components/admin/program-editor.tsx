@@ -8,16 +8,32 @@ import { useToast } from "@/components/ui/toast";
 import {
   updateProgramFields,
   updateProgramStatus,
+  searchExercises,
+  swapTemplateExercise,
 } from "@/lib/actions/admin";
 import type { Program, WorkoutTemplate } from "@/lib/types";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Repeat, Search } from "lucide-react";
+
+interface TemplateExercise {
+  id: string;
+  position: number | null;
+  sets: number | null;
+  rep_target: string | null;
+  exercise: {
+    id: string;
+    name: string;
+    primary_muscles: string[];
+    source: string | null;
+  } | null;
+}
+type TemplateWithExercises = WorkoutTemplate & { exercises: TemplateExercise[] };
 
 export function ProgramEditor({
   program,
   templates,
 }: {
   program: Program;
-  templates: WorkoutTemplate[];
+  templates: TemplateWithExercises[];
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -254,40 +270,151 @@ export function ProgramEditor({
 
       <div className="mt-8">
         <h2 className="text-lg font-bold">Workouts ({templates.length})</h2>
-        <div className="mt-3 overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)]">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--surface-secondary)] text-left text-xs uppercase text-[var(--text-muted)]">
-              <tr>
-                <th className="p-3">Name</th>
-                <th className="p-3">Type</th>
-                <th className="p-3">Seq</th>
-                <th className="p-3">Week pos</th>
-                <th className="p-3">Optional</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--border-subtle)]">
-              {templates.map((t) => (
-                <tr key={t.id} className="bg-[var(--surface-primary)]">
-                  <td className="p-3 font-medium">{t.name}</td>
-                  <td className="p-3 capitalize text-[var(--text-secondary)]">
-                    {t.workout_type}
-                  </td>
-                  <td className="p-3 text-[var(--text-secondary)]">
-                    {t.sequence_order ?? "—"}
-                  </td>
-                  <td className="p-3 text-[var(--text-secondary)]">
-                    {t.week_position ?? "—"}
-                  </td>
-                  <td className="p-3 text-[var(--text-secondary)]">
-                    {t.is_optional ? "Yes" : "No"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <p className="mt-0.5 text-sm text-[var(--text-muted)]">
+          Swap any exercise for another — use this to fine-tune the GIF exercise
+          picks.
+        </p>
+        <div className="mt-3 space-y-3">
+          {templates.map((t) => (
+            <div
+              key={t.id}
+              className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)]"
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] p-3">
+                <p className="font-semibold">{t.name}</p>
+                <span className="text-xs capitalize text-[var(--text-muted)]">
+                  {t.workout_type}
+                  {t.week_position ? ` · wk ${t.week_position}` : ""}
+                  {t.is_optional ? " · optional" : ""}
+                </span>
+              </div>
+              {t.exercises.length === 0 ? (
+                <p className="p-3 text-sm text-[var(--text-muted)]">No exercises.</p>
+              ) : (
+                <ul className="divide-y divide-[var(--border-subtle)]">
+                  {t.exercises.map((te) => (
+                    <ExerciseRow key={te.id} te={te} />
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
         </div>
       </div>
     </div>
+  );
+}
+
+function ExerciseRow({ te }: { te: TemplateExercise }) {
+  const router = useRouter();
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<
+    { id: string; name: string; primary_muscles: string[] }[]
+  >([]);
+  const [pending, startTransition] = useTransition();
+
+  function runSearch(q: string) {
+    setQuery(q);
+    startTransition(async () => {
+      const res = await searchExercises(q);
+      if (res.ok) setResults(res.results);
+    });
+  }
+
+  function openPanel() {
+    setOpen(true);
+    if (results.length === 0) runSearch("");
+  }
+
+  function pick(exerciseId: string) {
+    startTransition(async () => {
+      const res = await swapTemplateExercise(te.id, exerciseId);
+      if (res.ok) {
+        toast("Exercise swapped.", "success");
+        setOpen(false);
+        router.refresh();
+      } else {
+        toast(res.error ?? "Could not swap", "error");
+      }
+    });
+  }
+
+  const legacy = te.exercise?.source !== "exercisedb";
+
+  return (
+    <li className="p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">
+            {te.exercise?.name ?? "Unknown exercise"}
+            {legacy && (
+              <span className="ml-2 rounded bg-[var(--surface-secondary)] px-1.5 py-0.5 text-[10px] uppercase text-[var(--warning)]">
+                no GIF
+              </span>
+            )}
+          </p>
+          <p className="text-xs text-[var(--text-muted)]">
+            {(te.exercise?.primary_muscles ?? []).join(", ")}
+            {te.sets ? ` · ${te.sets} sets` : ""}
+            {te.rep_target ? ` × ${te.rep_target}` : ""}
+          </p>
+        </div>
+        <button
+          onClick={() => (open ? setOpen(false) : openPanel())}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium hover:border-[var(--border-active)]"
+        >
+          <Repeat className="h-3.5 w-3.5" /> Swap
+        </button>
+      </div>
+
+      {open && (
+        <div className="mt-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3">
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-[var(--text-muted)]" />
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => runSearch(e.target.value)}
+              placeholder="Search exercises…"
+              className="h-9 flex-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-primary)] px-2.5 text-sm focus:border-[var(--border-active)] focus:outline-none"
+            />
+          </div>
+          <div className="mt-2 max-h-64 overflow-y-auto">
+            {results.length === 0 ? (
+              <p className="p-2 text-xs text-[var(--text-muted)]">
+                {pending ? "Searching…" : "No matches."}
+              </p>
+            ) : (
+              <ul className="divide-y divide-[var(--border-subtle)]">
+                {results.map((r) => (
+                  <li key={r.id}>
+                    <button
+                      onClick={() => pick(r.id)}
+                      disabled={pending}
+                      className="flex w-full items-center justify-between gap-2 px-2 py-2 text-left hover:bg-[var(--surface-primary)]"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm">{r.name}</span>
+                        <span className="block truncate text-xs text-[var(--text-muted)]">
+                          {(r.primary_muscles ?? []).join(", ")}
+                        </span>
+                      </span>
+                      {r.id === te.exercise?.id && (
+                        <span className="shrink-0 text-[10px] uppercase text-[var(--accent-primary)]">
+                          current
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+    </li>
   );
 }
 

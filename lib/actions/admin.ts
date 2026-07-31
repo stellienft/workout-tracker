@@ -150,6 +150,50 @@ export async function updateGoal(goalId: string, fields: Record<string, unknown>
 
 // ---------- Exercises ----------
 
+/** Search published exercises by name (admin exercise picker). */
+export async function searchExercises(query: string) {
+  const { supabase, isAdmin } = await requireAdminAction();
+  if (!isAdmin) return { ok: false as const, error: "Forbidden", results: [] };
+  let q = supabase
+    .from("exercises")
+    .select("id, name, primary_muscles, equipment")
+    .eq("status", "published")
+    .order("name")
+    .limit(25);
+  const term = query.trim();
+  if (term) q = q.ilike("name", `%${term}%`);
+  const { data } = await q;
+  return {
+    ok: true as const,
+    results: (data ?? []) as {
+      id: string;
+      name: string;
+      primary_muscles: string[];
+      equipment: string[];
+    }[],
+  };
+}
+
+/** Swap the exercise used in a program-template slot. */
+export async function swapTemplateExercise(
+  templateExerciseId: string,
+  exerciseId: string
+) {
+  const { supabase, isAdmin } = await requireAdminAction();
+  if (!isAdmin) return { ok: false as const, error: "Forbidden" };
+  const parsed = z
+    .object({ wteId: z.string().uuid(), exerciseId: z.string().uuid() })
+    .safeParse({ wteId: templateExerciseId, exerciseId });
+  if (!parsed.success) return { ok: false as const, error: "Invalid input" };
+  const { error } = await supabase
+    .from("workout_template_exercises")
+    .update({ exercise_id: parsed.data.exerciseId })
+    .eq("id", parsed.data.wteId);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath("/admin/programs", "layout");
+  return { ok: true as const };
+}
+
 export async function updateExercise(
   exerciseId: string,
   fields: Record<string, unknown>
