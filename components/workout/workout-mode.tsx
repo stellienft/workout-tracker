@@ -14,6 +14,8 @@ import {
   Plus,
   Minus,
   Trash2,
+  Play,
+  Square,
   Calculator,
 } from "lucide-react";
 import { ExerciseImage } from "@/components/ui/exercise-image";
@@ -50,6 +52,7 @@ export interface WorkoutExerciseVM {
   templateExerciseId: string | null;
   exerciseId: string;
   name: string;
+  trackingType: "reps" | "time";
   primaryMuscles: string[];
   instructions: string | null;
   techniqueCues: string[];
@@ -76,9 +79,16 @@ interface SetState {
   n: number; // stable set number used for persistence
   weight: string;
   reps: string;
+  seconds: string; // for time-based exercises
   rpe: string;
   pain: string;
   done: boolean;
+}
+
+function fmtSecs(s: number): string {
+  const m = Math.floor(s / 60);
+  const ss = s % 60;
+  return `${m}:${String(ss).padStart(2, "0")}`;
 }
 
 export function WorkoutMode({
@@ -105,6 +115,7 @@ export function WorkoutMode({
     setNumber: number;
     weightKg: number | null;
     reps: number | null;
+    durationSeconds?: number | null;
     rpe: number | null;
     painLevel: number | null;
     completed: boolean;
@@ -131,6 +142,15 @@ export function WorkoutMode({
   // technique cues, cover and video swap to the substitute, not the original).
   const [subs, setSubs] = useState<Record<string, SubDetail>>({});
 
+  // Count-up stopwatch for time-based exercises (planks, holds, cardio).
+  const [timer, setTimer] = useState<{ exerciseId: string; setIdx: number; base: number; startedAt: number } | null>(null);
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    if (!timer) return;
+    const id = setInterval(() => forceTick((t) => t + 1), 250);
+    return () => clearInterval(id);
+  }, [timer]);
+
   // Per-exercise set state, seeded from any existing logs (resume).
   const [state, setState] = useState<Record<string, SetState[]>>(() => {
     const initial: Record<string, SetState[]> = {};
@@ -143,6 +163,7 @@ export function WorkoutMode({
           n: i + 1,
           weight: log?.weightKg != null ? String(log.weightKg) : "",
           reps: log?.reps != null ? String(log.reps) : "",
+          seconds: log?.durationSeconds != null ? String(log.durationSeconds) : "",
           rpe: log?.rpe != null ? String(log.rpe) : "",
           pain: log?.painLevel != null ? String(log.painLevel) : "",
           done: log?.completed ?? false,
@@ -232,8 +253,10 @@ export function WorkoutMode({
       templateExerciseId: ex.templateExerciseId,
       substitutedFromExerciseId: sub ? ex.exerciseId : null,
       setNumber: row.n,
-      weightKg: row.weight ? Number(row.weight) : null,
+      weightKg: ex.trackingType === "time" ? null : row.weight ? Number(row.weight) : null,
       reps: row.reps ? Number(row.reps) : null,
+      durationSeconds:
+        ex.trackingType === "time" && row.seconds ? Number(row.seconds) : null,
       rpe: row.rpe ? Number(row.rpe) : null,
       painLevel: row.pain ? Number(row.pain) : null,
       completed: true,
@@ -277,6 +300,7 @@ export function WorkoutMode({
             // pre-fill weight from the previous set for convenience
             weight: last?.weight ?? "",
             reps: "",
+            seconds: "",
             rpe: "",
             pain: "",
             done: false,
@@ -415,6 +439,27 @@ export function WorkoutMode({
     ? null
     : exerciseConcern(concerns, active.primaryMuscles);
   const rows = state[current.exerciseId] ?? [];
+  const timed = current.trackingType === "time";
+  const timerActive = (setIdx: number) =>
+    timer != null && timer.exerciseId === current.exerciseId && timer.setIdx === setIdx;
+  const timerSecs = (setIdx: number) => {
+    if (timerActive(setIdx) && timer)
+      return timer.base + Math.floor((Date.now() - timer.startedAt) / 1000);
+    return Number(rows[setIdx]?.seconds || 0);
+  };
+  function toggleTimer(setIdx: number) {
+    if (timerActive(setIdx)) {
+      updateSet(current.exerciseId, setIdx, { seconds: String(timerSecs(setIdx)) });
+      setTimer(null);
+    } else {
+      setTimer({
+        exerciseId: current.exerciseId,
+        setIdx,
+        base: Number(rows[setIdx]?.seconds || 0),
+        startedAt: Date.now(),
+      });
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-[var(--background-primary)]">
@@ -610,8 +655,14 @@ export function WorkoutMode({
           <div className="mt-4 space-y-2">
             <div className="grid grid-cols-[2rem_1fr_1.6fr_1fr_2.75rem] items-center gap-2 px-1 text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
               <span>Set</span>
-              <span>Weight</span>
-              <span className="text-center">Reps</span>
+              {timed ? (
+                <span className="col-span-2">Time</span>
+              ) : (
+                <>
+                  <span>Weight</span>
+                  <span className="text-center">Reps</span>
+                </>
+              )}
               <span>RPE</span>
               <span className="text-center">Done</span>
             </div>
@@ -621,31 +672,60 @@ export function WorkoutMode({
                 <div key={row.n} className="group">
                   <div className="grid grid-cols-[2rem_1fr_1.6fr_1fr_2.75rem] items-center gap-2">
                     <span className="text-center text-sm font-semibold">{i + 1}</span>
-                    <SetInput
-                      value={row.weight}
-                      onChange={(v) => updateSet(current.exerciseId, i, { weight: v })}
-                      placeholder={prev?.weight_kg != null ? String(prev.weight_kg) : "kg"}
-                    />
-                    {/* Reps stepper */}
-                    <div className="flex items-center gap-1">
-                      <StepBtn
-                        onClick={() => adjustReps(current, i, -1)}
-                        aria-label="One rep fewer"
-                      >
-                        <Minus className="h-4 w-4" />
-                      </StepBtn>
-                      <SetInput
-                        value={row.reps}
-                        onChange={(v) => updateSet(current.exerciseId, i, { reps: v })}
-                        placeholder={prev?.reps != null ? String(prev.reps) : "reps"}
-                      />
-                      <StepBtn
-                        onClick={() => adjustReps(current, i, 1)}
-                        aria-label="One rep more"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </StepBtn>
-                    </div>
+                    {timed ? (
+                      <div className="col-span-2 flex items-center gap-2">
+                        <button
+                          onClick={() => toggleTimer(i)}
+                          aria-label={timerActive(i) ? "Stop timer" : "Start timer"}
+                          className={cn(
+                            "inline-flex h-11 items-center gap-1.5 rounded-xl border px-3 text-sm font-semibold tabular-nums transition-colors",
+                            timerActive(i)
+                              ? "border-[var(--accent-primary)] bg-[var(--accent-primary)] text-black"
+                              : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
+                          )}
+                        >
+                          {timerActive(i) ? (
+                            <Square className="h-4 w-4" />
+                          ) : (
+                            <Play className="h-4 w-4" />
+                          )}
+                          {fmtSecs(timerSecs(i))}
+                        </button>
+                        <SetInput
+                          value={row.seconds}
+                          onChange={(v) => updateSet(current.exerciseId, i, { seconds: v })}
+                          placeholder="sec"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <SetInput
+                          value={row.weight}
+                          onChange={(v) => updateSet(current.exerciseId, i, { weight: v })}
+                          placeholder={prev?.weight_kg != null ? String(prev.weight_kg) : "kg"}
+                        />
+                        {/* Reps stepper */}
+                        <div className="flex items-center gap-1">
+                          <StepBtn
+                            onClick={() => adjustReps(current, i, -1)}
+                            aria-label="One rep fewer"
+                          >
+                            <Minus className="h-4 w-4" />
+                          </StepBtn>
+                          <SetInput
+                            value={row.reps}
+                            onChange={(v) => updateSet(current.exerciseId, i, { reps: v })}
+                            placeholder={prev?.reps != null ? String(prev.reps) : "reps"}
+                          />
+                          <StepBtn
+                            onClick={() => adjustReps(current, i, 1)}
+                            aria-label="One rep more"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </StepBtn>
+                        </div>
+                      </>
+                    )}
                     <SetInput
                       value={row.rpe}
                       onChange={(v) => updateSet(current.exerciseId, i, { rpe: v })}
@@ -665,7 +745,7 @@ export function WorkoutMode({
                     </button>
                   </div>
                   <div className="flex items-center justify-between pl-9 pr-1">
-                    {prev ? (
+                    {!timed && prev ? (
                       <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
                         Previous: {prev.weight_kg ?? "—"}kg × {prev.reps ?? "—"}
                         {prev.rpe ? ` @ RPE ${prev.rpe}` : ""}

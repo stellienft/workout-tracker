@@ -24,6 +24,9 @@ export function ExerciseEditor({
   const [instructions, setInstructions] = useState(exercise.instructions ?? "");
   const [shoulderSafe, setShoulderSafe] = useState(exercise.shoulder_safe);
   const [shoulderNotes, setShoulderNotes] = useState(exercise.shoulder_notes ?? "");
+  const [trackingType, setTrackingType] = useState<"reps" | "time">(
+    exercise.tracking_type ?? "reps"
+  );
   const [status, setStatus] = useState(exercise.status);
 
   function save() {
@@ -33,6 +36,7 @@ export function ExerciseEditor({
         instructions,
         shoulder_safe: shoulderSafe,
         shoulder_notes: shoulderNotes,
+        tracking_type: trackingType,
         status,
       });
       if (res.ok) {
@@ -67,6 +71,19 @@ export function ExerciseEditor({
             rows={4}
             className={cls}
           />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-[var(--text-secondary)]">
+            Tracking type
+          </span>
+          <select
+            value={trackingType}
+            onChange={(e) => setTrackingType(e.target.value as "reps" | "time")}
+            className={cls}
+          >
+            <option value="reps">Reps (weight × reps)</option>
+            <option value="time">Time (duration — planks, holds, cardio)</option>
+          </select>
         </label>
         <div className="flex items-center justify-between">
           <div>

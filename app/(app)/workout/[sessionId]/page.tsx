@@ -44,6 +44,10 @@ export default async function WorkoutSessionPage({
       templateExerciseId: ex.id,
       exerciseId: ex.exercise_id,
       name: ex.exercise.name,
+      trackingType:
+        (ex.exercise as { tracking_type?: string }).tracking_type === "time"
+          ? ("time" as const)
+          : ("reps" as const),
       primaryMuscles: ex.exercise.primary_muscles,
       instructions: ex.exercise.instructions,
       techniqueCues: ex.exercise.technique_cues,
@@ -76,6 +80,10 @@ export default async function WorkoutSessionPage({
       templateExerciseId: null,
       exerciseId: ex.exercise_id,
       name: ex.exercise.name,
+      trackingType:
+        (ex.exercise as { tracking_type?: string }).tracking_type === "time"
+          ? ("time" as const)
+          : ("reps" as const),
       primaryMuscles: ex.exercise.primary_muscles,
       instructions: ex.exercise.instructions,
       techniqueCues: ex.exercise.technique_cues,
@@ -121,6 +129,7 @@ export default async function WorkoutSessionPage({
         setNumber: l.set_number,
         weightKg: l.weight_kg,
         reps: l.reps,
+        durationSeconds: l.duration_seconds,
         rpe: l.rpe,
         painLevel: l.pain_level,
         completed: l.completed,
