@@ -155,6 +155,13 @@ export default async function WorkoutSummaryPage({
         />
       </div>
 
+      {session.warmup_seconds ? (
+        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-secondary)] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
+          🔥 Warm-up · {session.warmup_type} ·{" "}
+          {formatDuration(session.warmup_seconds as number)}
+        </p>
+      ) : null}
+
       {/* Improvement delta vs the previous session. */}
       {volumeDelta !== null && (
         <div className="mt-4">
