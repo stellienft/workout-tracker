@@ -281,8 +281,8 @@ function WeightChart({
     >
       <defs>
         <linearGradient id="wArea" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={LIME} stopOpacity="0.28" />
-          <stop offset="100%" stopColor={LIME} stopOpacity="0" />
+          <stop offset="0%" style={{ stopColor: "var(--accent-primary)", stopOpacity: 0.28 }} />
+          <stop offset="100%" style={{ stopColor: "var(--accent-primary)", stopOpacity: 0 }} />
         </linearGradient>
       </defs>
 
@@ -342,14 +342,20 @@ function WeightChart({
         <path
           d={line}
           fill="none"
-          stroke={LIME}
+          style={{ stroke: "var(--accent-primary)" }}
           strokeWidth="2.5"
           strokeLinejoin="round"
           strokeLinecap="round"
         />
       )}
       {coords.map((c, i) => (
-        <circle key={i} cx={c[0]} cy={c[1]} r={single ? 4 : 2.6} fill={LIME} />
+        <circle
+          key={i}
+          cx={c[0]}
+          cy={c[1]}
+          r={single ? 4 : 2.6}
+          style={{ fill: "var(--accent-primary)" }}
+        />
       ))}
     </svg>
   );
@@ -357,6 +363,20 @@ function WeightChart({
 
 function signed(n: number, digits = 1) {
   return `${n > 0 ? "+" : ""}${n.toFixed(digits)}`;
+}
+
+/** Parse a CSS colour (#hex or rgb()) to [r,g,b]; falls back to lime. */
+function toRgb(c: string): [number, number, number] {
+  const s = c.trim();
+  if (s.startsWith("#")) {
+    const h = s.slice(1);
+    const full = h.length === 3 ? h.split("").map((x) => x + x).join("") : h;
+    const n = parseInt(full, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  const m = s.match(/\d+/g);
+  if (m && m.length >= 3) return [Number(m[0]), Number(m[1]), Number(m[2])];
+  return [204, 255, 48];
 }
 
 function formatDay(ms: number, withYear: boolean) {
@@ -396,6 +416,14 @@ async function drawShareCard(data: Point[]): Promise<Blob | null> {
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
 
+  // Use the member's current theme accent so the shared card matches the app.
+  const accent =
+    getComputedStyle(document.documentElement)
+      .getPropertyValue("--accent-primary")
+      .trim() || LIME;
+  const [ar, ag, ab] = toRgb(accent);
+  const argba = (a: number) => `rgba(${ar},${ag},${ab},${a})`;
+
   const bg = ctx.createLinearGradient(0, 0, 0, H);
   bg.addColorStop(0, CHARCOAL_TOP);
   bg.addColorStop(1, CHARCOAL_BOT);
@@ -403,8 +431,8 @@ async function drawShareCard(data: Point[]): Promise<Blob | null> {
   ctx.fillRect(0, 0, W, H);
 
   const glow = ctx.createRadialGradient(W * 0.85, H * 0.12, 0, W * 0.85, H * 0.12, 520);
-  glow.addColorStop(0, "rgba(204,255,48,0.16)");
-  glow.addColorStop(1, "rgba(204,255,48,0)");
+  glow.addColorStop(0, argba(0.16));
+  glow.addColorStop(1, argba(0));
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
 
@@ -417,7 +445,7 @@ async function drawShareCard(data: Point[]): Promise<Blob | null> {
   ctx.fillStyle = "#FFFFFF";
   ctx.fillText("Stellio ", pad, 130);
   const w1 = ctx.measureText("Stellio ").width;
-  ctx.fillStyle = LIME;
+  ctx.fillStyle = accent;
   ctx.fillText("Fit", pad + w1, 130);
 
   ctx.fillStyle = "rgba(255,255,255,0.55)";
@@ -443,7 +471,7 @@ async function drawShareCard(data: Point[]): Promise<Blob | null> {
         ? `▲ ${change.toFixed(1)} kg since ${formatMonth(data[0].x)}`
         : `Holding steady since ${formatMonth(data[0].x)}`;
   ctx.font = `700 34px ${sans}`;
-  ctx.fillStyle = change < 0 ? LIME : "rgba(255,255,255,0.7)";
+  ctx.fillStyle = change < 0 ? accent : "rgba(255,255,255,0.7)";
   ctx.fillText(chipText, pad, 470);
 
   const cx = pad;
@@ -474,8 +502,8 @@ async function drawShareCard(data: Point[]): Promise<Blob | null> {
   ctx.lineTo(px(data.length - 1), cy + ch);
   ctx.closePath();
   const areaGrad = ctx.createLinearGradient(0, cy, 0, cy + ch);
-  areaGrad.addColorStop(0, "rgba(204,255,48,0.35)");
-  areaGrad.addColorStop(1, "rgba(204,255,48,0)");
+  areaGrad.addColorStop(0, argba(0.35));
+  areaGrad.addColorStop(1, argba(0));
   ctx.fillStyle = areaGrad;
   ctx.fill();
 
@@ -486,7 +514,7 @@ async function drawShareCard(data: Point[]): Promise<Blob | null> {
     if (i === 0) ctx.moveTo(X, Y);
     else ctx.lineTo(X, Y);
   });
-  ctx.strokeStyle = LIME;
+  ctx.strokeStyle = accent;
   ctx.lineWidth = 7;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
@@ -494,7 +522,7 @@ async function drawShareCard(data: Point[]): Promise<Blob | null> {
 
   ctx.beginPath();
   ctx.arc(px(data.length - 1), py(last), 12, 0, Math.PI * 2);
-  ctx.fillStyle = LIME;
+  ctx.fillStyle = accent;
   ctx.fill();
 
   ctx.font = `600 26px ${sans}`;
@@ -506,7 +534,7 @@ async function drawShareCard(data: Point[]): Promise<Blob | null> {
   ctx.fillText(formatMonth(data[data.length - 1].x), cx + cw, cy + ch + 40);
   ctx.textAlign = "left";
 
-  ctx.fillStyle = LIME;
+  ctx.fillStyle = accent;
   ctx.font = `800 40px ${sans}`;
   ctx.fillText("Train Smarter. Build Stronger.", pad, H - 120);
   ctx.fillStyle = "rgba(255,255,255,0.5)";
