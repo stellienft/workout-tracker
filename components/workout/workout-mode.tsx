@@ -20,6 +20,7 @@ import {
   Calculator,
   TrendingUp,
   Link2,
+  Flame,
 } from "lucide-react";
 import { ExerciseImage } from "@/components/ui/exercise-image";
 import { RestTimer } from "@/components/workout/rest-timer";
@@ -30,11 +31,14 @@ import {
   logSet,
   completeWorkout,
   saveAndExit,
+  cancelWorkout,
+  logWarmup,
   reportDiscomfort,
   deleteSetLog,
   deleteExerciseSets,
   getExerciseDetail,
 } from "@/lib/actions/workout";
+import { WarmupSheet } from "@/components/workout/warmup-sheet";
 import { enqueue, flush, pendingCount } from "@/lib/offline-queue";
 import type { LoadedVideo, AltOption } from "@/lib/workout-loader";
 import { combineConcerns, exerciseConcern } from "@/lib/injury";
@@ -105,6 +109,7 @@ export function WorkoutMode({
   injuryAreas,
   exercises,
   initialLogs,
+  initialWarmup,
 }: {
   sessionId: string;
   initialSeconds: number;
@@ -114,6 +119,7 @@ export function WorkoutMode({
   // global shoulder signal.
   considerations?: string | null;
   injuryAreas?: string[] | null;
+  initialWarmup?: { type: string | null; seconds: number | null };
   exercises: WorkoutExerciseVM[];
   initialLogs: {
     exerciseId: string;
@@ -142,6 +148,13 @@ export function WorkoutMode({
   const [tools, setTools] = useState<{ tab: ToolsTab; weight: number | null } | null>(
     null
   );
+  const [showWarmup, setShowWarmup] = useState(false);
+  const [warmup, setWarmup] = useState<{ type: string; seconds: number } | null>(
+    initialWarmup?.type && initialWarmup.seconds != null
+      ? { type: initialWarmup.type, seconds: initialWarmup.seconds }
+      : null
+  );
+  const [cancelling, setCancelling] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
   const [pending, setPending] = useState(0);
@@ -460,6 +473,30 @@ export function WorkoutMode({
     router.refresh();
   }
 
+  async function onCancel() {
+    if (
+      !confirm(
+        "Cancel this workout? It will be discarded and any sets you logged will be deleted. This can't be undone."
+      )
+    )
+      return;
+    setCancelling(true);
+    const res = await cancelWorkout(sessionId);
+    if (res.ok) {
+      router.push("/dashboard");
+      router.refresh();
+    } else {
+      setCancelling(false);
+      setFinishError(res.error ?? "Couldn't cancel — please try again.");
+    }
+  }
+
+  function saveWarmup(type: string, seconds: number) {
+    setWarmup({ type, seconds });
+    setShowWarmup(false);
+    void logWarmup({ sessionId, type, seconds });
+  }
+
   // Everything removed — let them finish/exit.
   if (!current) {
     return (
@@ -566,14 +603,24 @@ export function WorkoutMode({
     <div className="fixed inset-0 z-[100] flex flex-col bg-[var(--background-primary)]">
       {/* Header */}
       <header className="pt-safe border-b border-[var(--border-subtle)] px-4 py-3">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={onSaveExit}
-            aria-label="Pause workout and exit"
-            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--surface-secondary)] px-3 text-xs font-semibold text-[var(--text-secondary)]"
-          >
-            <Pause className="h-4 w-4" /> Pause
-          </button>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={onSaveExit}
+              aria-label="Pause workout and exit"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--surface-secondary)] px-3 text-xs font-semibold text-[var(--text-secondary)]"
+            >
+              <Pause className="h-4 w-4" /> Pause
+            </button>
+            <button
+              onClick={onCancel}
+              disabled={cancelling}
+              aria-label="Cancel and discard workout"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--surface-secondary)] hover:text-[var(--danger)] disabled:opacity-50"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
           <div className="min-w-0 text-center">
             <p className="truncate text-xs text-[var(--text-muted)]">{programName}</p>
             <p className="truncate text-sm font-semibold">{workoutName}</p>
@@ -698,6 +745,40 @@ export function WorkoutMode({
             </div>
           )}
 
+          {/* Warm-up prompt — shown before the first exercise until logged. */}
+          {safeIndex === 0 && (
+            warmup ? (
+              <button
+                onClick={() => setShowWarmup(true)}
+                className="mt-3 flex w-full items-center gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3 text-left"
+              >
+                <Flame className="h-4 w-4 shrink-0 text-[var(--accent-primary)]" />
+                <span className="flex-1 text-sm">
+                  Warmed up · {warmup.type} · {fmtSecs(warmup.seconds)}
+                </span>
+                <span className="text-xs text-[var(--text-muted)]">Edit</span>
+              </button>
+            ) : (
+              <div className="mt-3 flex items-center gap-3 rounded-2xl border border-[var(--accent-primary)]/30 bg-[var(--accent-muted)] p-3">
+                <Flame className="h-5 w-5 shrink-0 text-[var(--accent-primary)]" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-[var(--accent-primary)]">
+                    Warm up first?
+                  </p>
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    A few minutes on the bike, treadmill or light cardio.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowWarmup(true)}
+                  className="shrink-0 rounded-full bg-[var(--accent-primary)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-ink)]"
+                >
+                  Warm up
+                </button>
+              </div>
+            )
+          )}
+
           {/* Media — animated GIF demo plays inline; the YouTube overlay only
               appears when a real video exists. */}
           <div className="relative mt-4 aspect-video w-full overflow-hidden rounded-[var(--radius-card)]">
@@ -731,6 +812,12 @@ export function WorkoutMode({
               className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-sm"
             >
               <Calculator className="h-4 w-4" /> Tools
+            </button>
+            <button
+              onClick={() => setShowWarmup(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-sm"
+            >
+              <Flame className="h-4 w-4" /> Warm up
             </button>
             <button
               onClick={() => setShowReplace(true)}
@@ -1013,6 +1100,15 @@ export function WorkoutMode({
           onClose={() => setTools(null)}
           initialTab={tools.tab}
           defaultWeight={tools.weight}
+        />
+      )}
+
+      {showWarmup && (
+        <WarmupSheet
+          initialType={warmup?.type ?? null}
+          initialSeconds={warmup?.seconds ?? null}
+          onClose={() => setShowWarmup(false)}
+          onSave={saveWarmup}
         />
       )}
 

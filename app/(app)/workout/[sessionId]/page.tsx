@@ -128,6 +128,10 @@ export default async function WorkoutSessionPage({
       workoutName={workoutName}
       considerations={profile?.considerations ?? null}
       injuryAreas={(profile?.injury_areas as string[] | null) ?? null}
+      initialWarmup={{
+        type: (session.warmup_type as string | null) ?? null,
+        seconds: (session.warmup_seconds as number | null) ?? null,
+      }}
       exercises={vmExercises}
       initialLogs={(existingLogs ?? []).map((l) => ({
         exerciseId: l.exercise_id,

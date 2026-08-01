@@ -256,6 +256,52 @@ export async function saveAndExit(sessionId: string, totalSeconds: number) {
   return { ok: true as const };
 }
 
+/** Cancel (discard) an in-progress workout: delete it and its logged sets. */
+export async function cancelWorkout(sessionId: string) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+  const parsed = z.string().uuid().safeParse(sessionId);
+  if (!parsed.success) return { ok: false as const, error: "Invalid input" };
+  // set_logs cascade on session delete, so this leaves no trace.
+  const { error } = await supabase
+    .from("workout_sessions")
+    .delete()
+    .eq("id", parsed.data)
+    .eq("user_id", user.id)
+    .eq("status", "in_progress");
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath("/dashboard");
+  return { ok: true as const };
+}
+
+/** Record a pre-workout cardio warm-up (modality + duration) on the session. */
+export async function logWarmup(input: {
+  sessionId: string;
+  type: string;
+  seconds: number;
+}) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+  const parsed = z
+    .object({
+      sessionId: z.string().uuid(),
+      type: z.string().min(1).max(40),
+      seconds: z.number().int().min(0).max(36000),
+    })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false as const, error: "Invalid input" };
+  const { error } = await supabase
+    .from("workout_sessions")
+    .update({
+      warmup_type: parsed.data.type,
+      warmup_seconds: parsed.data.seconds,
+    })
+    .eq("id", parsed.data.sessionId)
+    .eq("user_id", user.id);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const };
+}
+
 /**
  * Complete a workout: mark the session done and advance the enrolment's
  * program state via the engine (sequential pointer + weekly progression).
