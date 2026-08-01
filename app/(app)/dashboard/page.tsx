@@ -432,15 +432,15 @@ export default async function DashboardPage() {
       <section className="mt-8">
         <Link
           href="/check-ins"
-          className="flex items-center justify-between overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5"
+          className="flex items-center justify-between gap-4 overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5"
         >
-          <div>
+          <div className="min-w-0">
             <h3 className="font-bold">How are you recovering?</h3>
             <p className="text-sm text-[var(--text-secondary)]">
               Log today&apos;s energy, soreness and recovery.
             </p>
           </div>
-          <span className="rounded-xl bg-[var(--surface-secondary)] px-4 py-2 text-sm">
+          <span className="shrink-0 whitespace-nowrap rounded-xl bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-semibold text-[var(--accent-ink)]">
             Check in
           </span>
         </Link>
