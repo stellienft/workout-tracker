@@ -10,7 +10,6 @@ export interface HistoryPoint {
   reps: number; // reps at the top set
 }
 
-const LIME = "#CCFF30";
 
 function fmt(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" });
@@ -88,21 +87,26 @@ export function ExerciseHistory({ points }: { points: HistoryPoint[] }) {
         >
           <defs>
             <linearGradient id="exHistFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={LIME} stopOpacity="0.35" />
-              <stop offset="100%" stopColor={LIME} stopOpacity="0" />
+              <stop offset="0%" style={{ stopColor: "var(--accent-primary)", stopOpacity: 0.35 }} />
+              <stop offset="100%" style={{ stopColor: "var(--accent-primary)", stopOpacity: 0 }} />
             </linearGradient>
           </defs>
           <polygon points={area} fill="url(#exHistFill)" />
           <polyline
             points={line}
             fill="none"
-            stroke={LIME}
+            style={{ stroke: "var(--accent-primary)" }}
             strokeWidth={1.5}
             strokeLinejoin="round"
             strokeLinecap="round"
             vectorEffect="non-scaling-stroke"
           />
-          <circle cx={px(points.length - 1)} cy={py(points[points.length - 1].e1rm)} r={1.8} fill={LIME} />
+          <circle
+            cx={px(points.length - 1)}
+            cy={py(points[points.length - 1].e1rm)}
+            r={1.8}
+            style={{ fill: "var(--accent-primary)" }}
+          />
         </svg>
         <div className="mt-1 flex justify-between text-[11px] text-[var(--text-muted)]">
           <span>{fmt(points[0].date)}</span>
