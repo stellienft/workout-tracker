@@ -4,23 +4,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   X,
-  ChevronLeft,
-  ChevronRight,
   Youtube,
   Repeat,
   ShieldAlert,
   Check,
-  Info,
   Plus,
-  Minus,
   Trash2,
   Play,
   Square,
   Pause,
   Calculator,
-  TrendingUp,
-  Link2,
   Flame,
+  MoreHorizontal,
+  Maximize2,
 } from "lucide-react";
 import { ExerciseImage } from "@/components/ui/exercise-image";
 import { RestTimer } from "@/components/workout/rest-timer";
@@ -94,6 +90,13 @@ interface SetState {
   done: boolean;
 }
 
+interface GroupMeta {
+  letter: string;
+  idx: number;
+  size: number;
+  type: "superset" | "circuit";
+}
+
 function fmtSecs(s: number): string {
   const m = Math.floor(s / 60);
   const ss = s % 60;
@@ -115,8 +118,6 @@ export function WorkoutMode({
   initialSeconds: number;
   programName: string;
   workoutName: string;
-  // Injury caution is driven by the member's own reported areas + note, not a
-  // global shoulder signal.
   considerations?: string | null;
   injuryAreas?: string[] | null;
   initialWarmup?: { type: string | null; seconds: number | null };
@@ -133,39 +134,40 @@ export function WorkoutMode({
   }[];
 }) {
   const router = useRouter();
-  const [index, setIndex] = useState(0);
-  // Resume from the active seconds already banked (paused time doesn't count),
-  // then keep counting forward from this mount — background-accurate.
   const resumeBaseRef = useRef(Date.now() - Math.max(0, initialSeconds) * 1000);
   const [elapsed, setElapsed] = useState(Math.max(0, initialSeconds));
+
   const [showRest, setShowRest] = useState(false);
   const [restSeconds, setRestSeconds] = useState(90);
-  const [showInjuryNote, setShowInjuryNote] = useState(true);
-  const [videoOpen, setVideoOpen] = useState(false);
-  const [showCues, setShowCues] = useState(false);
-  const [showReplace, setShowReplace] = useState(false);
-  // Tools sheet: which tab to open on, and the weight to seed it with.
-  const [tools, setTools] = useState<{ tab: ToolsTab; weight: number | null } | null>(
-    null
-  );
+  const [restNonce, setRestNonce] = useState(0);
+
+  const [tools, setTools] = useState<{ tab: ToolsTab; weight: number | null } | null>(null);
   const [showWarmup, setShowWarmup] = useState(false);
   const [warmup, setWarmup] = useState<{ type: string; seconds: number } | null>(
     initialWarmup?.type && initialWarmup.seconds != null
       ? { type: initialWarmup.type, seconds: initialWarmup.seconds }
       : null
   );
+
   const [cancelling, setCancelling] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
   const [pending, setPending] = useState(0);
   const [removed, setRemoved] = useState<Set<string>>(new Set());
 
-  // Active substitution: exerciseId -> replacement (full display detail so the
-  // technique cues, cover and video swap to the substitute, not the original).
+  // Per-exercise overlays, keyed by exerciseId.
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [replaceFor, setReplaceFor] = useState<string | null>(null);
+  const [enlargeFor, setEnlargeFor] = useState<string | null>(null);
+  const [videoFor, setVideoFor] = useState<string | null>(null);
+
+  // Active substitution: exerciseId -> replacement detail.
   const [subs, setSubs] = useState<Record<string, SubDetail>>({});
 
-  // Count-up stopwatch for time-based exercises (planks, holds, cardio).
-  const [timer, setTimer] = useState<{ exerciseId: string; setIdx: number; base: number; startedAt: number } | null>(null);
+  // Count-up stopwatch for time-based exercises.
+  const [timer, setTimer] = useState<
+    { exerciseId: string; setIdx: number; base: number; startedAt: number } | null
+  >(null);
   const [, forceTick] = useState(0);
   useEffect(() => {
     if (!timer) return;
@@ -173,11 +175,10 @@ export function WorkoutMode({
     return () => clearInterval(id);
   }, [timer]);
 
-  // Per-exercise set state, seeded from any existing logs (resume).
   const [state, setState] = useState<Record<string, SetState[]>>(() => {
     const initial: Record<string, SetState[]> = {};
     for (const ex of exercises) {
-      const rows: SetState[] = Array.from({ length: ex.sets }, (_, i) => {
+      initial[ex.exerciseId] = Array.from({ length: ex.sets }, (_, i) => {
         const log = initialLogs.find(
           (l) => l.exerciseId === ex.exerciseId && l.setNumber === i + 1
         );
@@ -191,7 +192,6 @@ export function WorkoutMode({
           done: log?.completed ?? false,
         };
       });
-      initial[ex.exerciseId] = rows;
     }
     return initial;
   });
@@ -201,40 +201,25 @@ export function WorkoutMode({
     [exercises, removed]
   );
 
-  // Superset / circuit grouping: runs of 2+ consecutive exercises that share a
-  // non-null supersetGroup. Keyed by index into workingExercises.
-  const groupMeta = useMemo(() => {
-    interface Meta {
-      letter: string;
-      idx: number; // 0-based position within the group
-      size: number;
-      firstIndex: number;
-      lastIndex: number;
-      type: "superset" | "circuit";
-      members: string[];
-    }
-    const map = new Map<number, Meta>();
+  // Superset / circuit grouping by exerciseId.
+  const groupByExId = useMemo(() => {
+    const map = new Map<string, GroupMeta>();
     let letterIdx = 0;
     let i = 0;
     while (i < workingExercises.length) {
       const g = workingExercises[i].supersetGroup;
       let j = i;
-      while (j < workingExercises.length && g != null && workingExercises[j].supersetGroup === g)
-        j++;
+      while (j < workingExercises.length && g != null && workingExercises[j].supersetGroup === g) j++;
       const size = j - i;
       if (g != null && size >= 2) {
         const letter = String.fromCharCode(65 + letterIdx);
         letterIdx++;
-        const members = workingExercises.slice(i, j).map((e) => e.name);
         for (let k = i; k < j; k++) {
-          map.set(k, {
+          map.set(workingExercises[k].exerciseId, {
             letter,
             idx: k - i,
             size,
-            firstIndex: i,
-            lastIndex: j - 1,
             type: size >= 3 ? "circuit" : "superset",
-            members,
           });
         }
         i = j;
@@ -244,19 +229,31 @@ export function WorkoutMode({
     }
     return map;
   }, [workingExercises]);
+
   const concerns = useMemo(
     () => combineConcerns(injuryAreas, considerations),
     [injuryAreas, considerations]
   );
-  const safeIndex = Math.min(index, Math.max(0, workingExercises.length - 1));
-  const current = workingExercises[safeIndex];
   const haptics = true;
 
   const activeId = (ex: WorkoutExerciseVM) => subs[ex.exerciseId]?.id ?? ex.exerciseId;
 
-  // Elapsed timer. Derived from the fixed start time (not an incrementing
-  // counter) so it stays accurate when the app is backgrounded — mobile
-  // browsers suspend setInterval, so we also resync on return to foreground.
+  // Display detail, substitute-aware.
+  function activeFor(ex: WorkoutExerciseVM) {
+    const sub = subs[ex.exerciseId];
+    return {
+      name: sub?.name ?? ex.name,
+      instructions: sub ? sub.instructions : ex.instructions,
+      techniqueCues: sub ? sub.techniqueCues : ex.techniqueCues,
+      coverPath: sub ? sub.coverPath : ex.coverPath,
+      primaryMuscles: sub ? sub.primaryMuscles : ex.primaryMuscles,
+      shoulderNotes: sub ? sub.shoulderNotes : ex.shoulderNotes,
+      video: sub ? sub.video : ex.video,
+      substituted: !!sub,
+    };
+  }
+
+  // Elapsed timer, background-accurate.
   useEffect(() => {
     const compute = () =>
       setElapsed(Math.max(0, Math.floor((Date.now() - resumeBaseRef.current) / 1000)));
@@ -274,7 +271,6 @@ export function WorkoutMode({
     };
   }, []);
 
-  // Flush any queued offline logs on mount + when we come back online.
   useEffect(() => {
     const doFlush = async () => {
       const res = await flush(logSet);
@@ -287,11 +283,7 @@ export function WorkoutMode({
   }, []);
 
   const totalSets = useMemo(
-    () =>
-      workingExercises.reduce(
-        (a, e) => a + (state[e.exerciseId]?.length ?? 0),
-        0
-      ),
+    () => workingExercises.reduce((a, e) => a + (state[e.exerciseId]?.length ?? 0), 0),
     [workingExercises, state]
   );
   const completedSets = useMemo(
@@ -340,6 +332,13 @@ export function WorkoutMode({
     }
   }
 
+  function startRest(sec: number) {
+    if (sec <= 0) return;
+    setRestSeconds(sec);
+    setRestNonce((n) => n + 1);
+    setShowRest(true);
+  }
+
   function completeSet(ex: WorkoutExerciseVM, setIdx: number) {
     const row = state[ex.exerciseId][setIdx];
     const done = !row.done;
@@ -347,25 +346,10 @@ export function WorkoutMode({
     if (done) {
       if (haptics && "vibrate" in navigator) navigator.vibrate?.(30);
       persistSet(ex, { ...row, done: true });
-
-      const meta = groupMeta.get(safeIndex);
-      if (meta && meta.idx < meta.size - 1) {
-        // Superset: no rest between movements — jump straight to the next one.
-        setShowRest(false);
-        setIndex(safeIndex + 1);
-        return;
-      }
-
-      setRestSeconds(ex.restSeconds || 90);
-      if (ex.restSeconds > 0) setShowRest(true);
-
-      if (meta) {
-        // Finished the last movement of a round — loop back to the first
-        // movement for the next round if any of its sets are still pending.
-        const firstEx = workingExercises[meta.firstIndex];
-        const hasNextRound = (state[firstEx.exerciseId] ?? []).some((r) => !r.done);
-        if (hasNextRound) setIndex(meta.firstIndex);
-      }
+      // Supersets: no rest between movements, only after the last of the group.
+      const meta = groupByExId.get(ex.exerciseId);
+      if (meta && meta.idx < meta.size - 1) return;
+      startRest(ex.restSeconds || 90);
     }
   }
 
@@ -378,16 +362,7 @@ export function WorkoutMode({
         ...prev,
         [ex.exerciseId]: [
           ...rows,
-          {
-            n: nextN,
-            // pre-fill weight from the previous set for convenience
-            weight: last?.weight ?? "",
-            reps: "",
-            seconds: "",
-            rpe: "",
-            pain: "",
-            done: false,
-          },
+          { n: nextN, weight: last?.weight ?? "", reps: "", seconds: "", rpe: "", pain: "", done: false },
         ],
       };
     });
@@ -401,22 +376,9 @@ export function WorkoutMode({
       rows.splice(setIdx, 1);
       return { ...prev, [ex.exerciseId]: rows };
     });
-    // Remove the persisted log if it was saved.
     if (row.done) {
-      deleteSetLog({ sessionId, exerciseId: activeId(ex), setNumber: row.n }).catch(
-        () => {}
-      );
+      deleteSetLog({ sessionId, exerciseId: activeId(ex), setNumber: row.n }).catch(() => {});
     }
-  }
-
-  function adjustReps(ex: WorkoutExerciseVM, setIdx: number, delta: number) {
-    const rows = state[ex.exerciseId];
-    const row = rows?.[setIdx];
-    if (!row) return;
-    const next = Math.max(0, (row.reps ? Number(row.reps) : 0) + delta);
-    const updated = { ...row, reps: String(next) };
-    updateSet(ex.exerciseId, setIdx, { reps: String(next) });
-    if (row.done) persistSet(ex, updated); // keep a saved set in sync
   }
 
   function removeExercise(ex: WorkoutExerciseVM) {
@@ -426,9 +388,8 @@ export function WorkoutMode({
       )
     )
       return;
+    setMenuFor(null);
     setRemoved((prev) => new Set(prev).add(ex.exerciseId));
-    setIndex((i) => Math.max(0, Math.min(i, workingExercises.length - 2)));
-    setShowReplace(false);
     deleteExerciseSets({ sessionId, exerciseId: activeId(ex) }).catch(() => {});
   }
 
@@ -436,8 +397,6 @@ export function WorkoutMode({
     setFinishing(true);
     setFinishError(null);
     try {
-      // Make sure every logged set has synced before we complete. If some
-      // stay queued (offline), warn instead of losing them silently.
       const flushed = await flush(logSet);
       setPending(flushed.remaining);
       if (flushed.remaining > 0) {
@@ -447,10 +406,6 @@ export function WorkoutMode({
         setFinishing(false);
         return;
       }
-
-      // completeWorkout is idempotent: if the session already flipped to
-      // completed on a previous attempt, it returns ok, so a retry after a
-      // dropped response still lands on the summary instead of dead-ending.
       const res = await completeWorkout({ sessionId, totalSeconds: elapsed });
       if (res.ok) {
         router.push(`/workout/${sessionId}/summary`);
@@ -459,9 +414,7 @@ export function WorkoutMode({
       }
       setFinishError(res.error ?? "Couldn't finish — please try again.");
     } catch {
-      setFinishError(
-        "Network hiccup. Your sets are saved — tap Complete again to finish."
-      );
+      setFinishError("Network hiccup. Your sets are saved — tap Complete again to finish.");
     }
     setFinishing(false);
   }
@@ -497,21 +450,59 @@ export function WorkoutMode({
     void logWarmup({ sessionId, type, seconds });
   }
 
-  // Everything removed — let them finish/exit.
-  if (!current) {
+  function pickReplacement(alt: AltOption) {
+    const exId = replaceFor;
+    if (!exId) return;
+    setReplaceFor(null);
+    setSubs((s) => ({
+      ...s,
+      [exId]: {
+        id: alt.id,
+        name: alt.name,
+        shoulder_safe: alt.shoulder_safe,
+        shoulderNotes: null,
+        instructions: null,
+        techniqueCues: [],
+        coverPath: null,
+        primaryMuscles: [],
+        video: null,
+      },
+    }));
+    void getExerciseDetail(alt.id).then((detail) => {
+      if (detail) setSubs((s) => ({ ...s, [exId]: detail }));
+    });
+  }
+
+  // Timer helpers (time-based exercises).
+  const timerActive = (exId: string, i: number) =>
+    timer != null && timer.exerciseId === exId && timer.setIdx === i;
+  const timerSecs = (exId: string, rows: SetState[], i: number) => {
+    if (timerActive(exId, i) && timer)
+      return timer.base + Math.floor((Date.now() - timer.startedAt) / 1000);
+    return Number(rows[i]?.seconds || 0);
+  };
+  function toggleTimer(exId: string, rows: SetState[], i: number) {
+    if (timerActive(exId, i)) {
+      updateSet(exId, i, { seconds: String(timerSecs(exId, rows, i)) });
+      setTimer(null);
+    } else {
+      setTimer({ exerciseId: exId, setIdx: i, base: Number(rows[i]?.seconds || 0), startedAt: Date.now() });
+    }
+  }
+
+  const menuEx = workingExercises.find((e) => e.exerciseId === menuFor) ?? null;
+  const replaceEx = workingExercises.find((e) => e.exerciseId === replaceFor) ?? null;
+  const enlargeEx = workingExercises.find((e) => e.exerciseId === enlargeFor) ?? null;
+  const videoEx = workingExercises.find((e) => e.exerciseId === videoFor) ?? null;
+  const allDone = totalSets > 0 && completedSets === totalSets;
+
+  if (workingExercises.length === 0) {
     return (
       <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-[var(--background-primary)] p-6 text-center">
-        <p className="text-[var(--text-secondary)]">
-          All exercises removed from this workout.
-        </p>
-        {finishError && (
-          <p className="max-w-xs text-sm text-[var(--warning)]">{finishError}</p>
-        )}
+        <p className="text-[var(--text-secondary)]">All exercises removed from this workout.</p>
+        {finishError && <p className="max-w-xs text-sm text-[var(--warning)]">{finishError}</p>}
         <div className="flex gap-2">
-          <button
-            onClick={onSaveExit}
-            className="rounded-2xl border border-[var(--border-subtle)] px-4 py-3 text-sm"
-          >
+          <button onClick={onSaveExit} className="rounded-2xl border border-[var(--border-subtle)] px-4 py-3 text-sm">
             Save &amp; exit
           </button>
           <button
@@ -526,84 +517,11 @@ export function WorkoutMode({
     );
   }
 
-  // When substituted, show the substitute's guidance (technique, cover, video);
-  // otherwise the original's.
-  const sub = subs[current.exerciseId];
-  const active = {
-    name: sub?.name ?? current.name,
-    shoulderSafe: sub?.shoulder_safe ?? current.shoulderSafe,
-    shoulderNotes: sub ? sub.shoulderNotes : current.shoulderNotes,
-    instructions: sub ? sub.instructions : current.instructions,
-    techniqueCues: sub ? sub.techniqueCues : current.techniqueCues,
-    coverPath: sub ? sub.coverPath : current.coverPath,
-    primaryMuscles: sub ? sub.primaryMuscles : current.primaryMuscles,
-    video: sub ? sub.video : current.video,
-  };
-  const activeName = active.name;
-  // Personalised injury caution from the member's own stated concerns, matched
-  // to this exercise's muscles (not a global shoulder flag).
-  const concernLabel = sub
-    ? null
-    : exerciseConcern(concerns, active.primaryMuscles);
-  const rows = state[current.exerciseId] ?? [];
-  const timed = current.trackingType === "time";
-  const groupInfo = groupMeta.get(safeIndex) ?? null;
-
-  // Progressive-overload suggestion from last session's working sets. Big
-  // compound lifts jump 5 kg, everything else 2.5 kg. Not shown for timed moves
-  // or when a substitute is active (the history is for the original).
-  const bigLift = active.primaryMuscles.some((m) =>
-    ["quads", "quadriceps", "hamstrings", "glutes", "back", "lats"].includes(
-      m.toLowerCase()
-    )
-  );
-  const suggestion =
-    timed || sub
-      ? null
-      : progressionSuggestion(current.previous, current.repTarget, bigLift ? 5 : 2.5);
-  // Weight to seed the Tools sheet with, preferring what's already typed.
-  const toolWeight =
-    Number(rows.find((r) => r.weight)?.weight) ||
-    suggestion?.weightKg ||
-    current.previous[0]?.weight_kg ||
-    null;
-
-  function applySuggestion() {
-    if (!suggestion) return;
-    setState((prev) => {
-      const rs = (prev[current.exerciseId] ?? []).map((r) =>
-        r.done || r.weight ? r : { ...r, weight: String(suggestion.weightKg) }
-      );
-      return { ...prev, [current.exerciseId]: rs };
-    });
-  }
-
-  const timerActive = (setIdx: number) =>
-    timer != null && timer.exerciseId === current.exerciseId && timer.setIdx === setIdx;
-  const timerSecs = (setIdx: number) => {
-    if (timerActive(setIdx) && timer)
-      return timer.base + Math.floor((Date.now() - timer.startedAt) / 1000);
-    return Number(rows[setIdx]?.seconds || 0);
-  };
-  function toggleTimer(setIdx: number) {
-    if (timerActive(setIdx)) {
-      updateSet(current.exerciseId, setIdx, { seconds: String(timerSecs(setIdx)) });
-      setTimer(null);
-    } else {
-      setTimer({
-        exerciseId: current.exerciseId,
-        setIdx,
-        base: Number(rows[setIdx]?.seconds || 0),
-        startedAt: Date.now(),
-      });
-    }
-  }
-
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-[var(--background-primary)]">
       {/* Header */}
-      <header className="pt-safe border-b border-[var(--border-subtle)] px-4 py-3">
-        <div className="flex items-center justify-between gap-2">
+      <header className="pt-safe z-10 border-b border-[var(--border-subtle)] bg-[var(--background-primary)] px-4 py-3">
+        <div className="mx-auto flex w-full max-w-xl items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
             <button
               onClick={onSaveExit}
@@ -625,482 +543,157 @@ export function WorkoutMode({
             <p className="truncate text-xs text-[var(--text-muted)]">{programName}</p>
             <p className="truncate text-sm font-semibold">{workoutName}</p>
           </div>
-          <div className="text-right text-sm font-mono tabular-nums">
+          <span className="rounded-full bg-[var(--surface-secondary)] px-3 py-1.5 text-sm font-mono font-semibold tabular-nums">
             {formatDuration(elapsed)}
-          </div>
+          </span>
         </div>
-        <div className="mt-2 flex items-center gap-2">
+        <div className="mx-auto mt-2 flex w-full max-w-xl items-center gap-2">
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--surface-secondary)]">
             <div
               className="h-full bg-[var(--accent-primary)] transition-[width]"
-              style={{
-                width: `${totalSets ? (completedSets / totalSets) * 100 : 0}%`,
-              }}
+              style={{ width: `${totalSets ? (completedSets / totalSets) * 100 : 0}%` }}
             />
           </div>
           <span className="text-xs text-[var(--text-muted)]">
-            {completedSets}/{totalSets} sets
+            {completedSets}/{totalSets}
           </span>
         </div>
         {pending > 0 && (
           <p className="mt-1 text-center text-[11px] text-[var(--warning)]">
-            {pending} set{pending === 1 ? "" : "s"} saved offline — will sync when
-            back online
+            {pending} set{pending === 1 ? "" : "s"} saved offline — will sync when back online
           </p>
         )}
-      </header>
-
-      {/* Body: one exercise at a time */}
-      <div className="flex-1 overflow-y-auto px-4 py-5">
-        <div className="mx-auto w-full max-w-xl">
-          <p className="text-xs text-[var(--text-muted)]">
-            Exercise {safeIndex + 1} of {workingExercises.length}
-          </p>
-          <div className="mt-1 flex items-start justify-between gap-2">
-            <h1 className="text-2xl font-extrabold">{activeName}</h1>
-            {concernLabel && (
-              <ShieldAlert className="mt-1 h-5 w-5 shrink-0 text-[var(--warning)]" />
-            )}
-          </div>
-          <p className="text-sm capitalize text-[var(--text-secondary)]">
-            {active.primaryMuscles.join(", ")} · target {current.repTarget}
-          </p>
-
-          {subs[current.exerciseId] && (
-            <p className="mt-1 text-xs text-[var(--accent-primary)]">
-              Substituted for {current.name}
-            </p>
-          )}
-
-          {groupInfo && (
-            <div className="mt-3 rounded-2xl border border-[var(--accent-primary)]/40 bg-[var(--accent-muted)] p-3">
-              <div className="flex items-center gap-1.5">
-                <Link2 className="h-4 w-4 text-[var(--accent-primary)]" />
-                <p className="text-sm font-semibold text-[var(--accent-primary)]">
-                  {groupInfo.type === "circuit" ? "Circuit" : "Superset"}{" "}
-                  {groupInfo.letter} · move {groupInfo.idx + 1} of {groupInfo.size}
-                </p>
-              </div>
-              <ol className="mt-1.5 space-y-0.5">
-                {groupInfo.members.map((name, i) => (
-                  <li
-                    key={i}
-                    className={cn(
-                      "text-xs capitalize",
-                      i === groupInfo.idx
-                        ? "font-semibold text-[var(--text-primary)]"
-                        : "text-[var(--text-secondary)]"
-                    )}
-                  >
-                    {groupInfo.letter}
-                    {i + 1}. {name}
-                    {i === groupInfo.idx && (
-                      <span className="ml-1 not-italic text-[var(--accent-primary)]">
-                        ← now
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ol>
-              <p className="mt-1.5 text-[11px] text-[var(--text-muted)]">
-                One set of each back-to-back, then rest. Completing a set jumps to
-                the next movement automatically.
-              </p>
-            </div>
-          )}
-
-          {concerns.length > 0 && showInjuryNote && (
-            <div className="mt-3 flex items-start gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-primary)]" />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold">Your sore / injured areas</p>
-                <p className="text-xs capitalize text-[var(--text-secondary)]">
-                  {concerns.map((c) => c.label).join(", ")}
-                  {considerations?.trim() ? ` — ${considerations.trim()}` : ""}. Tap
-                  Replace on any exercise that doesn&apos;t feel right.
-                </p>
-              </div>
-              <button
-                onClick={() => setShowInjuryNote(false)}
-                aria-label="Dismiss"
-                className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-
-          {concernLabel && (
-            <div className="mt-3 flex gap-2 rounded-2xl border border-[var(--warning)]/40 bg-[var(--surface-secondary)] p-3">
-              <ShieldAlert className="h-5 w-5 shrink-0 text-[var(--warning)]" />
-              <div>
-                <p className="text-sm font-medium capitalize text-[var(--warning)]">
-                  {concernLabel} caution
-                </p>
-                <p className="text-xs text-[var(--text-secondary)]">
-                  You noted a {concernLabel} concern and this movement loads it.
-                  Keep it pain-free, ease off, or tap Replace for another option.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Warm-up prompt — shown before the first exercise until logged. */}
-          {safeIndex === 0 && (
-            warmup ? (
-              <button
-                onClick={() => setShowWarmup(true)}
-                className="mt-3 flex w-full items-center gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3 text-left"
-              >
-                <Flame className="h-4 w-4 shrink-0 text-[var(--accent-primary)]" />
-                <span className="flex-1 text-sm">
-                  Warmed up · {warmup.type} · {fmtSecs(warmup.seconds)}
-                </span>
-                <span className="text-xs text-[var(--text-muted)]">Edit</span>
-              </button>
-            ) : (
-              <div className="mt-3 flex items-center gap-3 rounded-2xl border border-[var(--accent-primary)]/30 bg-[var(--accent-muted)] p-3">
-                <Flame className="h-5 w-5 shrink-0 text-[var(--accent-primary)]" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-[var(--accent-primary)]">
-                    Warm up first?
-                  </p>
-                  <p className="text-xs text-[var(--text-secondary)]">
-                    A few minutes on the bike, treadmill or light cardio.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowWarmup(true)}
-                  className="shrink-0 rounded-full bg-[var(--accent-primary)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-ink)]"
-                >
-                  Warm up
-                </button>
-              </div>
-            )
-          )}
-
-          {/* Media — animated GIF demo plays inline; the YouTube overlay only
-              appears when a real video exists. */}
-          <div className="relative mt-4 aspect-video w-full overflow-hidden rounded-[var(--radius-card)]">
-            <ExerciseImage path={active.coverPath} alt={activeName} />
-            {active.video ? (
-              <button
-                onClick={() => setVideoOpen(true)}
-                className="absolute inset-0 flex items-center justify-center bg-black/40"
-              >
-                <span className="flex items-center gap-2 rounded-full bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)]">
-                  <Youtube className="h-4 w-4" /> Watch technique
-                </span>
-              </button>
-            ) : active.coverPath ? (
-              <span className="absolute bottom-2 right-2 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-white">
-                Demo
-              </span>
-            ) : null}
-          </div>
-
-          {/* Action row */}
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              onClick={() => setShowCues((s) => !s)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-sm"
-            >
-              <Info className="h-4 w-4" /> Technique
-            </button>
-            <button
-              onClick={() => setTools({ tab: "plates", weight: toolWeight })}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-sm"
-            >
-              <Calculator className="h-4 w-4" /> Tools
-            </button>
-            <button
-              onClick={() => setShowWarmup(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-sm"
-            >
-              <Flame className="h-4 w-4" /> Warm up
-            </button>
-            <button
-              onClick={() => setShowReplace(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-sm"
-            >
-              <Repeat className="h-4 w-4" /> Replace
-            </button>
-            <button
-              onClick={() => removeExercise(current)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-sm text-[var(--text-secondary)]"
-            >
-              <Trash2 className="h-4 w-4" /> Remove
-            </button>
-            <button
-              onClick={async () => {
-                const sev = Number(
-                  prompt("Report discomfort — severity 0–10?", "3") ?? ""
-                );
-                if (!Number.isNaN(sev) && sev >= 0 && sev <= 10) {
-                  await reportDiscomfort({
-                    sessionId,
-                    exerciseId: current.exerciseId,
-                    severity: sev,
-                  });
-                }
-              }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-sm text-[var(--danger)]"
-            >
-              <ShieldAlert className="h-4 w-4" /> Report pain
-            </button>
-          </div>
-
-          {showCues && (
-            <div className="mt-3 rounded-2xl bg-[var(--surface-primary)] p-4 text-sm">
-              {active.instructions && (
-                <p className="text-[var(--text-secondary)]">{active.instructions}</p>
-              )}
-              {active.techniqueCues.length > 0 && (
-                <ul className="mt-2 list-inside list-disc space-y-1 text-[var(--text-secondary)]">
-                  {active.techniqueCues.map((c) => (
-                    <li key={c}>{c}</li>
-                  ))}
-                </ul>
-              )}
-              {active.shoulderNotes && (
-                <p className="mt-2 text-xs text-[var(--warning)]">
-                  {active.shoulderNotes}
-                </p>
-              )}
-            </div>
-          )}
-
-          {current.notes && (
-            <p className="mt-3 rounded-xl bg-[var(--surface-secondary)] p-3 text-xs text-[var(--warning)]">
-              {current.notes}
-            </p>
-          )}
-
-          {/* Progressive-overload coach — target for today from last session. */}
-          {suggestion && (
-            <div className="mt-4 rounded-2xl border border-[var(--accent-primary)]/30 bg-[var(--accent-muted)] p-3">
-              <div className="flex items-start gap-2">
-                <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-primary)]" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-[var(--accent-primary)]">
-                    {suggestion.headline}
-                  </p>
-                  <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
-                    {suggestion.detail}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <button
-                      onClick={applySuggestion}
-                      className="rounded-full bg-[var(--accent-primary)] px-3 py-1 text-xs font-semibold text-[var(--accent-ink)]"
-                    >
-                      Use target
-                    </button>
-                    <button
-                      onClick={() => setTools({ tab: "warmup", weight: suggestion.weightKg })}
-                      className="rounded-full border border-[var(--border-subtle)] px-3 py-1 text-xs"
-                    >
-                      Warm-up
-                    </button>
-                    <button
-                      onClick={() => setTools({ tab: "plates", weight: suggestion.weightKg })}
-                      className="rounded-full border border-[var(--border-subtle)] px-3 py-1 text-xs"
-                    >
-                      Plates
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Sets table */}
-          <div className="mt-4 space-y-2">
-            <div className="grid grid-cols-[2rem_1fr_1.6fr_1fr_2.75rem] items-center gap-2 px-1 text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
-              <span>Set</span>
-              {timed ? (
-                <span className="col-span-2">Time</span>
-              ) : (
-                <>
-                  <span>Weight</span>
-                  <span className="text-center">Reps</span>
-                </>
-              )}
-              <span>RPE</span>
-              <span className="text-center">Done</span>
-            </div>
-            {rows.map((row, i) => {
-              const prev = current.previous.find((p) => p.set_number === i + 1);
-              return (
-                <div key={row.n} className="group">
-                  <div className="grid grid-cols-[2rem_1fr_1.6fr_1fr_2.75rem] items-center gap-2">
-                    <span className="text-center text-sm font-semibold">{i + 1}</span>
-                    {timed ? (
-                      <div className="col-span-2 flex items-center gap-2">
-                        <button
-                          onClick={() => toggleTimer(i)}
-                          aria-label={timerActive(i) ? "Stop timer" : "Start timer"}
-                          className={cn(
-                            "inline-flex h-11 items-center gap-1.5 rounded-xl border px-3 text-sm font-semibold tabular-nums transition-colors",
-                            timerActive(i)
-                              ? "border-[var(--accent-primary)] bg-[var(--accent-primary)] text-[var(--accent-ink)]"
-                              : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
-                          )}
-                        >
-                          {timerActive(i) ? (
-                            <Square className="h-4 w-4" />
-                          ) : (
-                            <Play className="h-4 w-4" />
-                          )}
-                          {fmtSecs(timerSecs(i))}
-                        </button>
-                        <SetInput
-                          value={row.seconds}
-                          onChange={(v) => updateSet(current.exerciseId, i, { seconds: v })}
-                          placeholder="sec"
-                        />
-                      </div>
-                    ) : (
-                      <>
-                        <SetInput
-                          value={row.weight}
-                          onChange={(v) => updateSet(current.exerciseId, i, { weight: v })}
-                          placeholder={prev?.weight_kg != null ? String(prev.weight_kg) : "kg"}
-                        />
-                        {/* Reps stepper */}
-                        <div className="flex items-center gap-1">
-                          <StepBtn
-                            onClick={() => adjustReps(current, i, -1)}
-                            aria-label="One rep fewer"
-                          >
-                            <Minus className="h-4 w-4" />
-                          </StepBtn>
-                          <SetInput
-                            value={row.reps}
-                            onChange={(v) => updateSet(current.exerciseId, i, { reps: v })}
-                            placeholder={prev?.reps != null ? String(prev.reps) : "reps"}
-                          />
-                          <StepBtn
-                            onClick={() => adjustReps(current, i, 1)}
-                            aria-label="One rep more"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </StepBtn>
-                        </div>
-                      </>
-                    )}
-                    <SetInput
-                      value={row.rpe}
-                      onChange={(v) => updateSet(current.exerciseId, i, { rpe: v })}
-                      placeholder="RPE"
-                    />
-                    <button
-                      onClick={() => completeSet(current, i)}
-                      aria-label={row.done ? "Mark set incomplete" : "Complete set"}
-                      className={cn(
-                        "flex h-11 w-11 items-center justify-center rounded-xl border transition-colors",
-                        row.done
-                          ? "border-[var(--accent-primary)] bg-[var(--accent-primary)] text-[var(--accent-ink)]"
-                          : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
-                      )}
-                    >
-                      <Check className="h-5 w-5" />
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between pl-9 pr-1">
-                    {!timed && prev ? (
-                      <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
-                        Previous: {prev.weight_kg ?? "—"}kg × {prev.reps ?? "—"}
-                        {prev.rpe ? ` @ RPE ${prev.rpe}` : ""}
-                      </p>
-                    ) : (
-                      <span />
-                    )}
-                    <button
-                      onClick={() => deleteSet(current, i)}
-                      className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-[var(--text-muted)] hover:text-[var(--danger)]"
-                      aria-label={`Delete set ${i + 1}`}
-                    >
-                      <Trash2 className="h-3 w-3" /> Delete set
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-
-            <button
-              onClick={() => addSet(current)}
-              className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-[var(--border-subtle)] py-2.5 text-sm text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)]"
-            >
-              <Plus className="h-4 w-4" /> Add set
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Sticky footer: rest timer + nav */}
-      <div className="pointer-events-none px-4 pb-safe">
         {showRest && (
-          <div className="pb-2">
+          <div className="mx-auto mt-3 w-full max-w-xl">
             <RestTimer
+              key={restNonce}
               seconds={restSeconds}
               onClose={() => setShowRest(false)}
               haptics={haptics}
             />
           </div>
         )}
-      </div>
-      <footer className="border-t border-[var(--border-subtle)] px-4 py-3 pb-safe">
-        {finishError && (
-          <p className="mx-auto mb-2 flex w-full max-w-xl items-center gap-1.5 rounded-xl bg-[var(--surface-secondary)] px-3 py-2 text-xs text-[var(--warning)]">
-            {finishError}
-          </p>
-        )}
-        <div className="mx-auto flex w-full max-w-xl items-center gap-2">
-          <button
-            onClick={() => setIndex((i) => Math.max(0, i - 1))}
-            disabled={safeIndex === 0}
-            className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--border-subtle)] disabled:opacity-40"
-            aria-label="Previous exercise"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          {safeIndex < workingExercises.length - 1 ? (
+      </header>
+
+      {/* Scrollable exercise list */}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="mx-auto w-full max-w-xl space-y-3">
+          {/* Warm-up chip */}
+          {warmup ? (
             <button
-              onClick={() => setIndex(safeIndex + 1)}
-              className="flex h-12 flex-1 items-center justify-center gap-1 rounded-2xl bg-[var(--surface-secondary)] font-semibold"
+              onClick={() => setShowWarmup(true)}
+              className="flex w-full items-center gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-primary)] px-4 py-2.5 text-left"
             >
-              {groupInfo && groupInfo.idx < groupInfo.size - 1
-                ? "Next in superset"
-                : "Next exercise"}{" "}
-              <ChevronRight className="h-5 w-5" />
+              <Flame className="h-4 w-4 shrink-0 text-[var(--accent-primary)]" />
+              <span className="flex-1 text-sm">
+                Warmed up · {warmup.type} · {fmtSecs(warmup.seconds)}
+              </span>
+              <span className="text-xs text-[var(--text-muted)]">Edit</span>
             </button>
           ) : (
             <button
-              onClick={onFinish}
-              disabled={finishing}
-              className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] font-bold text-[var(--accent-ink)] disabled:opacity-60"
+              onClick={() => setShowWarmup(true)}
+              className="flex w-full items-center gap-2 rounded-2xl border border-dashed border-[var(--border-subtle)] px-4 py-2.5 text-left text-sm text-[var(--text-secondary)] hover:border-[var(--border-active)]"
             >
-              <Check className="h-5 w-5" />
-              {finishing ? "Finishing…" : "Complete Workout"}
+              <Flame className="h-4 w-4 shrink-0 text-[var(--accent-primary)]" />
+              <span className="flex-1">Warm up — bike, treadmill or light cardio</span>
+              <Plus className="h-4 w-4 text-[var(--text-muted)]" />
             </button>
           )}
+
+          {workingExercises.map((ex) => renderCard(ex))}
         </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="border-t border-[var(--border-subtle)] px-4 py-3 pb-safe">
+        {finishError && (
+          <p className="mx-auto mb-2 w-full max-w-xl rounded-xl bg-[var(--surface-secondary)] px-3 py-2 text-xs text-[var(--warning)]">
+            {finishError}
+          </p>
+        )}
+        <button
+          onClick={onFinish}
+          disabled={finishing}
+          className={cn(
+            "mx-auto flex w-full max-w-xl items-center justify-center gap-2 rounded-2xl py-4 font-bold disabled:opacity-60",
+            allDone
+              ? "bg-[var(--accent-primary)] text-[var(--accent-ink)]"
+              : "bg-[var(--surface-secondary)] text-[var(--text-primary)]"
+          )}
+        >
+          <Check className="h-5 w-5" />
+          {finishing ? "Finishing…" : allDone ? "Complete workout" : "Finish workout"}
+        </button>
       </footer>
 
-      {videoOpen && (
+      {/* Enlarge lightbox */}
+      {enlargeEx && (() => {
+        const a = activeFor(enlargeEx);
+        return (
+          <div
+            className="fixed inset-0 z-[160] flex items-center justify-center bg-black/80 p-4"
+            onClick={() => setEnlargeFor(null)}
+          >
+            <div
+              className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-elevated)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative aspect-video w-full bg-black">
+                <ExerciseImage path={a.coverPath} alt={a.name} />
+                <button
+                  onClick={() => setEnlargeFor(null)}
+                  aria-label="Close"
+                  className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="overflow-y-auto p-5">
+                <h3 className="text-lg font-bold">{a.name}</h3>
+                <p className="text-sm capitalize text-[var(--text-secondary)]">
+                  {a.primaryMuscles.join(", ")}
+                </p>
+                {a.video && (
+                  <button
+                    onClick={() => {
+                      setVideoFor(enlargeEx.exerciseId);
+                      setEnlargeFor(null);
+                    }}
+                    className="mt-3 inline-flex items-center gap-2 rounded-full bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)]"
+                  >
+                    <Youtube className="h-4 w-4" /> Watch technique
+                  </button>
+                )}
+                {a.instructions && (
+                  <p className="mt-3 text-sm text-[var(--text-secondary)]">{a.instructions}</p>
+                )}
+                {a.techniqueCues.length > 0 && (
+                  <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-[var(--text-secondary)]">
+                    {a.techniqueCues.map((c) => (
+                      <li key={c}>{c}</li>
+                    ))}
+                  </ul>
+                )}
+                {a.shoulderNotes && (
+                  <p className="mt-2 text-xs text-[var(--warning)]">{a.shoulderNotes}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {videoEx && (
         <VideoSheet
-          video={active.video}
-          exerciseName={activeName}
-          onClose={() => setVideoOpen(false)}
+          video={activeFor(videoEx).video}
+          exerciseName={activeFor(videoEx).name}
+          onClose={() => setVideoFor(null)}
         />
       )}
 
       {tools && (
-        <WorkoutTools
-          onClose={() => setTools(null)}
-          initialTab={tools.tab}
-          defaultWeight={tools.weight}
-        />
+        <WorkoutTools onClose={() => setTools(null)} initialTab={tools.tab} defaultWeight={tools.weight} />
       )}
 
       {showWarmup && (
@@ -1112,53 +705,108 @@ export function WorkoutMode({
         />
       )}
 
-      {showReplace && (
-        <div className="fixed inset-0 z-[160] flex items-end justify-center bg-black/70 p-4 sm:items-center">
+      {/* Per-exercise actions menu */}
+      {menuEx && (
+        <div
+          className="fixed inset-0 z-[160] flex items-end justify-center bg-black/70 p-4 sm:items-center"
+          onClick={() => setMenuFor(null)}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-elevated)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b border-[var(--border-subtle)] p-4">
+              <p className="truncate font-semibold">{activeFor(menuEx).name}</p>
+            </div>
+            <MenuItem
+              icon={<Repeat className="h-5 w-5" />}
+              label="Replace exercise"
+              onClick={() => {
+                setReplaceFor(menuEx.exerciseId);
+                setMenuFor(null);
+              }}
+            />
+            <MenuItem
+              icon={<Calculator className="h-5 w-5" />}
+              label="Plate & 1RM tools"
+              onClick={() => {
+                const rows = state[menuEx.exerciseId] ?? [];
+                const w =
+                  Number(rows.find((r) => r.weight)?.weight) ||
+                  menuEx.previous[0]?.weight_kg ||
+                  null;
+                setTools({ tab: "plates", weight: w });
+                setMenuFor(null);
+              }}
+            />
+            <MenuItem
+              icon={<ShieldAlert className="h-5 w-5 text-[var(--danger)]" />}
+              label="Report pain"
+              onClick={async () => {
+                const id = menuEx.exerciseId;
+                setMenuFor(null);
+                const sev = Number(prompt("Report discomfort — severity 0–10?", "3") ?? "");
+                if (!Number.isNaN(sev) && sev >= 0 && sev <= 10) {
+                  await reportDiscomfort({ sessionId, exerciseId: id, severity: sev });
+                }
+              }}
+            />
+            <MenuItem
+              icon={<Trash2 className="h-5 w-5" />}
+              label="Remove from workout"
+              danger
+              onClick={() => removeExercise(menuEx)}
+            />
+            <button
+              onClick={() => setMenuFor(null)}
+              className="w-full border-t border-[var(--border-subtle)] py-3 text-sm text-[var(--text-secondary)]"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Replace sheet */}
+      {replaceEx && (
+        <div className="fixed inset-0 z-[170] flex items-end justify-center bg-black/70 p-4 sm:items-center">
           <div className="flex max-h-[80vh] w-full max-w-md flex-col rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-5">
-            <h3 className="text-lg font-bold">Replace {current.name}</h3>
+            <h3 className="text-lg font-bold">Replace {replaceEx.name}</h3>
             <p className="mt-1 text-sm text-[var(--text-secondary)]">
               Pick a substitute. Shoulder-safe options are marked.
             </p>
             <div className="mt-4 flex-1 space-y-4 overflow-y-auto">
-              {subs[current.exerciseId] && (
+              {subs[replaceEx.exerciseId] && (
                 <button
                   onClick={() => {
                     setSubs((s) => {
                       const n = { ...s };
-                      delete n[current.exerciseId];
+                      delete n[replaceEx.exerciseId];
                       return n;
                     });
-                    setShowReplace(false);
+                    setReplaceFor(null);
                   }}
                   className="w-full rounded-2xl border border-[var(--border-subtle)] p-3 text-left text-sm"
                 >
-                  ↩ Use original ({current.name})
+                  ↩ Use original ({replaceEx.name})
                 </button>
               )}
-
-              {current.alternatives.length > 0 && (
+              {replaceEx.alternatives.length > 0 && (
+                <ReplaceGroup label="Recommended" options={replaceEx.alternatives} onPick={pickReplacement} />
+              )}
+              {replaceEx.moreAlternatives.length > 0 && (
                 <ReplaceGroup
-                  label="Recommended"
-                  options={current.alternatives}
-                  onPick={pick}
+                  label={`More ${replaceEx.primaryMuscles[0] ?? ""} options`.trim()}
+                  options={replaceEx.moreAlternatives}
+                  onPick={pickReplacement}
                 />
               )}
-              {current.moreAlternatives.length > 0 && (
-                <ReplaceGroup
-                  label={`More ${current.primaryMuscles[0] ?? ""} options`.trim()}
-                  options={current.moreAlternatives}
-                  onPick={pick}
-                />
+              {replaceEx.alternatives.length === 0 && replaceEx.moreAlternatives.length === 0 && (
+                <p className="text-sm text-[var(--text-muted)]">No alternatives available for this exercise.</p>
               )}
-              {current.alternatives.length === 0 &&
-                current.moreAlternatives.length === 0 && (
-                  <p className="text-sm text-[var(--text-muted)]">
-                    No alternatives available for this exercise.
-                  </p>
-                )}
             </div>
             <button
-              onClick={() => setShowReplace(false)}
+              onClick={() => setReplaceFor(null)}
               className="mt-4 w-full rounded-2xl py-2 text-sm text-[var(--text-secondary)]"
             >
               Cancel
@@ -1169,28 +817,241 @@ export function WorkoutMode({
     </div>
   );
 
-  function pick(alt: AltOption) {
-    const exId = current.exerciseId;
-    setShowReplace(false);
-    // Show the swap immediately, then fill in the substitute's technique/video.
-    setSubs((s) => ({
-      ...s,
-      [exId]: {
-        id: alt.id,
-        name: alt.name,
-        shoulder_safe: alt.shoulder_safe,
-        shoulderNotes: null,
-        instructions: null,
-        techniqueCues: [],
-        coverPath: null,
-        primaryMuscles: [],
-        video: null,
-      },
-    }));
-    void getExerciseDetail(alt.id).then((detail) => {
-      if (detail) setSubs((s) => ({ ...s, [exId]: detail }));
-    });
+  // --- per-exercise card (plain function so inputs keep focus) ---
+  function renderCard(ex: WorkoutExerciseVM) {
+    const a = activeFor(ex);
+    const rows = state[ex.exerciseId] ?? [];
+    const meta = groupByExId.get(ex.exerciseId) ?? null;
+    const timed = ex.trackingType === "time";
+    const concernLabel = a.substituted ? null : exerciseConcern(concerns, a.primaryMuscles);
+
+    const bigLift = a.primaryMuscles.some((m) =>
+      ["quads", "quadriceps", "hamstrings", "glutes", "back", "lats"].includes(m.toLowerCase())
+    );
+    const suggestion =
+      timed || a.substituted
+        ? null
+        : progressionSuggestion(ex.previous, ex.repTarget, bigLift ? 5 : 2.5);
+
+    function applySuggestion() {
+      if (!suggestion) return;
+      setState((prev) => {
+        const rs = (prev[ex.exerciseId] ?? []).map((r) =>
+          r.done || r.weight ? r : { ...r, weight: String(suggestion.weightKg) }
+        );
+        return { ...prev, [ex.exerciseId]: rs };
+      });
+    }
+
+    return (
+      <section
+        key={ex.exerciseId}
+        className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)]"
+      >
+        {/* Card header */}
+        <div className="flex items-center gap-3 p-3">
+          <button
+            onClick={() => setEnlargeFor(ex.exerciseId)}
+            aria-label={`Enlarge ${a.name} demo`}
+            className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)]"
+          >
+            <ExerciseImage path={a.coverPath} alt={a.name} />
+            <span className="absolute bottom-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded bg-black/55 text-white">
+              <Maximize2 className="h-2.5 w-2.5" />
+            </span>
+          </button>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              {meta && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded bg-[var(--accent-primary)] px-1 text-[11px] font-bold text-[var(--accent-ink)]">
+                  {meta.letter}
+                </span>
+              )}
+              <p className="truncate font-semibold leading-tight">{a.name}</p>
+              {concernLabel && <ShieldAlert className="h-4 w-4 shrink-0 text-[var(--warning)]" />}
+            </div>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              <Badge>Sets {rows.length}</Badge>
+              {ex.repTarget && <Badge>Reps {ex.repTarget}</Badge>}
+              {ex.restSeconds > 0 && <Badge>Rest {fmtSecs(ex.restSeconds)}</Badge>}
+            </div>
+          </div>
+          <button
+            onClick={() => setMenuFor(ex.exerciseId)}
+            aria-label="Exercise options"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--surface-secondary)]"
+          >
+            <MoreHorizontal className="h-5 w-5" />
+          </button>
+        </div>
+
+        {a.substituted && (
+          <p className="px-3 pb-1 text-xs text-[var(--accent-primary)]">Substituted for {ex.name}</p>
+        )}
+        {suggestion && (
+          <button
+            onClick={applySuggestion}
+            className="mx-3 mb-1 inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-muted)] px-3 py-1 text-xs font-medium text-[var(--accent-primary)]"
+          >
+            {suggestion.headline} · tap to fill
+          </button>
+        )}
+        {ex.notes && (
+          <p className="mx-3 mb-1 rounded-lg bg-[var(--surface-secondary)] p-2 text-xs text-[var(--warning)]">
+            {ex.notes}
+          </p>
+        )}
+
+        {/* Sets */}
+        <div className="border-t border-[var(--border-subtle)] px-3 py-2">
+          <div
+            className={cn(
+              "grid items-center gap-2 px-1 pb-1 text-[11px] uppercase tracking-wide text-[var(--text-muted)]",
+              timed ? "grid-cols-[1.5rem_1fr_2.75rem]" : "grid-cols-[1.5rem_1fr_1fr_2.75rem]"
+            )}
+          >
+            <span>#</span>
+            {timed ? (
+              <span>Time</span>
+            ) : (
+              <>
+                <span>Weight</span>
+                <span>Reps</span>
+              </>
+            )}
+            <span className="text-center">Done</span>
+          </div>
+
+          {rows.map((row, i) => {
+            const prev = ex.previous.find((p) => p.set_number === i + 1);
+            const weightPlaceholder =
+              suggestion?.weightKg != null
+                ? String(suggestion.weightKg)
+                : prev?.weight_kg != null
+                  ? String(prev.weight_kg)
+                  : "kg";
+            const repsPlaceholder =
+              suggestion?.reps != null
+                ? String(suggestion.reps)
+                : prev?.reps != null
+                  ? String(prev.reps)
+                  : "reps";
+            return (
+              <div
+                key={row.n}
+                className={cn(
+                  "grid items-center gap-2 py-1",
+                  timed ? "grid-cols-[1.5rem_1fr_2.75rem]" : "grid-cols-[1.5rem_1fr_1fr_2.75rem]"
+                )}
+              >
+                <span className="text-center text-sm font-semibold text-[var(--text-secondary)]">
+                  {i + 1}
+                </span>
+                {timed ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => toggleTimer(ex.exerciseId, rows, i)}
+                      aria-label={timerActive(ex.exerciseId, i) ? "Stop timer" : "Start timer"}
+                      className={cn(
+                        "inline-flex h-11 items-center gap-1.5 rounded-xl border px-3 text-sm font-semibold tabular-nums",
+                        timerActive(ex.exerciseId, i)
+                          ? "border-[var(--accent-primary)] bg-[var(--accent-primary)] text-[var(--accent-ink)]"
+                          : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
+                      )}
+                    >
+                      {timerActive(ex.exerciseId, i) ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                      {fmtSecs(timerSecs(ex.exerciseId, rows, i))}
+                    </button>
+                    <SetInput
+                      value={row.seconds}
+                      onChange={(v) => updateSet(ex.exerciseId, i, { seconds: v })}
+                      placeholder="sec"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <SetInput
+                      value={row.weight}
+                      onChange={(v) => updateSet(ex.exerciseId, i, { weight: v })}
+                      placeholder={weightPlaceholder}
+                    />
+                    <SetInput
+                      value={row.reps}
+                      onChange={(v) => updateSet(ex.exerciseId, i, { reps: v })}
+                      placeholder={repsPlaceholder}
+                    />
+                  </>
+                )}
+                <button
+                  onClick={() => completeSet(ex, i)}
+                  aria-label={row.done ? "Mark set incomplete" : "Complete set"}
+                  className={cn(
+                    "flex h-11 w-11 items-center justify-center justify-self-center rounded-full border transition-colors",
+                    row.done
+                      ? "border-[var(--accent-primary)] bg-[var(--accent-primary)] text-[var(--accent-ink)]"
+                      : "border-[var(--border-subtle)] text-[var(--text-muted)]"
+                  )}
+                >
+                  <Check className="h-5 w-5" />
+                </button>
+              </div>
+            );
+          })}
+
+          <div className="mt-1 flex items-center gap-2">
+            <button
+              onClick={() => addSet(ex)}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-dashed border-[var(--border-subtle)] py-2.5 text-sm text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)]"
+            >
+              <Plus className="h-4 w-4" /> Add set
+            </button>
+            {rows.length > 1 && (
+              <button
+                onClick={() => deleteSet(ex, rows.length - 1)}
+                aria-label="Remove last set"
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--danger)]"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
+    );
   }
+}
+
+function Badge({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-md bg-[var(--surface-secondary)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">
+      {children}
+    </span>
+  );
+}
+
+function MenuItem({
+  icon,
+  label,
+  onClick,
+  danger,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex w-full items-center gap-3 border-b border-[var(--border-subtle)] px-4 py-3.5 text-left text-sm font-medium last:border-b-0",
+        danger ? "text-[var(--danger)]" : "text-[var(--text-primary)]"
+      )}
+    >
+      <span className="shrink-0 text-[var(--text-secondary)]">{icon}</span>
+      <span>{label}</span>
+    </button>
+  );
 }
 
 function ReplaceGroup({
@@ -1227,22 +1088,6 @@ function ReplaceGroup({
   );
 }
 
-function StepBtn({
-  onClick,
-  children,
-  ...rest
-}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return (
-    <button
-      onClick={onClick}
-      {...rest}
-      className="flex h-11 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--border-subtle)] text-[var(--text-secondary)] active:bg-[var(--surface-secondary)]"
-    >
-      {children}
-    </button>
-  );
-}
-
 function SetInput({
   value,
   onChange,
@@ -1258,7 +1103,7 @@ function SetInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="h-11 w-full min-w-0 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-primary)] px-2 text-center text-sm focus:border-[var(--border-active)] focus:outline-none"
+      className="h-11 w-full min-w-0 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-center text-sm focus:border-[var(--border-active)] focus:outline-none"
     />
   );
 }

@@ -79,28 +79,33 @@ export function RestTimer({
   const s = remaining % 60;
 
   return (
-    <div className="pointer-events-auto rounded-2xl border border-[var(--border-active)] bg-[var(--surface-elevated)] p-3 shadow-lg">
+    <div className="pointer-events-auto rounded-2xl border border-[var(--border-active)] bg-[var(--accent-muted)] px-4 py-3 shadow-lg">
       <div className="flex items-center gap-3">
         <button
           onClick={toggleRunning}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-primary)] text-[var(--accent-ink)]"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--accent-primary)] text-[var(--accent-ink)]"
           aria-label={running ? "Pause timer" : "Resume timer"}
         >
           {running ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
         </button>
         <div className="flex-1">
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-semibold">
-              Rest {remaining > 0 ? `${m}:${s.toString().padStart(2, "0")}` : "done"}
-            </span>
+          <div className="flex items-baseline justify-between">
+            <div className="flex items-baseline gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--accent-primary)]">
+                Rest
+              </span>
+              <span className="font-mono text-3xl font-extrabold tabular-nums leading-none">
+                {remaining > 0 ? `${m}:${s.toString().padStart(2, "0")}` : "0:00"}
+              </span>
+            </div>
             <button
               onClick={addFifteen}
-              className="inline-flex items-center gap-1 text-xs text-[var(--text-secondary)]"
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)]"
             >
               <Plus className="h-3 w-3" /> 15s
             </button>
           </div>
-          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--surface-secondary)]">
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--surface-secondary)]">
             <div
               className="h-full bg-[var(--accent-primary)] transition-[width] duration-1000 ease-linear"
               style={{ width: `${pct}%` }}
@@ -109,10 +114,10 @@ export function RestTimer({
         </div>
         <button
           onClick={onClose}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-secondary)]"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]"
           aria-label="Dismiss timer"
         >
-          <X className="h-4 w-4" />
+          <X className="h-5 w-5" />
         </button>
       </div>
     </div>
