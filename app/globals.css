@@ -66,6 +66,10 @@
   --text-secondary: #52525b;
   --text-muted: #8a8a93;
   --border-subtle: rgba(0, 0, 0, 0.1);
+  /* The bright dark-mode amber/red are unreadable on light surfaces — darken
+     them so warning/danger text and icons keep contrast in light themes. */
+  --warning: #b45309;
+  --danger: #dc2626;
   color-scheme: light;
 }
 
