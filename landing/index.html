@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Stellio Fit — Train Smarter. Build Stronger.</title>
+<meta name="description" content="Stellio Fit is a premium training platform for members and coaches — guided programs, smart workout logging, deep progress tracking, an AI coach, and a full trainer toolkit." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%230d0d0d'/><circle cx='50' cy='50' r='22' fill='%23ccff30'/></svg>" />
+<style>
+  :root{
+    --bg:#0b0b0c; --bg2:#0f0f11; --surface:#161619; --surface2:#1d1d21;
+    --line:rgba(255,255,255,.09); --line2:rgba(255,255,255,.14);
+    --text:#ffffff; --muted:#a6a6b0; --muted2:#74747e;
+    --lime:#ccff30; --lime-ink:#0d0d0d; --peach:#ffb27a; --blue:#5b8cff;
+    --radius:22px; --radius-sm:16px; --max:1120px;
+    --sans:'Inter',ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+    line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  }
+  a{color:inherit;text-decoration:none}
+  img{max-width:100%}
+  .wrap{max-width:var(--max);margin:0 auto;padding:0 22px}
+  .eyebrow{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--lime)}
+  h1,h2,h3{margin:0;line-height:1.08;letter-spacing:-.02em}
+  h2{font-size:clamp(28px,4.4vw,44px);font-weight:800}
+  h3{font-size:19px;font-weight:700;letter-spacing:-.01em}
+  p{margin:0}
+  .muted{color:var(--muted)}
+  .accent{color:var(--lime)}
+  .grad{background:linear-gradient(90deg,#ccff30,#a6e015);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+  /* Buttons */
+  .btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;
+    padding:13px 22px;border-radius:14px;border:1px solid transparent;cursor:pointer;transition:.18s;white-space:nowrap}
+  .btn-primary{background:var(--lime);color:var(--lime-ink)}
+  .btn-primary:hover{background:#b8eb24;transform:translateY(-1px)}
+  .btn-ghost{background:transparent;border-color:var(--line2);color:var(--text)}
+  .btn-ghost:hover{border-color:var(--lime);color:var(--lime)}
+
+  /* Nav */
+  header.nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);
+    background:rgba(11,11,12,.72);border-bottom:1px solid var(--line)}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;height:66px}
+  .brand{font-weight:800;font-size:20px;letter-spacing:-.02em}
+  .nav-links{display:flex;gap:28px;align-items:center}
+  .nav-links a{font-size:14px;color:var(--muted);font-weight:500}
+  .nav-links a:hover{color:var(--text)}
+  @media(max-width:820px){.nav-links a:not(.btn){display:none}}
+
+  /* Hero */
+  .hero{position:relative;padding:96px 0 60px;text-align:center;overflow:hidden}
+  .hero::before{content:"";position:absolute;top:-160px;left:50%;transform:translateX(-50%);
+    width:820px;height:620px;background:radial-gradient(closest-side,rgba(204,255,48,.18),transparent 70%);
+    filter:blur(10px);z-index:0}
+  .hero .wrap{position:relative;z-index:1}
+  .badge{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line2);
+    background:var(--surface);border-radius:999px;padding:7px 14px;font-size:13px;color:var(--muted);font-weight:600}
+  .badge .dot{width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:0 0 10px var(--lime)}
+  .hero h1{font-size:clamp(40px,7vw,76px);font-weight:800;margin:26px 0 0}
+  .hero p.sub{max-width:620px;margin:20px auto 0;font-size:clamp(16px,2.2vw,19px);color:var(--muted)}
+  .hero-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:32px}
+  .hero-note{margin-top:16px;font-size:13px;color:var(--muted2)}
+
+  /* Stat strip */
+  .strip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:64px}
+  .strip .cell{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-sm);padding:18px}
+  .strip .n{font-size:24px;font-weight:800}
+  .strip .l{font-size:12.5px;color:var(--muted);margin-top:2px}
+  @media(max-width:720px){.strip{grid-template-columns:repeat(2,1fr)}}
+
+  /* Sections */
+  section{padding:74px 0;position:relative}
+  .sec-head{max-width:680px;margin:0 auto 44px;text-align:center}
+  .sec-head p{margin-top:14px;color:var(--muted);font-size:16.5px}
+
+  /* Feature grid */
+  .grid{display:grid;gap:16px}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:900px){.g3{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:620px){.g3,.g2{grid-template-columns:1fr}}
+  .card{border:1px solid var(--line);background:linear-gradient(180deg,var(--surface),var(--bg2));
+    border-radius:var(--radius);padding:24px;transition:.2s}
+  .card:hover{border-color:var(--line2);transform:translateY(-3px)}
+  .ic{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;
+    background:rgba(204,255,48,.12);color:var(--lime);margin-bottom:16px}
+  .ic svg{width:22px;height:22px}
+  .card h3{margin-bottom:8px}
+  .card p{font-size:14.5px;color:var(--muted)}
+  .card ul{margin:12px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:7px}
+  .card ul li{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 10px}
+
+  /* Modes */
+  .modes{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:820px){.modes{grid-template-columns:1fr}}
+  .mode{border:1px solid var(--line);border-radius:var(--radius);padding:30px;position:relative;overflow:hidden}
+  .mode.client{background:linear-gradient(180deg,rgba(204,255,48,.06),var(--surface))}
+  .mode.trainer{background:linear-gradient(180deg,rgba(255,178,122,.08),var(--surface))}
+  .mode .tag{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+  .mode.client .tag{color:var(--lime)}
+  .mode.trainer .tag{color:var(--peach)}
+  .mode h3{font-size:26px;margin:10px 0 6px}
+  .mode>p{color:var(--muted);font-size:15px}
+  .mode .list{margin-top:18px;display:flex;flex-direction:column;gap:11px}
+  .mode .list .row{display:flex;gap:11px;align-items:flex-start;font-size:14.5px}
+  .mode .list .row svg{width:18px;height:18px;flex:none;margin-top:2px}
+  .mode.client .list .row svg{color:var(--lime)}
+  .mode.trainer .list .row svg{color:var(--peach)}
+  .mode .list .row b{font-weight:600}
+  .mode .list .row span{color:var(--muted)}
+
+  /* Split feature rows */
+  .feature-row{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+  .feature-row.rev .txt{order:2}
+  @media(max-width:820px){.feature-row{grid-template-columns:1fr;gap:22px}.feature-row.rev .txt{order:0}}
+  .feature-row h2{font-size:clamp(26px,3.6vw,36px)}
+  .feature-row .lead{margin-top:14px;color:var(--muted);font-size:16px}
+  .chk{margin-top:20px;display:flex;flex-direction:column;gap:12px}
+  .chk .row{display:flex;gap:11px;font-size:14.5px}
+  .chk .row svg{width:19px;height:19px;color:var(--lime);flex:none;margin-top:2px}
+  .chk .row b{font-weight:600}
+  .chk .row span{color:var(--muted)}
+
+  /* Mock panels (pure CSS previews) */
+  .mock{border:1px solid var(--line2);border-radius:var(--radius);background:linear-gradient(180deg,var(--surface2),var(--surface));
+    padding:18px;box-shadow:0 30px 60px -30px rgba(0,0,0,.7)}
+  .mock .mrow{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line);
+    border-radius:13px;background:var(--bg2);margin-bottom:10px}
+  .mock .mrow:last-child{margin-bottom:0}
+  .mock .mdot{width:32px;height:32px;border-radius:9px;background:rgba(204,255,48,.14);flex:none}
+  .mock .bars{flex:1;display:flex;flex-direction:column;gap:6px}
+  .mock .bar{height:8px;border-radius:6px;background:var(--line2)}
+  .mock .bar.s{width:55%}
+  .mock .pill{font-size:11px;font-weight:700;color:var(--lime-ink);background:var(--lime);border-radius:8px;padding:5px 10px}
+  .mock .pill.q{background:rgba(204,255,48,.15);color:var(--lime)}
+  /* chart mock */
+  .chart{height:150px;border:1px solid var(--line);border-radius:14px;background:var(--bg2);
+    padding:14px;position:relative;overflow:hidden}
+  .chart svg{width:100%;height:100%}
+
+  /* Themes */
+  .themes{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  @media(max-width:720px){.themes{grid-template-columns:repeat(2,1fr)}}
+  .swatch{border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;background:var(--surface)}
+  .swatch .prev{padding:16px}
+  .swatch .mini{border-radius:10px;padding:9px}
+  .swatch .mini .l{height:7px;border-radius:5px;margin-bottom:6px}
+  .swatch .btnm{height:20px;border-radius:7px;margin-top:9px}
+  .swatch .cap{padding:11px 14px;border-top:1px solid var(--line)}
+  .swatch .cap b{font-size:14px}
+  .swatch .cap span{display:block;font-size:11.5px;color:var(--muted);text-transform:capitalize}
+
+  /* Pricing */
+  .price{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:stretch}
+  @media(max-width:860px){.price{grid-template-columns:1fr}}
+  .plan{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);padding:28px;display:flex;flex-direction:column}
+  .plan.pop{border-color:var(--lime);background:linear-gradient(180deg,rgba(204,255,48,.07),var(--surface));position:relative}
+  .plan.pop .flag{position:absolute;top:-11px;left:28px;background:var(--lime);color:var(--lime-ink);
+    font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:4px 11px;border-radius:999px}
+  .plan .pname{font-weight:700;font-size:15px}
+  .plan .cost{margin:12px 0 2px;font-size:38px;font-weight:800;letter-spacing:-.02em}
+  .plan .cost small{font-size:14px;font-weight:600;color:var(--muted)}
+  .plan .pdesc{color:var(--muted);font-size:13.5px;min-height:38px}
+  .plan ul{list-style:none;margin:18px 0 22px;padding:0;display:flex;flex-direction:column;gap:10px;flex:1}
+  .plan ul li{display:flex;gap:9px;font-size:14px;color:var(--muted)}
+  .plan ul li svg{width:18px;height:18px;color:var(--lime);flex:none;margin-top:1px}
+  .plan .btn{justify-content:center}
+
+  /* CTA */
+  .cta{position:relative;text-align:center;border:1px solid var(--line2);border-radius:calc(var(--radius) + 6px);
+    background:linear-gradient(180deg,var(--surface2),var(--bg2));padding:56px 24px;overflow:hidden}
+  .cta::before{content:"";position:absolute;inset:0;background:radial-gradient(60% 120% at 50% 0%,rgba(204,255,48,.14),transparent 70%)}
+  .cta *{position:relative}
+  .cta h2{font-size:clamp(28px,4.4vw,42px)}
+  .cta p{color:var(--muted);margin-top:14px;max-width:520px;margin-inline:auto}
+
+  footer{border-top:1px solid var(--line);padding:40px 0 60px;margin-top:20px}
+  .foot{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:center}
+  .foot .links{display:flex;gap:22px;flex-wrap:wrap}
+  .foot .links a{font-size:14px;color:var(--muted)}
+  .foot .links a:hover{color:var(--text)}
+  .foot small{color:var(--muted2);font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="nav">
+  <div class="wrap nav-in">
+    <div class="brand">Stellio <span class="grad">Fit</span></div>
+    <nav class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#workout">Training</a>
+      <a href="#trainers">For Trainers</a>
+      <a href="#pricing">Pricing</a>
+      <a href="https://stellio.fit" class="btn btn-primary">Get started</a>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="wrap">
+    <span class="badge"><span class="dot"></span> Members &amp; coaches · PWA · iOS &amp; Android</span>
+    <h1>Train Smarter.<br><span class="grad">Build Stronger.</span></h1>
+    <p class="sub">Stellio Fit is a premium training platform — guided programs, intelligent workout logging,
+      deep progress tracking and an AI coach for members, plus a complete business toolkit for personal trainers.</p>
+    <div class="hero-cta">
+      <a href="https://stellio.fit" class="btn btn-primary">Start free →</a>
+      <a href="#features" class="btn btn-ghost">See everything inside</a>
+    </div>
+    <p class="hero-note">Free to start · No credit card · Install to your home screen</p>
+
+    <div class="strip">
+      <div class="cell"><div class="n grad">2 modes</div><div class="l">Member &amp; Trainer, one app</div></div>
+      <div class="cell"><div class="n">GIF-guided</div><div class="l">Animated exercise demos</div></div>
+      <div class="cell"><div class="n">AI coach</div><div class="l">Weekly recaps &amp; tips</div></div>
+      <div class="cell"><div class="n">4 themes</div><div class="l">Light &amp; dark, your colour</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODES -->
+<section id="modes">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">One platform, two experiences</span>
+      <h2 style="margin-top:12px">Built for the person training —<br>and the coach behind them</h2>
+      <p>Sign up as a member to train yourself, or as a trainer to run your coaching business. Trainers get their first client free.</p>
+    </div>
+    <div class="modes">
+      <!-- CLIENT -->
+      <div class="mode client">
+        <span class="tag">Client mode</span>
+        <h3>Your personal training app</h3>
+        <p>Follow a structured program or build your own split, log every set with smart guidance, and watch your progress compound.</p>
+        <div class="list">
+          <div class="row">%CHK% <div><b>Guided programs</b> <span>— pick a plan; we build your training week (sequential, weekly split or calendar).</span></div></div>
+          <div class="row">%CHK% <div><b>Smart workout mode</b> <span>— set logging, RPE, rest timer, GIF demos, supersets, warm-ups and progressive-overload targets.</span></div></div>
+          <div class="row">%CHK% <div><b>Deep progress</b> <span>— weight trend, body scans, photos, strength charts, heatmap and muscle balance.</span></div></div>
+          <div class="row">%CHK% <div><b>AI coach &amp; wellness</b> <span>— weekly recaps, water &amp; sleep, recovery check-ins, streaks and achievements.</span></div></div>
+        </div>
+      </div>
+      <!-- TRAINER -->
+      <div class="mode trainer">
+        <span class="tag">Trainer mode</span>
+        <h3>Run your coaching business</h3>
+        <p>Manage clients, build and assign programs, sell packages and message clients — all under your own brand.</p>
+        <div class="list">
+          <div class="row">%CHKP% <div><b>Client management</b> <span>— invite clients, track adherence, assign plans that appear in their app instantly.</span></div></div>
+          <div class="row">%CHKP% <div><b>Program builder</b> <span>— days, exercises, sets/reps/rest, one-tap exercise swap and superset grouping.</span></div></div>
+          <div class="row">%CHKP% <div><b>Packages &amp; billing</b> <span>— sell coaching packages with secure Stripe checkout and a customer portal.</span></div></div>
+          <div class="row">%CHKP% <div><b>Your brand</b> <span>— accent colour, logo and videos, plus in-app coach ↔ client messaging.</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURE GRID -->
+<section id="features" style="background:var(--bg2)">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Everything included</span>
+      <h2 style="margin-top:12px">A complete training toolkit</h2>
+      <p>No add-ons, no scattered apps. From your first workout to long-term body composition, it's all in one place.</p>
+    </div>
+    <div class="grid g3">
+
+      <div class="card">
+        <div class="ic">%DUMBBELL%</div>
+        <h3>Programs &amp; splits</h3>
+        <p>Ready-made programs with guided enrolment, plus a custom split builder (Full Body, Push/Pull/Legs and more) you can start any day.</p>
+        <ul><li>Sequential</li><li>Weekly split</li><li>Calendar</li><li>Starter templates</li></ul>
+      </div>
+
+      <div class="card">
+        <div class="ic">%FLAME%</div>
+        <h3>Smart workout mode</h3>
+        <p>Log sets and RPE, follow GIF demos and technique cues, rest with a built-in timer, and get an overload target from last session.</p>
+        <ul><li>Supersets &amp; circuits</li><li>Warm-up timer</li><li>Plate &amp; 1RM calc</li><li>Pause · resume · cancel</li></ul>
+      </div>
+
+      <div class="card">
+        <div class="ic">%CHART%</div>
+        <h3>Progress tracking</h3>
+        <p>A shareable weight trend, strength progress per lift, weekly volume, a 16-week activity heatmap and muscle-balance analysis.</p>
+        <ul><li>Body scans</li><li>Progress photos</li><li>Heatmap</li><li>Muscle balance</li></ul>
+      </div>
+
+      <div class="card">
+        <div class="ic">%SPARK%</div>
+        <h3>AI coach</h3>
+        <p>An intelligent weekly recap of your training, plus tailored suggestions to fix undertrained muscles and keep you progressing.</p>
+        <ul><li>Weekly recap</li><li>Smart tips</li><li>Undertrained flags</li></ul>
+      </div>
+
+      <div class="card">
+        <div class="ic">%DROP%</div>
+        <h3>Wellness &amp; recovery</h3>
+        <p>Track water and sleep by week or month, log recovery check-ins, and flag sore or injured areas for safer exercise swaps.</p>
+        <ul><li>Water &amp; sleep</li><li>Recovery routines</li><li>Injury-aware</li></ul>
+      </div>
+
+      <div class="card">
+        <div class="ic">%APPLE%</div>
+        <h3>Nutrition</h3>
+        <p>Set macro targets, log meals and browse a recipe library to fuel your goal — built right alongside your training.</p>
+        <ul><li>Macro targets</li><li>Meal log</li><li>Recipes</li></ul>
+      </div>
+
+      <div class="card">
+        <div class="ic">%TROPHY%</div>
+        <h3>Achievements &amp; streaks</h3>
+        <p>Earn milestones for streaks, personal records and volume, then share beautiful, on-brand cards to your socials in a tap.</p>
+        <ul><li>Milestones</li><li>Training streaks</li><li>Share cards</li></ul>
+      </div>
+
+      <div class="card">
+        <div class="ic">%USERS%</div>
+        <h3>Social &amp; friends</h3>
+        <p>Follow friends, post your workouts, react and comment, and get notified in-app and by push when your circle shows up.</p>
+        <ul><li>Activity feed</li><li>Friends</li><li>Push notifications</li></ul>
+      </div>
+
+      <div class="card">
+        <div class="ic">%PHONE%</div>
+        <h3>Yours, everywhere</h3>
+        <p>Install as an app, log offline and sync later, pick from four themes, and stay in control with data export and account deletion.</p>
+        <ul><li>PWA install</li><li>Offline logging</li><li>Web push</li><li>Data controls</li></ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- WORKOUT DEEP DIVE -->
+<section id="workout">
+  <div class="wrap">
+    <div class="feature-row">
+      <div class="txt">
+        <span class="eyebrow">Inside the workout</span>
+        <h2 style="margin-top:12px">The smartest way to log a session</h2>
+        <p class="lead">Everything you need mid-set, nothing you don't. One exercise at a time, guided by animation and backed by your history.</p>
+        <div class="chk">
+          <div class="row">%CK% <div><b>Progressive overload —</b> <span>we read your last session and suggest today's weight and reps.</span></div></div>
+          <div class="row">%CK% <div><b>Supersets &amp; circuits —</b> <span>grouped movements flow back-to-back, resting only after the round.</span></div></div>
+          <div class="row">%CK% <div><b>Warm-up first —</b> <span>a bike, treadmill or light-cardio timer before you lift.</span></div></div>
+          <div class="row">%CK% <div><b>Built-in tools —</b> <span>plate calculator, warm-up ramp and 1RM estimator, seeded to your working weight.</span></div></div>
+          <div class="row">%CK% <div><b>Timed exercises —</b> <span>planks and holds use a stopwatch, not kilos.</span></div></div>
+        </div>
+      </div>
+      <div class="mock" aria-hidden="true">
+        <div class="mrow"><div class="mdot"></div><div class="bars"><div class="bar"></div><div class="bar s"></div></div><span class="pill">Try 42.5kg × 8</span></div>
+        <div class="mrow"><div class="mdot" style="background:rgba(255,178,122,.16)"></div><div class="bars"><div class="bar"></div><div class="bar s"></div></div><span class="pill q">Superset A</span></div>
+        <div class="mrow"><div class="mdot"></div><div class="bars"><div class="bar"></div><div class="bar s"></div></div><span class="pill q">Rest 1:30</span></div>
+        <div class="mrow"><div class="mdot"></div><div class="bars"><div class="bar"></div><div class="bar s"></div></div><span class="pill q">🔥 Warm-up</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROGRESS DEEP DIVE -->
+<section style="background:var(--bg2)">
+  <div class="wrap">
+    <div class="feature-row rev">
+      <div class="txt">
+        <span class="eyebrow">See it add up</span>
+        <h2 style="margin-top:12px">Progress you can actually read</h2>
+        <p class="lead">Charts that recolour with your theme, plus the deeper metrics serious lifters and coaches care about.</p>
+        <div class="chk">
+          <div class="row">%CK% <div><b>Weight trend —</b> <span>range-filtered and shareable as a branded card.</span></div></div>
+          <div class="row">%CK% <div><b>Strength &amp; volume —</b> <span>per-lift progress and weekly training volume over time.</span></div></div>
+          <div class="row">%CK% <div><b>Body composition —</b> <span>scan uploads and progress photos to watch your shape change.</span></div></div>
+          <div class="row">%CK% <div><b>Heatmap &amp; balance —</b> <span>16 weeks of activity and where your volume is skewed.</span></div></div>
+        </div>
+      </div>
+      <div class="mock" aria-hidden="true">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">
+          <div><div class="muted" style="font-size:12px">Body weight</div><div style="font-size:26px;font-weight:800">137.8 kg</div></div>
+          <span class="pill">All time</span>
+        </div>
+        <div class="chart">
+          <svg viewBox="0 0 300 120" preserveAspectRatio="none">
+            <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#ccff30" stop-opacity=".35"/><stop offset="1" stop-color="#ccff30" stop-opacity="0"/>
+            </linearGradient></defs>
+            <polygon fill="url(#g)" points="0,70 40,55 90,30 130,72 175,45 230,66 270,92 300,100 300,120 0,120"/>
+            <polyline fill="none" stroke="#ccff30" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"
+              points="0,70 40,55 90,30 130,72 175,45 230,66 270,92 300,100"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRAINER PLATFORM -->
+<section id="trainers">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">For personal trainers</span>
+      <h2 style="margin-top:12px">Everything to coach — and get paid</h2>
+      <p>Start free with your first client included. Upgrade to the Trainer plan for unlimited clients and the full coaching stack.</p>
+    </div>
+    <div class="grid g3">
+      <div class="card"><div class="ic" style="background:rgba(255,178,122,.14);color:var(--peach)">%USERS%</div>
+        <h3>Clients &amp; assignments</h3><p>Invite clients, assign programs that clone straight into their app, and revoke or reassign anytime.</p></div>
+      <div class="card"><div class="ic" style="background:rgba(255,178,122,.14);color:var(--peach)">%DUMBBELL%</div>
+        <h3>Program builder</h3><p>Compose training days with sets, reps, rest and notes. Swap any exercise and group supersets in a tap.</p></div>
+      <div class="card"><div class="ic" style="background:rgba(255,178,122,.14);color:var(--peach)">%CAL%</div>
+        <h3>Sessions &amp; check-ins</h3><p>Schedule coaching sessions and check-ins so clients always know what's next.</p></div>
+      <div class="card"><div class="ic" style="background:rgba(255,178,122,.14);color:var(--peach)">%CARD%</div>
+        <h3>Packages &amp; billing</h3><p>Sell coaching packages with Stripe checkout and a self-serve customer portal. You keep the relationship.</p></div>
+      <div class="card"><div class="ic" style="background:rgba(255,178,122,.14);color:var(--peach)">%BRUSH%</div>
+        <h3>Your branding</h3><p>Set your accent colour, logo and video library so the experience feels like your studio.</p></div>
+      <div class="card"><div class="ic" style="background:rgba(255,178,122,.14);color:var(--peach)">%CHAT%</div>
+        <h3>Messaging</h3><p>Talk to clients in-app, answer questions and keep them accountable between sessions.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- THEMES -->
+<section style="background:var(--bg2)">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Make it yours</span>
+      <h2 style="margin-top:12px">Four hand-tuned themes</h2>
+      <p>Two dark, two light — each with a curated accent that recolours the whole app, charts included.</p>
+    </div>
+    <div class="themes">
+      <!-- Midnight Lime -->
+      <div class="swatch"><div class="prev" style="background:#141414">
+        <div class="mini" style="background:#242424"><div class="l" style="width:70%;background:rgba(255,255,255,.22)"></div><div class="l" style="width:45%;background:rgba(255,255,255,.22)"></div></div>
+        <div class="btnm" style="background:#ccff30"></div></div>
+        <div class="cap"><b>Midnight Lime</b><span>dark · lime accent</span></div></div>
+      <!-- Midnight Peach -->
+      <div class="swatch"><div class="prev" style="background:#141414">
+        <div class="mini" style="background:#242424"><div class="l" style="width:70%;background:rgba(255,255,255,.22)"></div><div class="l" style="width:45%;background:rgba(255,255,255,.22)"></div></div>
+        <div class="btnm" style="background:#ffb27a"></div></div>
+        <div class="cap"><b>Midnight Peach</b><span>dark · peach accent</span></div></div>
+      <!-- Daylight Blue -->
+      <div class="swatch"><div class="prev" style="background:#eceef1">
+        <div class="mini" style="background:#fff"><div class="l" style="width:70%;background:rgba(0,0,0,.14)"></div><div class="l" style="width:45%;background:rgba(0,0,0,.14)"></div></div>
+        <div class="btnm" style="background:#3b82f6"></div></div>
+        <div class="cap"><b>Daylight Blue</b><span>light · blue accent</span></div></div>
+      <!-- Daylight Grey -->
+      <div class="swatch"><div class="prev" style="background:#eceef1">
+        <div class="mini" style="background:#fff"><div class="l" style="width:70%;background:rgba(0,0,0,.14)"></div><div class="l" style="width:45%;background:rgba(0,0,0,.14)"></div></div>
+        <div class="btnm" style="background:#64748b"></div></div>
+        <div class="cap"><b>Daylight Grey</b><span>light · grey accent</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Simple pricing</span>
+      <h2 style="margin-top:12px">Start free. Upgrade when you're ready.</h2>
+      <p>Members unlock everything with Pro. Trainers get their first client free, then go unlimited.</p>
+    </div>
+    <div class="price">
+      <!-- Free -->
+      <div class="plan">
+        <div class="pname">Member · Free</div>
+        <div class="cost">$0</div>
+        <div class="pdesc">Everything you need to start training with structure.</div>
+        <ul>
+          <li>%CK% Guided programs &amp; custom splits</li>
+          <li>%CK% Full workout mode &amp; tools</li>
+          <li>%CK% Progress, streaks &amp; achievements</li>
+          <li>%CK% Water, sleep &amp; check-ins</li>
+        </ul>
+        <a href="https://stellio.fit" class="btn btn-ghost">Get started</a>
+      </div>
+      <!-- Pro -->
+      <div class="plan pop">
+        <span class="flag">Most popular</span>
+        <div class="pname">Member · Pro</div>
+        <div class="cost">$10 <small>/ month</small></div>
+        <div class="pdesc">The full experience with AI, nutrition and body composition.</div>
+        <ul>
+          <li>%CK% Everything in Free</li>
+          <li>%CK% AI coach &amp; weekly recaps</li>
+          <li>%CK% Nutrition, recipes &amp; macros</li>
+          <li>%CK% Body-composition scans</li>
+        </ul>
+        <a href="https://stellio.fit" class="btn btn-primary">Go Pro</a>
+      </div>
+      <!-- Trainer -->
+      <div class="plan">
+        <div class="pname">Trainer</div>
+        <div class="cost">$15 <small>/ month</small></div>
+        <div class="pdesc">Run your coaching business. First client free.</div>
+        <ul>
+          <li>%CK% Unlimited clients</li>
+          <li>%CK% Program builder &amp; assignments</li>
+          <li>%CK% Packages, billing &amp; branding</li>
+          <li>%CK% Client messaging &amp; check-ins</li>
+        </ul>
+        <a href="https://stellio.fit" class="btn btn-ghost">Start coaching</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section>
+  <div class="wrap">
+    <div class="cta">
+      <span class="eyebrow">Ready when you are</span>
+      <h2 style="margin-top:12px">Your strongest year starts today</h2>
+      <p>Join Stellio Fit free, install it to your home screen, and train with a plan that actually adapts to you.</p>
+      <div class="hero-cta" style="margin-top:26px">
+        <a href="https://stellio.fit" class="btn btn-primary">Start free →</a>
+        <a href="#features" class="btn btn-ghost">Explore features</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot">
+    <div>
+      <div class="brand" style="font-size:18px">Stellio <span class="grad">Fit</span></div>
+      <small>Train Smarter. Build Stronger.</small>
+    </div>
+    <div class="links">
+      <a href="https://stellio.fit">Open the app</a>
+      <a href="https://stellio.fit/legal/privacy">Privacy</a>
+      <a href="https://stellio.fit/legal/terms">Terms</a>
+      <a href="mailto:hello@stellio.com.au">Contact</a>
+    </div>
+    <small>© 2026 Stellio Fit · stellio.fit</small>
+  </div>
+</footer>
+
+<script>
+// Inline the shared SVG icons (keeps the markup readable above).
+(function(){
+  var I = {
+    CHK:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+    CK:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+    DUMBBELL:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6.5 6.5 11 11"/><path d="m21 21-1-1"/><path d="m3 3 1 1"/><path d="m18 22 4-4"/><path d="m2 6 4-4"/><path d="m3 10 7-7"/><path d="m14 21 7-7"/></svg>',
+    FLAME:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
+    CHART:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/></svg>',
+    SPARK:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/></svg>',
+    DROP:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>',
+    APPLE:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06z"/><path d="M10 2c1 .5 2 2 2 5"/></svg>',
+    TROPHY:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
+    USERS:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    PHONE:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>',
+    CAL:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>',
+    CARD:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>',
+    BRUSH:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.622 17.897-10.68-2.913"/><path d="M18.376 2.622a1 1 0 1 1 3.002 3.002L17.36 9.643a.5.5 0 0 0 0 .707l.944.944a2.41 2.41 0 0 1 0 3.408l-.944.944a.5.5 0 0 1-.707 0L8.354 8.348a.5.5 0 0 1 0-.707l.944-.944a2.41 2.41 0 0 1 3.408 0l.944.944a.5.5 0 0 0 .707 0z"/><path d="M9 8c-1.804 2.71-3.97 3.46-6.583 3.948a.507.507 0 0 0-.302.819l7.32 8.883a1 1 0 0 0 1.185.204C12.735 20.405 16 16.792 16 15"/></svg>',
+    CHAT:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg>'
+  };
+  document.body.innerHTML = document.body.innerHTML.replace(/%([A-Z]+)%/g, function(m, k){ return I[k] || m; });
+})();
+</script>
+</body>
+</html>
