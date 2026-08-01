@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { startWorkout } from "@/lib/actions/workout";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,8 @@ export function StartWorkoutButton({
   const [open, setOpen] = useState(false);
   const [energy, setEnergy] = useState(3);
   const [readiness, setReadiness] = useState(3);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   function go() {
     startTransition(async () => {
@@ -55,7 +58,7 @@ export function StartWorkoutButton({
       <Button onClick={() => setOpen(true)} className={className}>
         <Play className="h-4 w-4" /> Start Workout
       </Button>
-      {open && (
+      {open && mounted && createPortal(
         <div className="fixed inset-0 z-[150] flex items-end justify-center bg-black/60 p-4 sm:items-center">
           <div className="w-full max-w-md rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-6">
             <h3 className="text-lg font-bold">Quick check-in</h3>
@@ -81,7 +84,8 @@ export function StartWorkoutButton({
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
