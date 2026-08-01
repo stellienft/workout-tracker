@@ -19,6 +19,25 @@ export default async function WorkoutPreviewPage({
 
   const { template, exercises } = loaded;
 
+  // Superset letters: runs of 2+ consecutive exercises sharing a group value.
+  const groupLetter = new Map<string, string>();
+  {
+    let letterIdx = 0;
+    let i = 0;
+    while (i < exercises.length) {
+      const g = exercises[i].superset_group;
+      let j = i;
+      while (j < exercises.length && g != null && exercises[j].superset_group === g) j++;
+      if (g != null && j - i >= 2) {
+        const letter = String.fromCharCode(65 + letterIdx++);
+        for (let k = i; k < j; k++) groupLetter.set(exercises[k].id, letter);
+        i = j;
+      } else {
+        i += 1;
+      }
+    }
+  }
+
   return (
     <div className="pb-12">
       <div className="relative h-56 w-full sm:h-72">
@@ -56,19 +75,35 @@ export default async function WorkoutPreviewPage({
                 alt={ex.exercise.name}
               />
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-[var(--text-muted)]">{i + 1}.</span>
-                  <p className="font-semibold">{ex.exercise.name}</p>
+                <div className="flex items-center gap-1.5">
+                  {groupLetter.has(ex.id) ? (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded bg-[var(--accent-primary)] px-1 text-[11px] font-bold text-[var(--accent-ink)]">
+                      {groupLetter.get(ex.id)}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-[var(--text-muted)]">{i + 1}.</span>
+                  )}
+                  <p className="truncate font-semibold">{ex.exercise.name}</p>
                   {!ex.exercise.shoulder_safe && (
-                    <ShieldAlert className="h-4 w-4 text-[var(--warning)]" />
+                    <ShieldAlert className="h-4 w-4 shrink-0 text-[var(--warning)]" />
                   )}
                 </div>
                 <p className="text-xs capitalize text-[var(--text-muted)]">
                   {ex.exercise.primary_muscles.join(", ")}
                 </p>
-                <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                  {ex.sets} sets × {repDisplay(ex)} · {ex.rest_seconds}s rest
-                </p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  <span className="rounded-md bg-[var(--surface-secondary)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">
+                    Sets {ex.sets}
+                  </span>
+                  <span className="rounded-md bg-[var(--surface-secondary)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">
+                    Reps {repDisplay(ex)}
+                  </span>
+                  {ex.rest_seconds > 0 && (
+                    <span className="rounded-md bg-[var(--surface-secondary)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">
+                      Rest {ex.rest_seconds}s
+                    </span>
+                  )}
+                </div>
                 {ex.notes && (
                   <p className="mt-1 text-xs text-[var(--warning)]">{ex.notes}</p>
                 )}

@@ -150,6 +150,7 @@ export function WorkoutMode({
   );
 
   const [cancelling, setCancelling] = useState(false);
+  const [showRpe, setShowRpe] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
   const [pending, setPending] = useState(0);
@@ -330,6 +331,13 @@ export function WorkoutMode({
     } catch {
       // stays queued
     }
+  }
+
+  function setRpe(ex: WorkoutExerciseVM, setIdx: number, v: string) {
+    const row = state[ex.exerciseId]?.[setIdx];
+    if (!row) return;
+    updateSet(ex.exerciseId, setIdx, { rpe: v });
+    if (row.done) persistSet(ex, { ...row, rpe: v }); // keep a saved set in sync
   }
 
   function startRest(sec: number) {
@@ -601,6 +609,21 @@ export function WorkoutMode({
             </button>
           )}
 
+          <div className="flex justify-end">
+            <button
+              onClick={() => setShowRpe((v) => !v)}
+              aria-pressed={showRpe}
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                showRpe
+                  ? "border-[var(--border-active)] bg-[var(--accent-muted)] text-[var(--accent-primary)]"
+                  : "border-[var(--border-subtle)] text-[var(--text-muted)]"
+              )}
+            >
+              {showRpe ? "Hide RPE" : "Log RPE"}
+            </button>
+          </div>
+
           {workingExercises.map((ex) => renderCard(ex))}
         </div>
       </div>
@@ -824,6 +847,12 @@ export function WorkoutMode({
     const meta = groupByExId.get(ex.exerciseId) ?? null;
     const timed = ex.trackingType === "time";
     const concernLabel = a.substituted ? null : exerciseConcern(concerns, a.primaryMuscles);
+    const rpeCol = !timed && showRpe;
+    const colsClass = timed
+      ? "grid-cols-[1.5rem_1fr_2.75rem]"
+      : rpeCol
+        ? "grid-cols-[1.5rem_1fr_1fr_3rem_2.75rem]"
+        : "grid-cols-[1.5rem_1fr_1fr_2.75rem]";
 
     const bigLift = a.primaryMuscles.some((m) =>
       ["quads", "quadriceps", "hamstrings", "glutes", "back", "lats"].includes(m.toLowerCase())
@@ -907,7 +936,7 @@ export function WorkoutMode({
           <div
             className={cn(
               "grid items-center gap-2 px-1 pb-1 text-[11px] uppercase tracking-wide text-[var(--text-muted)]",
-              timed ? "grid-cols-[1.5rem_1fr_2.75rem]" : "grid-cols-[1.5rem_1fr_1fr_2.75rem]"
+              colsClass
             )}
           >
             <span>#</span>
@@ -917,6 +946,7 @@ export function WorkoutMode({
               <>
                 <span>Weight</span>
                 <span>Reps</span>
+                {rpeCol && <span className="text-center">RPE</span>}
               </>
             )}
             <span className="text-center">Done</span>
@@ -937,13 +967,7 @@ export function WorkoutMode({
                   ? String(prev.reps)
                   : "reps";
             return (
-              <div
-                key={row.n}
-                className={cn(
-                  "grid items-center gap-2 py-1",
-                  timed ? "grid-cols-[1.5rem_1fr_2.75rem]" : "grid-cols-[1.5rem_1fr_1fr_2.75rem]"
-                )}
-              >
+              <div key={row.n} className={cn("grid items-center gap-2 py-1", colsClass)}>
                 <span className="text-center text-sm font-semibold text-[var(--text-secondary)]">
                   {i + 1}
                 </span>
@@ -980,6 +1004,13 @@ export function WorkoutMode({
                       onChange={(v) => updateSet(ex.exerciseId, i, { reps: v })}
                       placeholder={repsPlaceholder}
                     />
+                    {rpeCol && (
+                      <SetInput
+                        value={row.rpe}
+                        onChange={(v) => setRpe(ex, i, v)}
+                        placeholder="RPE"
+                      />
+                    )}
                   </>
                 )}
                 <button
