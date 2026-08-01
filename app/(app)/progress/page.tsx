@@ -14,6 +14,10 @@ import { MuscleSuggestions } from "@/components/progress/muscle-suggestions";
 import { BodyScanUpload } from "@/components/progress/body-scan-upload";
 import { BodyCompCard } from "@/components/progress/body-comp-card";
 import { BodyCompTrends } from "@/components/progress/body-comp-trends";
+import {
+  WellnessProgress,
+  type WellnessSummary,
+} from "@/components/progress/wellness-progress";
 import { getUserPlan } from "@/lib/entitlements";
 import Link from "next/link";
 
@@ -169,6 +173,40 @@ export default async function ProgressPage() {
   // Total volume per week (last 12 weeks).
   const volumeData = buildWeeklyVolume(setLogsWithNames, tz);
 
+  // Water & sleep: last 31 local days, summarised for this week / this month.
+  const localDate = (d: Date) =>
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: tz,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(d);
+  const todayLocal = localDate(new Date());
+  const monthPrefix = todayLocal.slice(0, 7);
+  const weekDates = new Set(
+    Array.from({ length: 7 }, (_, i) => localDate(new Date(Date.now() - i * 86_400_000)))
+  );
+  const { data: wellnessRows } = await supabase
+    .from("daily_wellness")
+    .select("logged_on, water_ml, sleep_hours")
+    .eq("user_id", user.id)
+    .gte("logged_on", localDate(new Date(Date.now() - 31 * 86_400_000)))
+    .order("logged_on", { ascending: false });
+  const wellness = (wellnessRows ?? []) as {
+    logged_on: string;
+    water_ml: number | null;
+    sleep_hours: number | null;
+  }[];
+  const todayWellness = wellness.find((w) => w.logged_on === todayLocal) ?? null;
+  const summarise = (rows: typeof wellness): WellnessSummary => {
+    const water = rows.filter((r) => (r.water_ml ?? 0) > 0).map((r) => r.water_ml as number);
+    const sleep = rows.filter((r) => r.sleep_hours != null).map((r) => Number(r.sleep_hours));
+    const mean = (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
+    return { days: rows.length, avgWaterMl: mean(water), avgSleepHours: mean(sleep) };
+  };
+  const weekSummary = summarise(wellness.filter((w) => weekDates.has(w.logged_on)));
+  const monthSummary = summarise(wellness.filter((w) => w.logged_on.startsWith(monthPrefix)));
+
   return (
     <PageShell>
       <PageHeader
@@ -205,6 +243,18 @@ export default async function ProgressPage() {
 
       <div className="mt-6">
         <WeightProgress data={weightData} tz={tz} />
+      </div>
+
+      <div className="mt-6">
+        <WellnessProgress
+          today={todayLocal}
+          initialWaterMl={Number(todayWellness?.water_ml ?? 0)}
+          initialSleepHours={
+            todayWellness?.sleep_hours != null ? Number(todayWellness.sleep_hours) : null
+          }
+          week={weekSummary}
+          month={monthSummary}
+        />
       </div>
 
       {/* Body Composition Scan — Pro only */}

@@ -1,32 +1,24 @@
 import { Flame } from "lucide-react";
 import type { StreakInfo } from "@/lib/streak";
 
-/** Prominent streak banner — celebrates a run and nudges when it's at risk. */
+/** Condensed streak banner — a slim single row rather than a big card. */
 export function StreakCard({ streak }: { streak: StreakInfo }) {
   if (streak.current === 0) return null;
 
   const { current, atRisk } = streak;
   return (
     <div
-      className={`mt-4 flex items-center gap-4 rounded-[var(--radius-card)] border p-4 ${
+      className={`mt-4 inline-flex max-w-full items-center gap-2 rounded-full border px-3.5 py-2 ${
         atRisk
-          ? "border-[var(--border-active)] bg-[var(--surface-primary)] ring-1 ring-[var(--accent-primary)]/25"
+          ? "border-[var(--border-active)] bg-[var(--accent-muted)]"
           : "border-[var(--border-subtle)] bg-[var(--surface-primary)]"
       }`}
     >
-      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--accent-muted)] text-[var(--accent-primary)]">
-        <Flame className="h-6 w-6" />
+      <Flame className="h-4 w-4 shrink-0 text-[var(--accent-primary)]" />
+      <span className="text-sm font-semibold">{current}-day streak</span>
+      <span className="truncate text-xs text-[var(--text-muted)]">
+        {atRisk ? "· train today to keep it alive" : "· keep it going"}
       </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-lg font-bold">
-          {current} day{current === 1 ? "" : "s"} streak
-        </p>
-        <p className="text-sm text-[var(--text-secondary)]">
-          {atRisk
-            ? "Train today to keep it alive 🔥"
-            : "Nice work — keep it going 🔥"}
-        </p>
-      </div>
     </div>
   );
 }

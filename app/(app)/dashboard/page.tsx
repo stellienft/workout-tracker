@@ -9,15 +9,13 @@ import { TodayHeroCard } from "@/components/dashboard/today-hero";
 import { WeeklyCompletionCard } from "@/components/dashboard/weekly-completion";
 import { StreakCard } from "@/components/dashboard/streak-card";
 import { WeeklyRecapCard } from "@/components/dashboard/weekly-recap-card";
-import { WellnessTrackers } from "@/components/dashboard/wellness-trackers";
+import { ResumeBanner } from "@/components/dashboard/resume-banner";
 import { computeStreak } from "@/lib/streak";
 import { getCachedRecap } from "@/lib/actions/recap";
 import { quoteForDate } from "@/lib/quotes";
 import { StatCard } from "@/components/ui/card";
-import { ProgramCard } from "@/components/program-card";
 import { CoverImage } from "@/components/ui/cover-image";
 import { formatDuration } from "@/lib/utils";
-import type { Program } from "@/lib/types";
 
 export const metadata = { title: "Dashboard" };
 
@@ -130,51 +128,6 @@ export default async function DashboardPage() {
       : splitDay.custom_splits
     : null;
 
-  // Today's wellness (water + sleep), keyed to the member's local day.
-  const tzLocal = profile?.timezone || "Australia/Brisbane";
-  const todayLocal = new Intl.DateTimeFormat("en-CA", {
-    timeZone: tzLocal,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-  const { data: wellness } = await supabase
-    .from("daily_wellness")
-    .select("water_ml, sleep_hours")
-    .eq("user_id", user.id)
-    .eq("logged_on", todayLocal)
-    .maybeSingle();
-
-  // Discovery: featured programs.
-  const { data: featured } = await supabase
-    .from("featured_content")
-    .select("*")
-    .eq("placement", "dashboard_discover")
-    .eq("active", true)
-    .order("display_order");
-
-  const discoverIds = (featured ?? [])
-    .filter((f) => f.content_type === "program" && f.content_id)
-    .map((f) => f.content_id);
-  let discoverPrograms: Program[] = [];
-  let savedProgramIds = new Set<string>();
-  if (discoverIds.length) {
-    const [{ data }, { data: saved }] = await Promise.all([
-      supabase
-        .from("programs")
-        .select("*")
-        .in("id", discoverIds)
-        .eq("status", "published"),
-      supabase
-        .from("saved_programs")
-        .select("program_id")
-        .eq("user_id", user.id)
-        .in("program_id", discoverIds),
-    ]);
-    discoverPrograms = (data ?? []) as Program[];
-    savedProgramIds = new Set((saved ?? []).map((s) => s.program_id as string));
-  }
-
   const firstName = (profile?.full_name || "Athlete").split(" ")[0];
   const quote = quoteForDate();
   const cachedRecap = await getCachedRecap();
@@ -240,43 +193,22 @@ export default async function DashboardPage() {
 
       {/* Resume an in-progress split workout (outside the program engine) */}
       {splitSession && (
-        <Link
-          href={`/workout/${splitSession.id}`}
-          className="mt-5 flex items-center justify-between rounded-[var(--radius-card)] border border-[var(--border-active)] bg-[var(--accent-muted)] p-4"
-        >
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--accent-primary)]">
-              Resume split workout
-            </p>
-            <p className="text-sm text-[var(--text-secondary)]">
-              {splitParent?.name ? `${splitParent.name} · ` : ""}
-              {splitDay?.name ?? "In progress"} — pick up where you left off.
-            </p>
-          </div>
-          <span className="rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)]">
-            Continue
-          </span>
-        </Link>
+        <ResumeBanner
+          sessionId={splitSession.id as string}
+          kicker="Resume split workout"
+          detail={`${splitParent?.name ? `${splitParent.name} · ` : ""}${
+            splitDay?.name ?? "In progress"
+          } — pick up where you left off.`}
+        />
       )}
 
       {/* Continue unfinished */}
       {dash.inProgressSession && (
-        <Link
-          href={`/workout/${dash.inProgressSession.id}`}
-          className="mt-5 flex items-center justify-between rounded-[var(--radius-card)] border border-[var(--border-active)] bg-[var(--accent-muted)] p-4"
-        >
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--accent-primary)]">
-              Resume workout
-            </p>
-            <p className="text-sm text-[var(--text-secondary)]">
-              You have a workout in progress — pick up where you left off.
-            </p>
-          </div>
-          <span className="rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)]">
-            Continue
-          </span>
-        </Link>
+        <ResumeBanner
+          sessionId={dash.inProgressSession.id}
+          kicker="Resume workout"
+          detail="You have a workout in progress — pick up where you left off."
+        />
       )}
 
       {/* Hero + weekly */}
@@ -305,21 +237,19 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <StreakCard streak={streak} />
-
-      <div className="mt-4">
-        <WeeklyRecapCard initial={cachedRecap} />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <StreakCard streak={streak} />
+        {dash.enrolment && (
+          <Link
+            href="/programs/current"
+            className="text-sm text-[var(--accent-primary)]"
+          >
+            Manage program
+          </Link>
+        )}
       </div>
 
-      <div className="mt-4">
-        <WellnessTrackers
-          date={todayLocal}
-          initialWaterMl={Number(wellness?.water_ml ?? 0)}
-          initialSleepHours={wellness?.sleep_hours != null ? Number(wellness.sleep_hours) : null}
-        />
-      </div>
-
-      {/* Your splits */}
+      {/* Your splits — show two, link out for the rest */}
       {splits.length > 0 && (
         <section className="mt-6">
           <div className="flex items-center justify-between">
@@ -329,7 +259,7 @@ export default async function DashboardPage() {
             </Link>
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            {splits.map((s) => (
+            {splits.slice(0, 2).map((s) => (
               <Link
                 key={s.id}
                 href={`/splits/${s.id}`}
@@ -347,6 +277,14 @@ export default async function DashboardPage() {
               </Link>
             ))}
           </div>
+          {splits.length > 2 && (
+            <Link
+              href="/splits"
+              className="mt-3 flex w-full items-center justify-center rounded-[var(--radius-card)] border border-dashed border-[var(--border-subtle)] py-3 text-sm text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)]"
+            >
+              View all {splits.length} splits
+            </Link>
+          )}
         </section>
       )}
 
@@ -411,22 +349,10 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      {/* Discovery */}
-      {discoverPrograms.length > 0 && (
-        <section className="mt-8">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold">Discover programs</h2>
-            <Link href="/programs" className="text-sm text-[var(--accent-primary)]">
-              See all
-            </Link>
-          </div>
-          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {discoverPrograms.map((p) => (
-              <ProgramCard key={p.id} program={p} saved={savedProgramIds.has(p.id)} />
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Weekly AI recap — moved to the bottom to keep the top focused. */}
+      <div className="mt-8">
+        <WeeklyRecapCard initial={cachedRecap} />
+      </div>
 
       {/* Recovery / check-in prompt */}
       <section className="mt-8">
