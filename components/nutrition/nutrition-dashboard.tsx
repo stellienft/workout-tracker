@@ -11,6 +11,7 @@ import {
   Trash2,
   Clock,
   SlidersHorizontal,
+  ScanLine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -21,7 +22,10 @@ import {
   addCustomFood,
   deleteMealEntry,
   saveNutritionTargets,
+  lookupBarcode,
+  type ScannedProduct,
 } from "@/lib/actions/nutrition";
+import { BarcodeScanner } from "@/components/nutrition/barcode-scanner";
 
 interface Entry {
   id: string;
@@ -353,7 +357,7 @@ function AddModal({
 }) {
   const toast = useToast();
   const [pending, startTransition] = useTransition();
-  const [tab, setTab] = useState<"recipes" | "custom">("recipes");
+  const [tab, setTab] = useState<"recipes" | "custom" | "scan">("recipes");
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<string | null>(null);
   const [selected, setSelected] = useState<Recipe | null>(null);
@@ -367,6 +371,53 @@ function AddModal({
   const [cP, setCP] = useState("");
   const [cC, setCC] = useState("");
   const [cF, setCF] = useState("");
+
+  // Scan
+  const [scanBusy, setScanBusy] = useState(false);
+  const [scanned, setScanned] = useState<ScannedProduct | null>(null);
+  const [grams, setGrams] = useState("100");
+
+  function handleBarcode(code: string) {
+    setScanBusy(true);
+    startTransition(async () => {
+      const res = await lookupBarcode(code);
+      setScanBusy(false);
+      if (res.ok) {
+        setScanned(res.product);
+        setGrams(String(res.product.servingG ?? 100));
+      } else {
+        toast(
+          res.error === "not_found"
+            ? "No product found for that barcode."
+            : "Couldn't look up that barcode.",
+          "error"
+        );
+      }
+    });
+  }
+
+  function addScanned() {
+    if (!scanned) return;
+    const g = Math.max(0, Number(grams) || 0);
+    const f = g / 100;
+    startTransition(async () => {
+      const res = await addCustomFood({
+        date,
+        meal,
+        title: scanned.brand ? `${scanned.name} (${scanned.brand})` : scanned.name,
+        calories: Math.round(scanned.per100.kcal * f),
+        protein_g: Math.round(scanned.per100.protein * f),
+        carbs_g: Math.round(scanned.per100.carbs * f),
+        fat_g: Math.round(scanned.per100.fat * f),
+      });
+      if (res.ok) {
+        toast("Added to " + meal, "success");
+        onDone();
+      } else {
+        toast(res.error ?? "Could not add", "error");
+      }
+    });
+  }
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -500,18 +551,19 @@ function AddModal({
         ) : (
           <>
             <div className="flex gap-2 border-b border-[var(--border-subtle)] p-3">
-              {(["recipes", "custom"] as const).map((tb) => (
+              {(["recipes", "custom", "scan"] as const).map((tb) => (
                 <button
                   key={tb}
                   onClick={() => setTab(tb)}
                   className={cn(
-                    "flex-1 rounded-xl py-2 text-sm font-medium capitalize",
+                    "flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-medium",
                     tab === tb
                       ? "bg-[var(--accent-muted)] text-[var(--accent-primary)]"
                       : "text-[var(--text-secondary)]"
                   )}
                 >
-                  {tb === "custom" ? "Quick add" : "Recipes"}
+                  {tb === "scan" && <ScanLine className="h-4 w-4" />}
+                  {tb === "custom" ? "Quick add" : tb === "scan" ? "Scan" : "Recipes"}
                 </button>
               ))}
             </div>
@@ -594,7 +646,7 @@ function AddModal({
                   )}
                 </div>
               </>
-            ) : (
+            ) : tab === "custom" ? (
               <div className="space-y-3 overflow-y-auto p-4">
                 <input
                   value={cTitle}
@@ -631,6 +683,90 @@ function AddModal({
                 >
                   {pending ? "Adding…" : "Add food"}
                 </Button>
+              </div>
+            ) : (
+              <div className="space-y-3 overflow-y-auto p-4">
+                {!scanned ? (
+                  <BarcodeScanner onDetected={handleBarcode} busy={scanBusy} />
+                ) : (
+                  (() => {
+                    const g = Math.max(0, Number(grams) || 0);
+                    const f = g / 100;
+                    const m = (v: number) => Math.round(v * f);
+                    return (
+                      <div className="space-y-4">
+                        <div>
+                          <p className="font-semibold">{scanned.name}</p>
+                          {scanned.brand && (
+                            <p className="text-xs text-[var(--text-muted)]">{scanned.brand}</p>
+                          )}
+                        </div>
+                        {scanned.hasMacros ? (
+                          <>
+                            <label className="flex items-center gap-3 text-sm">
+                              Amount
+                              <input
+                                type="number"
+                                min={0}
+                                step={10}
+                                value={grams}
+                                onChange={(e) => setGrams(e.target.value)}
+                                className="h-11 w-24 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm text-[var(--text-primary)]"
+                              />
+                              <span className="text-[var(--text-muted)]">g</span>
+                              {scanned.servingG && (
+                                <button
+                                  onClick={() => setGrams(String(scanned.servingG))}
+                                  className="text-xs text-[var(--accent-primary)]"
+                                >
+                                  1 serving ({scanned.servingG}g)
+                                </button>
+                              )}
+                            </label>
+                            <div className="grid grid-cols-4 gap-2 text-center">
+                              {[
+                                ["kcal", m(scanned.per100.kcal)],
+                                ["P", m(scanned.per100.protein)],
+                                ["C", m(scanned.per100.carbs)],
+                                ["F", m(scanned.per100.fat)],
+                              ].map(([lbl, v]) => (
+                                <div
+                                  key={lbl as string}
+                                  className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-2"
+                                >
+                                  <p className="text-sm font-bold">{v as number}</p>
+                                  <p className="text-[10px] text-[var(--text-muted)]">{lbl as string}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        ) : (
+                          <p className="text-sm text-[var(--warning)]">
+                            No nutrition data for this product. Try Quick add to enter macros
+                            manually.
+                          </p>
+                        )}
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={addScanned}
+                            disabled={pending || !scanned.hasMacros}
+                            size="lg"
+                            className="flex-1"
+                          >
+                            {pending ? "Adding…" : "Add to " + meal}
+                          </Button>
+                          <Button
+                            onClick={() => setScanned(null)}
+                            variant="secondary"
+                            size="lg"
+                          >
+                            Rescan
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })()
+                )}
               </div>
             )}
           </>

@@ -168,3 +168,77 @@ export async function deleteMealEntry(id: string) {
   revalidatePath("/nutrition");
   return { ok: true as const };
 }
+
+export interface ScannedProduct {
+  code: string;
+  name: string;
+  brand: string | null;
+  per100: { kcal: number; protein: number; carbs: number; fat: number };
+  servingG: number | null;
+  hasMacros: boolean;
+}
+
+/**
+ * Look up a scanned barcode against Open Food Facts (free, no key). Returns
+ * normalised per-100g macros so the client can scale to any quantity.
+ */
+export async function lookupBarcode(
+  code: string
+): Promise<
+  | { ok: true; product: ScannedProduct }
+  | { ok: false; error: "not_found" | "invalid" | "failed" }
+> {
+  const barcode = (code || "").replace(/\D/g, "");
+  if (barcode.length < 6 || barcode.length > 14) return { ok: false, error: "invalid" };
+
+  try {
+    const url =
+      `https://world.openfoodfacts.org/api/v2/product/${barcode}.json` +
+      `?fields=product_name,brands,nutriments,serving_quantity`;
+    const res = await fetch(url, {
+      headers: { "User-Agent": "StellioFit/1.0 (hello@stellio.com.au)" },
+      next: { revalidate: 86400 },
+    });
+    if (!res.ok) return { ok: false, error: "failed" };
+    const data = (await res.json()) as {
+      status?: number;
+      product?: {
+        product_name?: string;
+        brands?: string;
+        serving_quantity?: number | string;
+        nutriments?: Record<string, number | string>;
+      };
+    };
+    if (data.status !== 1 || !data.product) return { ok: false, error: "not_found" };
+
+    const p = data.product;
+    const n = p.nutriments ?? {};
+    const num = (v: unknown) => {
+      const x = typeof v === "number" ? v : Number(v);
+      return Number.isFinite(x) ? x : 0;
+    };
+    let kcal = num(n["energy-kcal_100g"]);
+    if (!kcal && n["energy_100g"]) kcal = num(n["energy_100g"]) / 4.184; // kJ → kcal
+    const per100 = {
+      kcal: Math.round(kcal),
+      protein: Math.round(num(n["proteins_100g"])),
+      carbs: Math.round(num(n["carbohydrates_100g"])),
+      fat: Math.round(num(n["fat_100g"])),
+    };
+    const servingRaw = num(p.serving_quantity);
+    return {
+      ok: true,
+      product: {
+        code: barcode,
+        name: (p.product_name || "").trim() || "Scanned product",
+        brand: (p.brands || "").split(",")[0]?.trim() || null,
+        per100,
+        servingG: servingRaw > 0 ? servingRaw : null,
+        hasMacros:
+          per100.kcal > 0 || per100.protein > 0 || per100.carbs > 0 || per100.fat > 0,
+      },
+    };
+  } catch {
+    return { ok: false, error: "failed" };
+  }
+}
