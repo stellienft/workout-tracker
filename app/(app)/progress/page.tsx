@@ -19,6 +19,7 @@ import {
   type WellnessSummary,
 } from "@/components/progress/wellness-progress";
 import { getUserPlan } from "@/lib/entitlements";
+import { Download } from "lucide-react";
 import Link from "next/link";
 
 export const metadata = { title: "Progress" };
@@ -215,9 +216,9 @@ export default async function ProgressPage() {
         action={
           <Link
             href="/api/export"
-            className="rounded-2xl border border-[var(--border-subtle)] px-4 py-2 text-sm"
+            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-2xl border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium hover:border-[var(--border-active)]"
           >
-            Export data
+            <Download className="h-4 w-4" /> Export
           </Link>
         }
       />
