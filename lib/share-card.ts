@@ -44,6 +44,20 @@ const ICON_SVG: Record<AchIcon, string> = {
     '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
 };
 
+/** Parse a CSS colour (#hex or rgb()) to [r,g,b]; falls back to lime. */
+function toRgb(c: string): [number, number, number] {
+  const str = c.trim();
+  if (str.startsWith("#")) {
+    const h = str.slice(1);
+    const full = h.length === 3 ? h.split("").map((x) => x + x).join("") : h;
+    const n = parseInt(full, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  const m = str.match(/\d+/g);
+  if (m && m.length >= 3) return [Number(m[0]), Number(m[1]), Number(m[2])];
+  return [204, 255, 48];
+}
+
 /** Rasterise a Lucide icon (24×24 viewBox) into an Image at the given pixel size. */
 function loadIcon(icon: AchIcon, color: string, px: number): Promise<HTMLImageElement | null> {
   const svg =
@@ -89,6 +103,14 @@ export async function drawAchievementCard(card: ShareCard): Promise<Blob | null>
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
 
+  // Use the member's current theme accent so shared cards match their app.
+  const accent =
+    getComputedStyle(document.documentElement)
+      .getPropertyValue("--accent-primary")
+      .trim() || LIME;
+  const [ar, ag, ab] = toRgb(accent);
+  const argba = (a: number) => `rgba(${ar},${ag},${ab},${a})`;
+
   // Background + glow.
   const bg = ctx.createLinearGradient(0, 0, 0, H);
   bg.addColorStop(0, CHARCOAL_TOP);
@@ -97,8 +119,8 @@ export async function drawAchievementCard(card: ShareCard): Promise<Blob | null>
   ctx.fillRect(0, 0, W, H);
 
   const glow = ctx.createRadialGradient(W / 2, 520, 0, W / 2, 520, 620);
-  glow.addColorStop(0, "rgba(204,255,48,0.18)");
-  glow.addColorStop(1, "rgba(204,255,48,0)");
+  glow.addColorStop(0, argba(0.18));
+  glow.addColorStop(1, argba(0));
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
 
@@ -115,7 +137,7 @@ export async function drawAchievementCard(card: ShareCard): Promise<Blob | null>
   ctx.textAlign = "left";
   ctx.fillStyle = "#FFFFFF";
   ctx.fillText(s, startX, 140);
-  ctx.fillStyle = LIME;
+  ctx.fillStyle = accent;
   ctx.fillText(f, startX + sw, 140);
   ctx.textAlign = "center";
 
@@ -129,14 +151,14 @@ export async function drawAchievementCard(card: ShareCard): Promise<Blob | null>
   const cy = 470;
   ctx.beginPath();
   ctx.arc(cx, cy, 170, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(204,255,48,0.12)";
+  ctx.fillStyle = argba(0.12);
   ctx.fill();
   ctx.lineWidth = 6;
-  ctx.strokeStyle = "rgba(204,255,48,0.55)";
+  ctx.strokeStyle = argba(0.55);
   ctx.stroke();
   // Centred Lucide icon in place of an emoji.
   const iconPx = 168;
-  const icon = await loadIcon(card.icon, LIME, iconPx);
+  const icon = await loadIcon(card.icon, accent, iconPx);
   if (icon) ctx.drawImage(icon, cx - iconPx / 2, cy - iconPx / 2, iconPx, iconPx);
 
   // Title (wrapped).
@@ -166,7 +188,7 @@ export async function drawAchievementCard(card: ShareCard): Promise<Blob | null>
   }
 
   // Footer.
-  ctx.fillStyle = LIME;
+  ctx.fillStyle = accent;
   ctx.font = `800 40px ${SANS}`;
   ctx.fillText("Train Smarter. Build Stronger.", W / 2, H - 120);
   ctx.fillStyle = "rgba(255,255,255,0.5)";
