@@ -256,18 +256,31 @@ export async function loadCustomSplitDay(
     .maybeSingle();
   if (!day) return null;
 
-  const { data: rows } = await supabase
+  // superset_group was added by a later migration. If that migration hasn't
+  // been applied yet, selecting the column errors the WHOLE query and the split
+  // would load with no exercises (so a workout logs zero sets). Fall back to a
+  // select without it so splits always work.
+  const first = await supabase
     .from("custom_split_day_exercises")
     .select(
       "id, exercise_id, sets, rep_target, rest_seconds, notes, superset_group, exercise:exercises(*)"
     )
     .eq("split_day_id", dayId)
     .order("position");
+  let rows: unknown[] | null = first.data;
+  if (first.error) {
+    const fallback = await supabase
+      .from("custom_split_day_exercises")
+      .select("id, exercise_id, sets, rep_target, rest_seconds, notes, exercise:exercises(*)")
+      .eq("split_day_id", dayId)
+      .order("position");
+    rows = fallback.data;
+  }
 
   const items = (rows ?? []) as unknown as (Omit<
     LoadedSplitDayExercise,
     keyof Enrichment
-  > & { exercise: Exercise })[];
+  > & { exercise: Exercise; superset_group?: number | null })[];
 
   const enrichment = await enrichExercises(
     supabase,
@@ -297,6 +310,7 @@ export async function loadCustomSplitDay(
     },
     exercises: items.map((r) => ({
       ...r,
+      superset_group: r.superset_group ?? null,
       ...(enrichment.get(r.exercise_id) ?? empty),
     })),
   };
