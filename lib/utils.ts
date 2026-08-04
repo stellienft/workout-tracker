@@ -30,6 +30,9 @@ export function repDisplay(ex: {
 export function mediaUrl(path: string | null | undefined): string | null {
   if (!path) return null;
   if (/^https?:\/\//i.test(path)) return path;
+  // A root-relative path points at a static asset bundled in /public
+  // (e.g. "/covers/programs/ppl-6day.png") — serve it as-is.
+  if (path.startsWith("/")) return path;
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!base) return null;
   return `${base}/storage/v1/object/public/media/${path}`;
