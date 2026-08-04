@@ -339,3 +339,24 @@ join public.programs p on p.slug = v.program_slug
 join public.workout_templates t on t.program_id = p.id and t.slug = v.template_slug
 where public._pick_ex(v.kw, v.muscle) is not null
 on conflict (workout_template_id, position) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- 4) Cover image paths (matching the rest of the library).
+--    scripts/seed-media.mjs discovers these paths and generates + uploads a
+--    deterministic on-brand cover for each. Keyed by slug so re-running is safe.
+-- ---------------------------------------------------------------------------
+update public.programs
+set cover_image_path = 'covers/programs/' || slug || '.jpg'
+where cover_image_path is null
+  and slug in ('ppl-6day','upper-lower-4','bro-split-5','full-body-3','five-by-five',
+               'powerlifting-3','deadlift-spec','squat-spec','bench-spec',
+               'antagonist-supersets','arm-blaster','circuit-conditioning');
+
+update public.workout_templates t
+set cover_image_path = 'covers/workouts/' || p.slug || '-' || t.slug || '.jpg'
+from public.programs p
+where t.program_id = p.id
+  and t.cover_image_path is null
+  and p.slug in ('ppl-6day','upper-lower-4','bro-split-5','full-body-3','five-by-five',
+                 'powerlifting-3','deadlift-spec','squat-spec','bench-spec',
+                 'antagonist-supersets','arm-blaster','circuit-conditioning');
