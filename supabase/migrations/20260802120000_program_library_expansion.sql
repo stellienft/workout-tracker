@@ -12,25 +12,35 @@
 -- ============================================================================
 
 -- Exercise picker: best keyword match (muscle-preferred), else muscle-only,
--- else any published GIF exercise (so exercise_id is never null).
+-- else ANY exercise — so exercise_id is never null regardless of how the
+-- exercise library is populated (source/status values vary between databases).
 create or replace function public._pick_ex(kw text, muscle text)
 returns uuid language sql stable as $$
   select coalesce(
+    -- keyword match, preferring the right muscle then GIF exercises
     (select e.id from public.exercises e
-       where e.status='published' and e.source='exercisedb'
-         and kw is not null and e.name ilike '%'||kw||'%'
+       where kw is not null and e.name ilike '%'||kw||'%'
        order by (case when muscle is not null
                    and exists (select 1 from unnest(e.primary_muscles) m where lower(m)=lower(muscle))
-                 then 0 else 1 end), length(e.name), e.name
+                 then 0 else 1 end),
+                (case when e.source='exercisedb' then 0 else 1 end),
+                (case when e.status='published' then 0 else 1 end),
+                length(e.name), e.name
        limit 1),
+    -- muscle-only fallback
     (select e.id from public.exercises e
-       where e.status='published' and e.source='exercisedb' and muscle is not null
+       where muscle is not null
          and exists (select 1 from unnest(e.primary_muscles) m where lower(m)=lower(muscle))
-       order by length(e.name), e.name
+       order by (case when e.source='exercisedb' then 0 else 1 end),
+                (case when e.status='published' then 0 else 1 end),
+                length(e.name)
        limit 1),
+    -- ultimate fallback: any exercise at all
     (select e.id from public.exercises e
-       where e.status='published' and e.source='exercisedb'
-       order by length(e.name) limit 1)
+       order by (case when e.source='exercisedb' then 0 else 1 end),
+                (case when e.status='published' then 0 else 1 end),
+                length(e.name)
+       limit 1)
   );
 $$;
 
@@ -381,6 +391,7 @@ select t.id,
 from public._seed_exercises e
 join public.programs p on p.slug = e.program_slug
 join public.workout_templates t on t.program_id = p.id and t.slug = e.template_slug
+where public._pick_ex(e.kw, e.muscle) is not null
 on conflict (workout_template_id, position) do nothing;
 
 -- ---------------------------------------------------------------------------
