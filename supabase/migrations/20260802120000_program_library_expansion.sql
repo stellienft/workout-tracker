@@ -363,3 +363,28 @@ from (values
   ('circuit-conditioning','https://images.pexels.com/photos/14121526/pexels-photo-14121526.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1200&h=800')
 ) as c(slug, url)
 where p.slug = c.slug;
+
+-- ---------------------------------------------------------------------------
+-- 5) Goal + experience tagging so the library filters (Goal / Experience)
+--    categorise these programs. Without a fitness_goal_id they never appear
+--    under a goal chip. Levels are a genuine spread, not all-beginner.
+-- ---------------------------------------------------------------------------
+update public.programs p
+set fitness_goal_id  = t.goal_id::uuid,
+    experience_level = t.level,
+    difficulty       = t.difficulty
+from (values
+  ('ppl-6day',             'd0000000-0000-4000-8000-000000000004','intermediate','intermediate'),
+  ('upper-lower-4',        'd0000000-0000-4000-8000-000000000004','intermediate','intermediate'),
+  ('antagonist-supersets', 'd0000000-0000-4000-8000-000000000004','intermediate','intermediate'),
+  ('bro-split-5',          'd0000000-0000-4000-8000-000000000005','intermediate','intermediate'),
+  ('arm-blaster',          'd0000000-0000-4000-8000-000000000005','intermediate','intermediate'),
+  ('full-body-3',          'd0000000-0000-4000-8000-000000000001','beginner','beginner'),
+  ('five-by-five',         'd0000000-0000-4000-8000-000000000001','beginner','beginner'),
+  ('powerlifting-3',       'd0000000-0000-4000-8000-000000000006','advanced','advanced'),
+  ('deadlift-spec',        'd0000000-0000-4000-8000-000000000006','advanced','advanced'),
+  ('squat-spec',           'd0000000-0000-4000-8000-000000000006','advanced','advanced'),
+  ('bench-spec',           'd0000000-0000-4000-8000-000000000006','advanced','advanced'),
+  ('circuit-conditioning', 'd0000000-0000-4000-8000-000000000002','all','beginner')
+) as t(slug, goal_id, level, difficulty)
+where p.slug = t.slug;
