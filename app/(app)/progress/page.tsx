@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { LineChart } from "@/components/ui/line-chart";
+import { MultiLineChart } from "@/components/ui/multi-line-chart";
 import { StatCard } from "@/components/ui/card";
 import { BodyMetricsForm } from "@/components/tracking/body-metrics-form";
 import { WeightProgress } from "@/components/progress/weight-progress";
@@ -300,20 +301,27 @@ export default async function ProgressPage() {
         </div>
       </div>
 
-      {/* Strength Progress */}
+      {/* Strength Progress — one combined chart, a line per exercise. */}
       <div className="mt-6">
         <h2 className="text-lg font-bold">Strength Progress</h2>
         {strengthCharts.length > 0 ? (
           <div className="mt-3 space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {strengthCharts.map((ex, i) => (
-                <div
-                  key={i}
-                  className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4"
-                >
-                  <LineChart data={ex.data} label={ex.name} unit=" kg" height={130} />
-                </div>
-              ))}
+            <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
+              <p className="mb-3 text-sm text-[var(--text-secondary)]">
+                Max weight per session · top {strengthCharts.length} exercises
+              </p>
+              <MultiLineChart
+                unit=" kg"
+                height={300}
+                series={strengthCharts.map((ex, i) => ({
+                  name: ex.name,
+                  color: `var(--series-${(i % 8) + 1})`,
+                  points: ex.data.map((d) => ({
+                    t: new Date(d.x).getTime(),
+                    y: d.y,
+                  })),
+                }))}
+              />
             </div>
             <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
               <LineChart data={volumeData} label="Total volume" unit=" kg" height={160} />
@@ -495,7 +503,9 @@ type SetLog = {
 
 /**
  * Build per-exercise strength progress: for each exercise, the max weight lifted
- * per session over time. Returns the top 5 most-trained exercises (by session count).
+ * per session over time. Returns the top 8 most-trained exercises (by session
+ * count) — 8 is the categorical palette's cap, so every line stays
+ * distinguishable in the combined chart.
  */
 function buildStrengthProgress(
   sets: SetLog[]
@@ -539,7 +549,7 @@ function buildStrengthProgress(
         .map((s) => ({ x: s.date, y: s.maxWeight })),
     }))
     .sort((a, b) => b.sessionCount - a.sessionCount)
-    .slice(0, 5)
+    .slice(0, 8)
     .map(({ name, data }) => ({ name, data }));
 }
 
