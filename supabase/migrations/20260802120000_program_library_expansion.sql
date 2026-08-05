@@ -341,13 +341,50 @@ where public._pick_ex(v.kw, v.muscle) is not null
 on conflict (workout_template_id, position) do nothing;
 
 -- ---------------------------------------------------------------------------
--- 4) Cover image paths.
---    These point at on-brand PNGs bundled in the app under
---    /public/covers/programs/<slug>.png (served directly, no storage upload).
---    mediaUrl() passes root-relative paths through untouched. Idempotent.
+-- 4) Cover images — real, subject-matched free stock photos from Pexels.
+--    images.pexels.com is allowlisted in next.config.ts and mediaUrl() passes
+--    full https URLs through untouched, so these render with no storage upload
+--    and no bundled assets. Idempotent (keyed by slug).
 -- ---------------------------------------------------------------------------
-update public.programs
-set cover_image_path = '/covers/programs/' || slug || '.png'
-where slug in ('ppl-6day','upper-lower-4','bro-split-5','full-body-3','five-by-five',
-               'powerlifting-3','deadlift-spec','squat-spec','bench-spec',
-               'antagonist-supersets','arm-blaster','circuit-conditioning');
+update public.programs p
+set cover_image_path = c.url
+from (values
+  ('ppl-6day','https://images.pexels.com/photos/34100808/pexels-photo-34100808.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1200&h=800'),
+  ('upper-lower-4','https://images.pexels.com/photos/841130/pexels-photo-841130.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1200&h=800'),
+  ('bro-split-5','https://images.pexels.com/photos/18091037/pexels-photo-18091037.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1200&h=800'),
+  ('full-body-3','https://images.pexels.com/photos/4162475/pexels-photo-4162475.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1200&h=800'),
+  ('five-by-five','https://images.pexels.com/photos/1552106/pexels-photo-1552106.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1200&h=800'),
+  ('powerlifting-3','https://images.pexels.com/photos/5327530/pexels-photo-5327530.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1200&h=800'),
+  ('deadlift-spec','https://images.pexels.com/photos/20817818/pexels-photo-20817818.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1200&h=800'),
+  ('squat-spec','https://images.pexels.com/photos/4164850/pexels-photo-4164850.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1200&h=800'),
+  ('bench-spec','https://images.pexels.com/photos/14036074/pexels-photo-14036074.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1200&h=800'),
+  ('antagonist-supersets','https://images.pexels.com/photos/5327498/pexels-photo-5327498.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1200&h=800'),
+  ('arm-blaster','https://images.pexels.com/photos/3763115/pexels-photo-3763115.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1200&h=800'),
+  ('circuit-conditioning','https://images.pexels.com/photos/14121526/pexels-photo-14121526.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1200&h=800')
+) as c(slug, url)
+where p.slug = c.slug;
+
+-- ---------------------------------------------------------------------------
+-- 5) Goal + experience tagging so the library filters (Goal / Experience)
+--    categorise these programs. Without a fitness_goal_id they never appear
+--    under a goal chip. Levels are a genuine spread, not all-beginner.
+-- ---------------------------------------------------------------------------
+update public.programs p
+set fitness_goal_id  = t.goal_id::uuid,
+    experience_level = t.level,
+    difficulty       = t.difficulty
+from (values
+  ('ppl-6day',             'd0000000-0000-4000-8000-000000000004','intermediate','intermediate'),
+  ('upper-lower-4',        'd0000000-0000-4000-8000-000000000004','intermediate','intermediate'),
+  ('antagonist-supersets', 'd0000000-0000-4000-8000-000000000004','intermediate','intermediate'),
+  ('bro-split-5',          'd0000000-0000-4000-8000-000000000005','intermediate','intermediate'),
+  ('arm-blaster',          'd0000000-0000-4000-8000-000000000005','intermediate','intermediate'),
+  ('full-body-3',          'd0000000-0000-4000-8000-000000000001','beginner','beginner'),
+  ('five-by-five',         'd0000000-0000-4000-8000-000000000001','beginner','beginner'),
+  ('powerlifting-3',       'd0000000-0000-4000-8000-000000000006','advanced','advanced'),
+  ('deadlift-spec',        'd0000000-0000-4000-8000-000000000006','advanced','advanced'),
+  ('squat-spec',           'd0000000-0000-4000-8000-000000000006','advanced','advanced'),
+  ('bench-spec',           'd0000000-0000-4000-8000-000000000006','advanced','advanced'),
+  ('circuit-conditioning', 'd0000000-0000-4000-8000-000000000002','all','beginner')
+) as t(slug, goal_id, level, difficulty)
+where p.slug = t.slug;

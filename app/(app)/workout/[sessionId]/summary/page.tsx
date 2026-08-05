@@ -26,9 +26,13 @@ export default async function WorkoutSummaryPage({
     .maybeSingle();
   if (!session) notFound();
 
+  // set_logs has TWO foreign keys to exercises (exercise_id and
+  // substituted_from_exercise_id), so the embed MUST name the constraint —
+  // otherwise PostgREST can't disambiguate, errors the whole query, and returns
+  // null, which shows the workout as "0 sets".
   const { data: logs } = await supabase
     .from("set_logs")
-    .select("exercise_id, weight_kg, reps, exercise:exercises(name)")
+    .select("exercise_id, weight_kg, reps, exercise:exercises!exercise_id(name)")
     .eq("session_id", sessionId)
     .eq("completed", true);
 
