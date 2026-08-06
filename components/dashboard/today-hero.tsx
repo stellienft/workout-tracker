@@ -9,16 +9,19 @@ export function TodayHeroCard({
   workout,
   sessionId,
   week,
+  programCoverPath,
 }: {
   programName: string;
   workout: WorkoutTemplate;
   sessionId: string | null;
   week: number;
+  /** Fallback cover when the individual workout has none of its own. */
+  programCoverPath?: string | null;
 }) {
   return (
     <div className="relative h-72 overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] sm:h-80">
       <CoverImage
-        path={workout.cover_image_path}
+        path={workout.cover_image_path || programCoverPath}
         alt={workout.name}
         sizes="(max-width: 1024px) 100vw, 66vw"
         priority
