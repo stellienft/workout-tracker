@@ -220,6 +220,7 @@ export default async function DashboardPage() {
               workout={dash.next}
               sessionId={dash.inProgressSession?.id ?? null}
               week={dash.enrolment.current_week}
+              programCoverPath={dash.enrolment.program.cover_image_path}
             />
           ) : (
             <NoProgramHero />

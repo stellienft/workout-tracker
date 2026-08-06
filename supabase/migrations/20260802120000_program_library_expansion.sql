@@ -364,6 +364,19 @@ from (values
 ) as c(slug, url)
 where p.slug = c.slug;
 
+-- Give each of these programs' workouts the program's cover, so the dashboard
+-- "Today's workout" hero (which reads the workout's cover) shows the real photo
+-- instead of the placeholder. Only touches empty covers or the earlier
+-- unshipped storage placeholders.
+update public.workout_templates t
+set cover_image_path = p.cover_image_path
+from public.programs p
+where t.program_id = p.id
+  and (t.cover_image_path is null or t.cover_image_path like 'covers/workouts/%')
+  and p.slug in ('ppl-6day','upper-lower-4','bro-split-5','full-body-3','five-by-five',
+                 'powerlifting-3','deadlift-spec','squat-spec','bench-spec',
+                 'antagonist-supersets','arm-blaster','circuit-conditioning');
+
 -- ---------------------------------------------------------------------------
 -- 5) Goal + experience tagging so the library filters (Goal / Experience)
 --    categorise these programs. Without a fitness_goal_id they never appear
