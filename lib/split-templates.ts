@@ -9,6 +9,8 @@ export interface TemplateExercise {
   sets: number;
   repTarget: string;
   restSeconds: number;
+  /** Exercises sharing a group number on the same day are a superset/circuit. */
+  supersetGroup?: number;
 }
 export interface TemplateDay {
   name: string;
@@ -24,11 +26,31 @@ export interface SplitTemplate {
   days: TemplateDay[];
 }
 
-const S = (slug: string, sets: number, reps: string, rest = 90): TemplateExercise => ({
+const S = (
+  slug: string,
+  sets: number,
+  reps: string,
+  rest = 90
+): TemplateExercise => ({
   slug,
   sets,
   repTarget: reps,
   restSeconds: rest,
+});
+
+/** Superset variant: last arg is the group number (same number = paired). */
+const SS = (
+  group: number,
+  slug: string,
+  sets: number,
+  reps: string,
+  rest = 60
+): TemplateExercise => ({
+  slug,
+  sets,
+  repTarget: reps,
+  restSeconds: rest,
+  supersetGroup: group,
 });
 
 export const SPLIT_TEMPLATES: SplitTemplate[] = [
@@ -241,6 +263,135 @@ export const SPLIT_TEMPLATES: SplitTemplate[] = [
           S("dumbbell-curl", 4, "10–12", 60),
           S("triceps-pushdown", 4, "10–12", 60),
           S("incline-push-up", 3, "AMRAP", 60),
+        ],
+      },
+    ],
+  },
+  {
+    key: "antagonist-supersets",
+    name: "Antagonist Supersets",
+    level: "Intermediate",
+    daysPerWeek: "2–4 days",
+    summary:
+      "Pair opposing muscles back-to-back — push with pull, quads with hamstrings. Big time-saver, great pump.",
+    days: [
+      {
+        name: "Upper Supersets",
+        focusMuscles: ["chest", "back", "shoulders", "biceps", "triceps"],
+        exercises: [
+          SS(1, "dumbbell-bench-press", 4, "8–12"),
+          SS(1, "one-arm-dumbbell-row", 4, "10–12"),
+          SS(2, "seated-db-shoulder-press", 3, "10–12"),
+          SS(2, "lat-pulldown-neutral", 3, "10–12"),
+          SS(3, "dumbbell-curl", 3, "12–15"),
+          SS(3, "triceps-pushdown", 3, "12–15"),
+        ],
+      },
+      {
+        name: "Lower Supersets",
+        focusMuscles: ["quads", "hamstrings", "glutes", "calves"],
+        exercises: [
+          SS(1, "leg-press", 4, "10–12"),
+          SS(1, "hamstring-curl", 4, "12–15"),
+          SS(2, "goblet-squat", 3, "10–12"),
+          SS(2, "romanian-deadlift-db", 3, "10–12"),
+          S("standing-calf-raise", 4, "12–15", 45),
+        ],
+      },
+    ],
+  },
+  {
+    key: "full-body-supersets",
+    name: "Full-Body Supersets (Express)",
+    level: "Intermediate",
+    daysPerWeek: "2–3 days",
+    summary:
+      "Two quick full-body sessions built entirely from supersets — in and out in 40 minutes.",
+    days: [
+      {
+        name: "Express A",
+        focusMuscles: ["quads", "chest", "back", "core"],
+        exercises: [
+          SS(1, "goblet-squat", 3, "10–12"),
+          SS(1, "push-up-flat", 3, "10–15"),
+          SS(2, "one-arm-dumbbell-row", 3, "10–12"),
+          SS(2, "seated-db-shoulder-press", 3, "10–12"),
+          S("plank", 3, "30–45s", 45),
+        ],
+      },
+      {
+        name: "Express B",
+        focusMuscles: ["hamstrings", "chest", "back", "shoulders", "core"],
+        exercises: [
+          SS(1, "romanian-deadlift-db", 3, "10–12"),
+          SS(1, "incline-dumbbell-press", 3, "10–12"),
+          SS(2, "lat-pulldown-neutral", 3, "10–12"),
+          SS(2, "lateral-raise-light", 3, "12–15"),
+          S("russian-twist", 3, "20", 45),
+        ],
+      },
+    ],
+  },
+  {
+    key: "arm-blaster-supersets",
+    name: "Arm Blaster Supersets",
+    level: "Intermediate",
+    daysPerWeek: "1–2 days",
+    summary:
+      "A dedicated arm pump — biceps and triceps supersetted back-to-back for maximum burn.",
+    days: [
+      {
+        name: "Arms Superset",
+        focusMuscles: ["biceps", "triceps"],
+        exercises: [
+          SS(1, "dumbbell-curl", 4, "10–12"),
+          SS(1, "triceps-pushdown", 4, "10–12"),
+          SS(2, "incline-push-up", 3, "AMRAP"),
+          SS(2, "face-pull", 3, "15"),
+          S("farmers-carry", 3, "40m", 60),
+        ],
+      },
+    ],
+  },
+  {
+    key: "dumbbell-home",
+    name: "Dumbbell Only (Home)",
+    level: "Beginner",
+    daysPerWeek: "3 days",
+    summary:
+      "No machines needed — a full split you can run at home with a pair of dumbbells and bodyweight.",
+    days: [
+      {
+        name: "Legs & Push",
+        focusMuscles: ["quads", "chest", "shoulders", "core"],
+        exercises: [
+          S("goblet-squat", 3, "10–12"),
+          S("dumbbell-bench-press", 3, "8–12"),
+          S("seated-db-shoulder-press", 3, "10–12"),
+          S("stationary-lunge", 3, "10 each"),
+          S("plank", 3, "30–45s", 45),
+        ],
+      },
+      {
+        name: "Pull & Core",
+        focusMuscles: ["back", "hamstrings", "biceps", "core"],
+        exercises: [
+          S("romanian-deadlift-db", 3, "8–12"),
+          S("one-arm-dumbbell-row", 3, "10–12"),
+          S("dumbbell-curl", 3, "12–15", 60),
+          S("glute-bridge", 3, "12–15"),
+          S("dead-bug", 3, "10 each", 45),
+        ],
+      },
+      {
+        name: "Full Body",
+        focusMuscles: ["chest", "shoulders", "quads", "core"],
+        exercises: [
+          S("incline-dumbbell-press", 3, "10–12"),
+          S("lateral-raise-light", 3, "12–15", 60),
+          S("stationary-lunge", 3, "10 each"),
+          S("farmers-carry", 3, "40m", 60),
+          S("russian-twist", 3, "20", 45),
         ],
       },
     ],
