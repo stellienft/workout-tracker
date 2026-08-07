@@ -36,15 +36,15 @@ export function ProgramCard({
             </span>
           )}
           <div className="on-media absolute inset-x-0 bottom-0 p-4">
-            {goalName && (
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--accent-primary)]">
-                {goalName}
-              </p>
-            )}
             <h3 className="text-lg font-bold leading-tight">{program.name}</h3>
           </div>
         </div>
         <div className="p-4">
+          {goalName && (
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--accent-primary)]">
+              {goalName}
+            </p>
+          )}
           <p className="line-clamp-2 text-sm text-[var(--text-secondary)]">
             {program.short_description}
           </p>
