@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { notifyAdminNewFeedback } from "@/lib/email";
 
 const schema = z.object({
   category: z.enum(["feedback", "feature", "bug", "other"]).default("feedback"),
@@ -26,13 +27,33 @@ export async function submitFeedback(input: {
     return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
+  const fromEmail = parsed.data.email || user.email || null;
+
   const { error } = await supabase.from("app_feedback").insert({
     user_id: user.id,
     category: parsed.data.category,
     message: parsed.data.message,
-    email: parsed.data.email || user.email || null,
+    email: fromEmail,
   });
   if (error) return { ok: false as const, error: error.message };
+
+  // Notify the admin by email. Fire-and-forget: a mail failure (or missing
+  // RESEND_API_KEY) must never fail the member's submission.
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .maybeSingle();
+    await notifyAdminNewFeedback({
+      category: parsed.data.category,
+      message: parsed.data.message,
+      fromEmail,
+      fromName: (profile?.full_name as string | null) ?? null,
+    });
+  } catch {
+    // ignore — feedback is already saved
+  }
 
   return { ok: true as const };
 }
