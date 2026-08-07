@@ -106,6 +106,7 @@ export async function createSplitFromTemplate(templateKey: string) {
           sets: e.sets,
           rep_target: e.repTarget,
           rest_seconds: e.restSeconds,
+          superset_group: e.supersetGroup ?? null,
         },
       ];
     });
