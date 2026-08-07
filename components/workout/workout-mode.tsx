@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   X,
-  Youtube,
   Repeat,
   ShieldAlert,
   Check,
@@ -20,7 +19,6 @@ import {
 } from "lucide-react";
 import { ExerciseImage } from "@/components/ui/exercise-image";
 import { RestTimer } from "@/components/workout/rest-timer";
-import { VideoSheet } from "@/components/workout/video-sheet";
 import { WorkoutTools, type Tab as ToolsTab } from "@/components/workout/workout-tools";
 import { progressionSuggestion } from "@/lib/gym-math";
 import {
@@ -160,7 +158,6 @@ export function WorkoutMode({
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [replaceFor, setReplaceFor] = useState<string | null>(null);
   const [enlargeFor, setEnlargeFor] = useState<string | null>(null);
-  const [videoFor, setVideoFor] = useState<string | null>(null);
 
   // Active substitution: exerciseId -> replacement detail.
   const [subs, setSubs] = useState<Record<string, SubDetail>>({});
@@ -501,7 +498,6 @@ export function WorkoutMode({
   const menuEx = workingExercises.find((e) => e.exerciseId === menuFor) ?? null;
   const replaceEx = workingExercises.find((e) => e.exerciseId === replaceFor) ?? null;
   const enlargeEx = workingExercises.find((e) => e.exerciseId === enlargeFor) ?? null;
-  const videoEx = workingExercises.find((e) => e.exerciseId === videoFor) ?? null;
   const allDone = totalSets > 0 && completedSets === totalSets;
 
   if (workingExercises.length === 0) {
@@ -677,17 +673,6 @@ export function WorkoutMode({
                 <p className="text-sm capitalize text-[var(--text-secondary)]">
                   {a.primaryMuscles.join(", ")}
                 </p>
-                {a.video && (
-                  <button
-                    onClick={() => {
-                      setVideoFor(enlargeEx.exerciseId);
-                      setEnlargeFor(null);
-                    }}
-                    className="mt-3 inline-flex items-center gap-2 rounded-full bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--accent-ink)]"
-                  >
-                    <Youtube className="h-4 w-4" /> Watch technique
-                  </button>
-                )}
                 {a.instructions && (
                   <p className="mt-3 text-sm text-[var(--text-secondary)]">{a.instructions}</p>
                 )}
@@ -706,14 +691,6 @@ export function WorkoutMode({
           </div>
         );
       })()}
-
-      {videoEx && (
-        <VideoSheet
-          video={activeFor(videoEx).video}
-          exerciseName={activeFor(videoEx).name}
-          onClose={() => setVideoFor(null)}
-        />
-      )}
 
       {tools && (
         <WorkoutTools onClose={() => setTools(null)} initialTab={tools.tab} defaultWeight={tools.weight} />

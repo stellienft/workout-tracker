@@ -6,19 +6,43 @@ import { ExerciseImport } from "@/components/admin/exercise-import";
 
 export default async function AdminExercisesPage() {
   const supabase = await createClient();
-  const { data: exercises } = await supabase
-    .from("exercises")
-    .select("*")
-    .order("name");
+  const [{ data: exercises }, { count: total }, { count: withDemo }, { count: published }] =
+    await Promise.all([
+      supabase.from("exercises").select("*").order("name"),
+      supabase.from("exercises").select("id", { count: "exact", head: true }),
+      supabase
+        .from("exercises")
+        .select("id", { count: "exact", head: true })
+        .not("cover_image_path", "is", null),
+      supabase
+        .from("exercises")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "published"),
+    ]);
 
   const hasKey = Boolean(process.env.EXERCISEDB_API_KEY);
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">Exercises</h1>
-      <p className="text-sm text-[var(--text-secondary)]">
-        Edit instructions, shoulder-safety flags and publication status.
-      </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Exercises</h1>
+          <p className="text-sm text-[var(--text-secondary)]">
+            Edit instructions, shoulder-safety flags and publication status.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <span className="rounded-full bg-[var(--accent-muted)] px-3 py-1.5 text-sm font-semibold text-[var(--accent-primary)]">
+            {total ?? 0} exercises
+          </span>
+          <span className="rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-sm text-[var(--text-secondary)]">
+            {withDemo ?? 0} with demo
+          </span>
+          <span className="rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-sm text-[var(--text-secondary)]">
+            {published ?? 0} published
+          </span>
+        </div>
+      </div>
 
       {!hasKey && (
         <div className="mt-4 rounded-[var(--radius-card)] border border-[var(--warning)]/40 bg-[var(--surface-primary)] p-4 text-sm">
