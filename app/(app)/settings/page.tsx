@@ -19,6 +19,7 @@ import { SettingsForm } from "@/components/settings-form";
 import { ThemeControls } from "@/components/theme-controls";
 import { PushToggle } from "@/components/settings/push-toggle";
 import { AccountDataControls } from "@/components/settings/account-data";
+import { FeedbackForm } from "@/components/settings/feedback-form";
 
 export const metadata = { title: "Settings" };
 
@@ -123,6 +124,12 @@ export default async function SettingsPage() {
             timezone: profile?.timezone ?? "Australia/Brisbane",
           }}
         />
+      </div>
+
+      {/* Feedback */}
+      <div className="mt-6">
+        <h2 className="mb-3 text-lg font-bold">Feedback</h2>
+        <FeedbackForm defaultEmail={profile?.email ?? ""} />
       </div>
 
       {/* Legal & support links */}
