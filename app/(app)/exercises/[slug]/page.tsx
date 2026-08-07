@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageShell } from "@/components/ui/page-header";
-import { ExerciseVideoPlayer } from "@/components/workout/exercise-video-player";
 import { ExerciseImage } from "@/components/ui/exercise-image";
 import { ExerciseFavoriteButton } from "@/components/exercise-favorite-button";
 import { GifDemo } from "@/components/exercise/gif-demo";
@@ -12,10 +11,8 @@ import { planAllows } from "@/lib/plan";
 import { estimate1RM } from "@/lib/ai/analysis";
 import { Lock } from "lucide-react";
 import { UpgradeButton } from "@/components/billing/billing-actions";
-import { normaliseVideoForClient } from "@/lib/video-utils";
-import { ShieldAlert } from "lucide-react";
 import Link from "next/link";
-import type { Exercise, ExerciseVideo } from "@/lib/types";
+import type { Exercise } from "@/lib/types";
 
 /** Best estimated-1RM day-by-day from the member's logged sets for this lift. */
 function buildHistory(
@@ -57,20 +54,12 @@ export default async function ExerciseDetailPage({
   if (!exercise) notFound();
   const e = exercise as Exercise;
 
-  const [{ data: videoRow }, { data: alts }, { data: fav }, { data: setLogs }] =
+  const [{ data: alts }, { data: fav }, { data: setLogs }] =
     await Promise.all([
-      supabase
-        .from("exercise_videos")
-        .select("*")
-        .eq("exercise_id", e.id)
-        .eq("active", true)
-        .order("verification_status")
-        .limit(1)
-        .maybeSingle(),
       supabase
         .from("exercise_alternatives")
         .select(
-          "alternative:exercises!exercise_alternatives_alternative_exercise_id_fkey(name, slug, shoulder_safe)"
+          "alternative:exercises!exercise_alternatives_alternative_exercise_id_fkey(name, slug)"
         )
         .eq("exercise_id", e.id)
         .order("priority"),
@@ -90,11 +79,6 @@ export default async function ExerciseDetailPage({
         .limit(2000),
     ]);
 
-  const video = normaliseVideoForClient(videoRow as ExerciseVideo | null);
-  // Exercises with an animated GIF cover (e.g. ExerciseDB imports) show the GIF
-  // as the demo instead of an empty YouTube embed.
-  const hasGif =
-    !!e.cover_image_path && /\.gif($|\?)|exercise-gifs/i.test(e.cover_image_path);
   const history = buildHistory(
     (setLogs ?? []) as {
       weight_kg: number | null;
@@ -111,12 +95,7 @@ export default async function ExerciseDetailPage({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold">{e.name}</h1>
-              {!e.shoulder_safe && (
-                <ShieldAlert className="h-5 w-5 text-[var(--warning)]" />
-              )}
-            </div>
+            <h1 className="text-2xl font-bold">{e.name}</h1>
             <ExerciseFavoriteButton exerciseId={e.id} initial={!!fav} />
           </div>
           <p className="mt-1 text-sm capitalize text-[var(--text-secondary)]">
@@ -132,11 +111,7 @@ export default async function ExerciseDetailPage({
       </div>
 
       <div className="mt-6">
-        {hasGif ? (
-          <GifDemo path={e.cover_image_path} name={e.name} />
-        ) : (
-          <ExerciseVideoPlayer video={video} exerciseName={e.name} />
-        )}
+        <GifDemo path={e.cover_image_path} name={e.name} />
       </div>
 
       {history.length > 0 &&
@@ -176,16 +151,6 @@ export default async function ExerciseDetailPage({
         </div>
       )}
 
-      {e.shoulder_notes && (
-        <div className="mt-4 flex gap-2 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4">
-          <ShieldAlert className="h-5 w-5 shrink-0 text-[var(--warning)]" />
-          <div>
-            <p className="font-semibold">Shoulder guidance</p>
-            <p className="text-sm text-[var(--text-secondary)]">{e.shoulder_notes}</p>
-          </div>
-        </div>
-      )}
-
       {alts && alts.length > 0 && (
         <div className="mt-6">
           <h2 className="text-lg font-bold">Alternatives</h2>
@@ -194,7 +159,6 @@ export default async function ExerciseDetailPage({
               const alt = a.alternative as unknown as {
                 name: string;
                 slug: string;
-                shoulder_safe: boolean;
               };
               return (
                 <Link
@@ -203,11 +167,6 @@ export default async function ExerciseDetailPage({
                   className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-sm"
                 >
                   {alt.name}
-                  {alt.shoulder_safe && (
-                    <span className="text-[11px] text-[var(--accent-primary)]">
-                      shoulder-safe
-                    </span>
-                  )}
                 </Link>
               );
             })}
