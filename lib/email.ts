@@ -118,6 +118,71 @@ export async function notifyAdminNewMember(member: {
   });
 }
 
+/** Notify the admin that a member left feedback / a feature request / a bug. */
+export async function notifyAdminNewFeedback(input: {
+  category: string;
+  message: string;
+  fromEmail?: string | null;
+  fromName?: string | null;
+}) {
+  const labels: Record<string, string> = {
+    feedback: "General feedback",
+    feature: "Feature request",
+    bug: "Bug report",
+    other: "Feedback",
+  };
+  const label = labels[input.category] ?? "Feedback";
+  const who = input.fromName?.trim() || input.fromEmail || "A member";
+  const when = new Date().toLocaleString("en-AU", {
+    timeZone: "Australia/Sydney",
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+
+  const html = `<!doctype html><html><body style="margin:0;background:#0D0D0D;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#fff;padding:24px">
+  <div style="max-width:520px;margin:0 auto;background:#1A1A1A;border:1px solid rgba(255,255,255,.08);border-radius:20px;overflow:hidden">
+    <div style="padding:20px 24px;border-bottom:1px solid rgba(255,255,255,.08)">
+      <span style="font-size:18px;font-weight:800">Stellio <span style="color:#CCFF30">Fit</span></span>
+    </div>
+    <div style="padding:24px">
+      <p style="margin:0 0 4px;color:#CCFF30;font-size:12px;letter-spacing:.06em;text-transform:uppercase">${escapeHtml(label)}</p>
+      <h1 style="margin:0 0 16px;font-size:20px">New ${escapeHtml(label.toLowerCase())}</h1>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.5;white-space:pre-wrap;background:#222;border-radius:12px;padding:14px">${escapeHtml(
+        input.message
+      )}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:14px">
+        <tr><td style="padding:6px 0;color:#A9A9A9;width:90px">From</td><td style="padding:6px 0;color:#fff">${escapeHtml(
+          who
+        )}</td></tr>
+        ${
+          input.fromEmail
+            ? `<tr><td style="padding:6px 0;color:#A9A9A9">Email</td><td style="padding:6px 0;color:#fff">${escapeHtml(
+                input.fromEmail
+              )}</td></tr>`
+            : ""
+        }
+        <tr><td style="padding:6px 0;color:#A9A9A9">When</td><td style="padding:6px 0;color:#fff">${escapeHtml(
+          when
+        )} (Sydney)</td></tr>
+      </table>
+    </div>
+  </div>
+  <p style="max-width:520px;margin:12px auto 0;color:#737373;font-size:12px;text-align:center">Automated notification from Stellio Fit. Reply to respond to the member.</p>
+  </body></html>`;
+
+  const text = `${label}\n\n${input.message}\n\nFrom: ${who}${
+    input.fromEmail ? ` (${input.fromEmail})` : ""
+  }\nWhen: ${when} (Sydney)`;
+
+  return sendEmail({
+    to: ADMIN_EMAIL,
+    subject: `Stellio Fit ${label.toLowerCase()} from ${who}`,
+    html,
+    text,
+    replyTo: input.fromEmail || undefined,
+  });
+}
+
 function escapeHtml(s: string): string {
   return s.replace(
     /[&<>"']/g,
