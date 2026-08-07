@@ -232,13 +232,13 @@ function Toggle({
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
+        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
           checked ? "bg-[var(--accent-primary)]" : "bg-[var(--surface-elevated)]"
         }`}
       >
         <span
-          className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.35)] transition-transform ${
-            checked ? "translate-x-6" : "translate-x-1"
+          className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.35)] transition-transform ${
+            checked ? "translate-x-5" : "translate-x-0"
           }`}
         />
       </button>
