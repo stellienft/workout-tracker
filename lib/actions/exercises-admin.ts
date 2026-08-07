@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   searchExerciseDb,
   listByBodyPart,
+  listAllExerciseDb,
   type NormalizedExercise,
 } from "@/lib/exercisedb";
 
@@ -350,4 +351,172 @@ export async function seedStarterExercises() {
       error: err instanceof Error ? err.message : "Could not save exercises",
     };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Free, key-less bulk import from the open-source exercise dataset
+// (github.com/yuhonas/free-exercise-db, MIT licence). Uses NO RapidAPI quota:
+// the data + images come straight from GitHub. Batched so a full ~870-exercise
+// import never times out; the admin UI loops until hasMore is false.
+// ---------------------------------------------------------------------------
+const FREE_DB_JSON =
+  "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json";
+const FREE_DB_IMG =
+  "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/";
+
+interface FreeExercise {
+  id: string;
+  name: string;
+  category?: string;
+  level?: string;
+  equipment?: string | null;
+  primaryMuscles?: string[];
+  secondaryMuscles?: string[];
+  instructions?: string[];
+  images?: string[];
+}
+
+// Map free-exercise-db muscle names onto the app's simple tokens.
+const FREE_MUSCLE_MAP: Record<string, string> = {
+  abdominals: "core",
+  chest: "chest",
+  lats: "lats",
+  "middle back": "back",
+  "lower back": "back",
+  traps: "back",
+  neck: "back",
+  quadriceps: "quads",
+  hamstrings: "hamstrings",
+  glutes: "glutes",
+  calves: "calves",
+  biceps: "biceps",
+  triceps: "triceps",
+  forearms: "forearms",
+  shoulders: "shoulders",
+  adductors: "quads",
+  abductors: "glutes",
+};
+function mapFreeMuscle(m: string): string {
+  const k = (m || "").trim().toLowerCase();
+  return FREE_MUSCLE_MAP[k] ?? k;
+}
+function freeSlug(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+function freeDifficulty(level?: string): "beginner" | "intermediate" | "advanced" {
+  const l = (level || "").toLowerCase();
+  if (l === "expert" || l === "advanced") return "advanced";
+  if (l === "intermediate") return "intermediate";
+  return "beginner";
+}
+function freeToRow(e: FreeExercise) {
+  const primary = (e.primaryMuscles ?? []).map(mapFreeMuscle).filter(Boolean);
+  const secondary = (e.secondaryMuscles ?? []).map(mapFreeMuscle).filter(Boolean);
+  return {
+    name: e.name,
+    // Namespaced slug so it can never collide with seed/exercisedb slugs.
+    slug: `fdb-${freeSlug(e.id)}`,
+    category: (e.category ?? "").toLowerCase() === "cardio" ? "cardio" : "strength",
+    primary_muscles: Array.from(new Set(primary)),
+    secondary_muscles: Array.from(new Set(secondary)),
+    equipment: e.equipment ? [String(e.equipment).toLowerCase()] : [],
+    difficulty: freeDifficulty(e.level),
+    instructions: (e.instructions ?? []).join(" ").slice(0, 2000) || null,
+    cover_image_path: e.images?.[0]
+      ? FREE_DB_IMG + e.images[0].split("/").map(encodeURIComponent).join("/")
+      : null,
+    status: "published",
+    source: "freedb",
+    external_id: `freedb:${e.id}`,
+  };
+}
+
+/**
+ * Import one batch of the free catalog. Call repeatedly with the returned
+ * nextOffset until hasMore is false. Deduped on external_id, so it is safe to
+ * re-run and it tops up rather than duplicating.
+ */
+export async function importFreeCatalog(offset = 0) {
+  const { roles } = await getAuthContext();
+  if (!isAdminRole(roles)) return { ok: false as const, error: "Admins only" };
+
+  let all: FreeExercise[];
+  try {
+    const res = await fetch(FREE_DB_JSON, { next: { revalidate: 86400 } });
+    if (!res.ok) throw new Error(`dataset fetch failed (${res.status})`);
+    all = (await res.json()) as FreeExercise[];
+  } catch (err) {
+    return {
+      ok: false as const,
+      error: err instanceof Error ? err.message : "Couldn't fetch the free dataset",
+    };
+  }
+
+  const total = all.length;
+  const BATCH = 150;
+  const rawSlice = all.slice(offset, offset + BATCH);
+  const rows = rawSlice.filter((e) => e?.id && e?.name).map(freeToRow);
+
+  let imported = 0;
+  if (rows.length) {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("exercises")
+      .upsert(rows, { onConflict: "external_id", ignoreDuplicates: false })
+      .select("id");
+    if (error) return { ok: false as const, error: error.message };
+    imported = data?.length ?? rows.length;
+  }
+
+  const nextOffset = offset + rawSlice.length;
+  const hasMore = nextOffset < total;
+  if (!hasMore) {
+    revalidatePath("/admin/exercises");
+    revalidatePath("/exercises");
+  }
+  return { ok: true as const, imported, total, nextOffset, hasMore };
+}
+
+/**
+ * Import the ENTIRE ExerciseDB catalogue (needs a RapidAPI key with quota —
+ * one request per page). Metadata + GIF URL only; it does NOT download GIFs
+ * inline (that would time out over ~1,300 exercises), so run "Re-host GIFs"
+ * afterwards to pull the animations onto our own storage. Batched: call with
+ * the returned nextOffset until hasMore is false. Deduped on external_id.
+ */
+export async function importAllExerciseDb(offset = 0) {
+  const { roles } = await getAuthContext();
+  if (!isAdminRole(roles)) return { ok: false as const, error: "Admins only" };
+
+  const LIMIT = 100;
+  let batch: NormalizedExercise[];
+  try {
+    batch = await listAllExerciseDb(LIMIT, offset);
+  } catch (err) {
+    return {
+      ok: false as const,
+      error: err instanceof Error ? err.message : "ExerciseDB request failed",
+    };
+  }
+
+  let imported = 0;
+  if (batch.length) {
+    const supabase = await createClient();
+    const rows = batch.map(toRow);
+    const { data, error } = await supabase
+      .from("exercises")
+      .upsert(rows, { onConflict: "external_id", ignoreDuplicates: false })
+      .select("id");
+    if (error) return { ok: false as const, error: error.message };
+    imported = data?.length ?? rows.length;
+  }
+
+  // ExerciseDB returns a short (or empty) page once we run past the end.
+  const hasMore = batch.length === LIMIT;
+  const nextOffset = offset + batch.length;
+  if (!hasMore) {
+    revalidatePath("/admin/exercises");
+    revalidatePath("/exercises");
+  }
+  return { ok: true as const, imported, nextOffset, hasMore };
 }

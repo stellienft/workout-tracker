@@ -115,6 +115,15 @@ export async function searchExerciseDb(opts: {
     .slice(0, limit);
 }
 
+/** One page of the full catalogue (used by the "import everything" tool). */
+export async function listAllExerciseDb(
+  limit: number,
+  offset: number
+): Promise<NormalizedExercise[]> {
+  const list = await getList(`${BASE}/exercises?limit=${limit}&offset=${offset}`);
+  return list.map(normalize).filter((x): x is NormalizedExercise => x !== null);
+}
+
 /** List exercises for a body part (used by the starter seed). */
 export async function listByBodyPart(
   bodyPart: string,

@@ -18,6 +18,8 @@ const nextConfig: NextConfig = {
       // ExerciseDB animated GIF demos
       { protocol: "https" as const, hostname: "v2.exercisedb.io" },
       { protocol: "https" as const, hostname: "d205bpvrqc9yn1.cloudfront.net" },
+      // Free open-source exercise library images (yuhonas/free-exercise-db)
+      { protocol: "https" as const, hostname: "raw.githubusercontent.com" },
     ],
   },
 };
