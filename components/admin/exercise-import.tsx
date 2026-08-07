@@ -2,13 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Download, Sparkles, Film } from "lucide-react";
+import { Download, Sparkles, Film, Library } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import {
   importExercises,
   seedStarterExercises,
   rehostExerciseGifs,
+  importFreeCatalog,
+  importAllExerciseDb,
 } from "@/lib/actions/exercises-admin";
 
 const SUGGESTIONS = [
@@ -66,6 +68,54 @@ export function ExerciseImport({ disabled }: { disabled?: boolean }) {
     });
   }
 
+  // Import the entire ExerciseDB catalogue (Pro key), one page per request.
+  function importAll() {
+    startSeeding(async () => {
+      let offset = 0;
+      let total = 0;
+      for (let guard = 0; guard < 100; guard++) {
+        const res = await importAllExerciseDb(offset);
+        if (!res.ok) {
+          toast(res.error ?? "Import failed", "error");
+          setLastResult(res.error ?? null);
+          return;
+        }
+        total += res.imported;
+        setLastResult(`Importing all of ExerciseDB… ${res.nextOffset} fetched, ${total} saved`);
+        if (!res.hasMore) break;
+        offset = res.nextOffset;
+      }
+      const msg = `Imported ${total} exercises from ExerciseDB. Now run “Re-host GIFs” so the animations load.`;
+      setLastResult(msg);
+      toast(msg, "success");
+      router.refresh();
+    });
+  }
+
+  // Free, key-less full catalogue from the open-source dataset.
+  function importFree() {
+    startSeeding(async () => {
+      let offset = 0;
+      let total = 0;
+      for (let guard = 0; guard < 50; guard++) {
+        const res = await importFreeCatalog(offset);
+        if (!res.ok) {
+          toast(res.error ?? "Import failed", "error");
+          setLastResult(res.error ?? null);
+          return;
+        }
+        total += res.imported;
+        setLastResult(`Importing free library… ${res.nextOffset}/${res.total} processed`);
+        if (!res.hasMore) break;
+        offset = res.nextOffset;
+      }
+      const msg = `Imported ${total} exercises from the free open-source library.`;
+      setLastResult(msg);
+      toast(msg, "success");
+      router.refresh();
+    });
+  }
+
   function rehost() {
     startSeeding(async () => {
       let offset = 0;
@@ -106,6 +156,27 @@ export function ExerciseImport({ disabled }: { disabled?: boolean }) {
           Real exercises with animated GIF demos, target muscles and steps.
           Imports dedupe, so re-running a search tops up the library.
         </p>
+      </div>
+
+      {/* Bulk: import the whole library in one go. */}
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--border-active)] bg-[var(--accent-muted)] p-3">
+        <Button onClick={importAll} disabled={disabled || pending || seeding} className="gap-1.5">
+          <Library className="h-4 w-4" />
+          {seeding ? "Importing…" : "Import entire ExerciseDB"}
+        </Button>
+        <button
+          onClick={importFree}
+          disabled={pending || seeding}
+          title="Import ~870 exercises from the open-source dataset — no API key or quota used"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)] disabled:opacity-50"
+        >
+          <Download className="h-4 w-4 text-[var(--accent-primary)]" />
+          {seeding ? "Working…" : "Free library (no key)"}
+        </button>
+        <span className="text-xs text-[var(--text-muted)]">
+          Full catalogue. ExerciseDB uses your RapidAPI quota (then re-host GIFs);
+          the free library uses none.
+        </span>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
