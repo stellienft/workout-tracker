@@ -23,6 +23,7 @@ export interface AltOption {
   name: string;
   slug: string;
   shoulder_safe: boolean;
+  cover_image_path: string | null;
 }
 
 interface Enrichment {
@@ -73,13 +74,13 @@ async function enrichExercises(
       supabase
         .from("exercise_alternatives")
         .select(
-          "exercise_id, priority, alternative:exercises!exercise_alternatives_alternative_exercise_id_fkey(id, name, slug, shoulder_safe)"
+          "exercise_id, priority, alternative:exercises!exercise_alternatives_alternative_exercise_id_fkey(id, name, slug, shoulder_safe, cover_image_path)"
         )
         .in("exercise_id", safeIds)
         .order("priority"),
       supabase
         .from("exercises")
-        .select("id, name, slug, shoulder_safe, primary_muscles")
+        .select("id, name, slug, shoulder_safe, cover_image_path, primary_muscles")
         .eq("status", "published")
         .limit(500),
     ]);
@@ -155,11 +156,12 @@ async function enrichExercises(
                 p.primary_muscles.some((m) => muscles.has(m))
             )
             .slice(0, 12)
-            .map(({ id, name, slug, shoulder_safe }) => ({
+            .map(({ id, name, slug, shoulder_safe, cover_image_path }) => ({
               id,
               name,
               slug,
               shoulder_safe,
+              cover_image_path,
             }));
     result.set(ex.id, {
       video: normaliseVideoForClient(videoByExercise.get(ex.id) ?? null),
