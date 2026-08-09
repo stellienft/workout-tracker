@@ -468,7 +468,7 @@ export function WorkoutMode({
         shoulderNotes: null,
         instructions: null,
         techniqueCues: [],
-        coverPath: null,
+        coverPath: alt.cover_image_path,
         primaryMuscles: [],
         video: null,
       },
@@ -1081,11 +1081,16 @@ function ReplaceGroup({
           <button
             key={alt.id}
             onClick={() => onPick(alt)}
-            className="flex w-full items-center justify-between rounded-2xl border border-[var(--border-subtle)] p-3 text-left"
+            className="flex w-full items-center gap-3 rounded-2xl border border-[var(--border-subtle)] p-2.5 text-left"
           >
-            <span className="font-medium capitalize">{alt.name}</span>
+            <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white">
+              <ExerciseImage path={alt.cover_image_path} alt={alt.name} />
+            </span>
+            <span className="min-w-0 flex-1 truncate font-medium capitalize">
+              {alt.name}
+            </span>
             {alt.shoulder_safe && (
-              <span className="rounded-full bg-[var(--accent-muted)] px-2 py-0.5 text-[11px] text-[var(--accent-primary)]">
+              <span className="shrink-0 rounded-full bg-[var(--accent-muted)] px-2 py-0.5 text-[11px] text-[var(--accent-primary)]">
                 Shoulder-safe
               </span>
             )}
