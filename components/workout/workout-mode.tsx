@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   X,
+  Search,
   Repeat,
   ShieldAlert,
   Check,
@@ -31,6 +32,7 @@ import {
   deleteSetLog,
   deleteExerciseSets,
   getExerciseDetail,
+  searchReplacementExercises,
 } from "@/lib/actions/workout";
 import { WarmupSheet } from "@/components/workout/warmup-sheet";
 import { enqueue, flush, pendingCount } from "@/lib/offline-queue";
@@ -773,7 +775,7 @@ export function WorkoutMode({
           <div className="flex max-h-[80vh] w-full max-w-md flex-col rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-5">
             <h3 className="text-lg font-bold">Replace {replaceEx.name}</h3>
             <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              Pick a substitute. Shoulder-safe options are marked.
+              Search the library or pick a suggested substitute.
             </p>
             <div className="mt-4 flex-1 space-y-4 overflow-y-auto">
               {subs[replaceEx.exerciseId] && (
@@ -791,6 +793,7 @@ export function WorkoutMode({
                   ↩ Use original ({replaceEx.name})
                 </button>
               )}
+              <ReplaceSearch onPick={pickReplacement} />
               {replaceEx.alternatives.length > 0 && (
                 <ReplaceGroup label="Recommended" options={replaceEx.alternatives} onPick={pickReplacement} />
               )}
@@ -1059,6 +1062,110 @@ function MenuItem({
       <span className="shrink-0 text-[var(--text-secondary)]">{icon}</span>
       <span>{label}</span>
     </button>
+  );
+}
+
+const MUSCLE_CHIPS = [
+  "chest", "back", "lats", "shoulders", "biceps", "triceps",
+  "quads", "hamstrings", "glutes", "calves", "core", "cardio",
+];
+const EQUIP_CHIPS: [string, string][] = [
+  ["barbell", "Barbell"],
+  ["dumbbell", "Dumbbell"],
+  ["machine", "Machine"],
+  ["cable", "Cable"],
+  ["bodyweight", "Bodyweight"],
+  ["kettlebell", "Kettlebell"],
+  ["band", "Band"],
+];
+
+/** Search the whole library for a replacement, with muscle + equipment filters. */
+function ReplaceSearch({ onPick }: { onPick: (a: AltOption) => void }) {
+  const [query, setQuery] = useState("");
+  const [muscle, setMuscle] = useState<string | null>(null);
+  const [equip, setEquip] = useState<string | null>(null);
+  const [results, setResults] = useState<AltOption[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+
+  useEffect(() => {
+    const active = query.trim().length >= 2 || !!muscle || !!equip;
+    if (!active) {
+      setResults([]);
+      setSearched(false);
+      return;
+    }
+    setLoading(true);
+    const h = setTimeout(async () => {
+      const res = await searchReplacementExercises({ query, muscle, equipment: equip });
+      setResults(res as AltOption[]);
+      setLoading(false);
+      setSearched(true);
+    }, 250);
+    return () => clearTimeout(h);
+  }, [query, muscle, equip]);
+
+  const chip = (active: boolean) =>
+    `shrink-0 rounded-full border px-2.5 py-1 text-xs capitalize ${
+      active
+        ? "border-[var(--border-active)] bg-[var(--accent-muted)] text-[var(--accent-primary)]"
+        : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
+    }`;
+
+  return (
+    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search all exercises…"
+          className="h-11 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-primary)] pl-9 pr-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
+        />
+      </div>
+      <div className="no-scrollbar mt-2 flex gap-1.5 overflow-x-auto">
+        {MUSCLE_CHIPS.map((m) => (
+          <button key={m} onClick={() => setMuscle(muscle === m ? null : m)} className={chip(muscle === m)}>
+            {m}
+          </button>
+        ))}
+      </div>
+      <div className="no-scrollbar mt-1.5 flex gap-1.5 overflow-x-auto">
+        {EQUIP_CHIPS.map(([key, label]) => (
+          <button key={key} onClick={() => setEquip(equip === key ? null : key)} className={chip(equip === key)}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {(loading || searched) && (
+        <div className="mt-3 space-y-2">
+          {loading && <p className="text-xs text-[var(--text-muted)]">Searching…</p>}
+          {!loading && results.length === 0 && (
+            <p className="text-xs text-[var(--text-muted)]">
+              No matches. Try a different term or filter.
+            </p>
+          )}
+          {results.map((alt) => (
+            <button
+              key={alt.id}
+              onClick={() => onPick(alt)}
+              className="flex w-full items-center gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-2.5 text-left"
+            >
+              <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white">
+                <ExerciseImage path={alt.cover_image_path} alt={alt.name} />
+              </span>
+              <span className="min-w-0 flex-1 truncate font-medium capitalize">{alt.name}</span>
+              {alt.shoulder_safe && (
+                <span className="shrink-0 rounded-full bg-[var(--accent-muted)] px-2 py-0.5 text-[11px] text-[var(--accent-primary)]">
+                  Shoulder-safe
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

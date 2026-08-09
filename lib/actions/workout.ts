@@ -478,3 +478,60 @@ export async function getExerciseDetail(exerciseId: string) {
     video: normaliseVideoForClient(best),
   };
 }
+
+// Equipment filter chips → the raw equipment values that appear in the library
+// (ExerciseDB + free dataset use different spellings for the same thing).
+const EQUIP_SYNONYMS: Record<string, string[]> = {
+  barbell: ["barbell", "ez barbell", "olympic barbell", "trap bar"],
+  dumbbell: ["dumbbell"],
+  machine: ["leverage machine", "machine", "smith machine", "sled machine"],
+  cable: ["cable"],
+  bodyweight: ["body weight", "body only", "assisted", "bodyweight"],
+  kettlebell: ["kettlebell"],
+  band: ["band", "bands", "resistance band"],
+};
+
+export interface ReplacementResult {
+  id: string;
+  name: string;
+  slug: string;
+  shoulder_safe: boolean;
+  cover_image_path: string | null;
+}
+
+/**
+ * Search the published exercise library for a replacement, with optional
+ * muscle and equipment filters. Used by the in-workout "Replace exercise"
+ * sheet. Results with a demo image come first.
+ */
+export async function searchReplacementExercises(input: {
+  query?: string;
+  muscle?: string | null;
+  equipment?: string | null;
+}): Promise<ReplacementResult[]> {
+  const supabase = await createClient();
+  let q = supabase
+    .from("exercises")
+    .select("id, name, slug, shoulder_safe, cover_image_path")
+    .eq("status", "published")
+    .limit(40);
+
+  const query = (input.query ?? "").trim();
+  if (query) q = q.ilike("name", `%${query}%`);
+  if (input.muscle) q = q.contains("primary_muscles", [input.muscle]);
+  if (input.equipment) {
+    q = q.overlaps("equipment", EQUIP_SYNONYMS[input.equipment] ?? [input.equipment]);
+  }
+
+  const { data } = await q
+    .order("cover_image_path", { ascending: false, nullsFirst: false })
+    .order("name");
+
+  return (data ?? []).map((r) => ({
+    id: r.id as string,
+    name: r.name as string,
+    slug: r.slug as string,
+    shoulder_safe: r.shoulder_safe as boolean,
+    cover_image_path: (r.cover_image_path as string | null) ?? null,
+  }));
+}
