@@ -57,13 +57,62 @@ const createPostSchema = z.object({
   workoutSessionId: z.string().uuid().optional(),
 });
 
+/**
+ * Notify the followers of `actorId` who opted in to feed activity — used when
+ * they post or comment. Reads follow rows + preferences with the service role,
+ * excludes the actor (and any already-notified ids). Best-effort.
+ */
+async function notifyFollowersOfActivity(opts: {
+  actorId: string;
+  title: string;
+  body: string;
+  excludeIds?: string[];
+}) {
+  try {
+    const { serviceSupabase } = await import("@/lib/push");
+    const svc = serviceSupabase();
+    const { data: followerRows } = await svc
+      .from("social_follows")
+      .select("follower_id")
+      .eq("following_id", opts.actorId);
+    const exclude = new Set([opts.actorId, ...(opts.excludeIds ?? [])]);
+    const followerIds = (followerRows ?? [])
+      .map((r) => r.follower_id as string)
+      .filter((id) => !exclude.has(id));
+    if (!followerIds.length) return;
+
+    const { data: prefs } = await svc
+      .from("profiles")
+      .select("id")
+      .in("id", followerIds)
+      .eq("feed_notifications_enabled", true);
+    const recipients = (prefs ?? []).map((p) => p.id as string);
+    if (!recipients.length) return;
+
+    const { notifyUser } = await import("@/lib/notify");
+    await Promise.all(
+      recipients.map((rid) =>
+        notifyUser({
+          userId: rid,
+          type: "feed_activity",
+          title: opts.title,
+          body: opts.body,
+          link: "/feed",
+        })
+      )
+    );
+  } catch {
+    // best-effort — never block the post/comment
+  }
+}
+
 export async function createPost(input: {
   caption?: string;
   mediaUrl?: string;
   mediaType?: "image" | "video" | "none";
   workoutSessionId?: string;
 }) {
-  const { supabase, user } = await getAuthContext();
+  const { supabase, user, profile } = await getAuthContext();
   if (!user) return { ok: false as const, error: "Not authenticated" };
 
   const { isPro } = await getUserPlan();
@@ -92,6 +141,13 @@ export async function createPost(input: {
 
   // Kick off AI moderation (fire-and-forget; fail-open).
   moderatePost(postId, caption || "").catch(() => {});
+
+  // Ping opted-in followers that someone they follow shared a post.
+  await notifyFollowersOfActivity({
+    actorId: user.id,
+    title: `${profile?.full_name ?? "Someone"} shared a post`,
+    body: (caption || "New post").slice(0, 100),
+  });
 
   revalidatePath("/feed");
   return { ok: true as const, postId };
@@ -164,46 +220,13 @@ export async function addComment(postId: string, body: string) {
     });
   }
 
-  // Notify followers of the commenter who opted in to feed activity — so people
-  // get pinged when someone they follow comments. Skip the commenter and the
-  // post owner (already notified above). Uses the service role to read other
-  // members' follow rows + preference. Best-effort.
-  try {
-    const { serviceSupabase } = await import("@/lib/push");
-    const svc = serviceSupabase();
-    const { data: followerRows } = await svc
-      .from("social_follows")
-      .select("follower_id")
-      .eq("following_id", user.id);
-    const followerIds = (followerRows ?? [])
-      .map((r) => r.follower_id as string)
-      .filter((id) => id !== user.id && id !== postOwnerId);
-
-    if (followerIds.length) {
-      const { data: prefs } = await svc
-        .from("profiles")
-        .select("id")
-        .in("id", followerIds)
-        .eq("feed_notifications_enabled", true);
-      const recipients = (prefs ?? []).map((p) => p.id as string);
-      if (recipients.length) {
-        const { notifyUser } = await import("@/lib/notify");
-        await Promise.all(
-          recipients.map((rid) =>
-            notifyUser({
-              userId: rid,
-              type: "feed_activity",
-              title: `${name} commented`,
-              body: preview,
-              link: "/feed",
-            })
-          )
-        );
-      }
-    }
-  } catch {
-    // best-effort — never block the comment
-  }
+  // Ping opted-in followers of the commenter (skip the post owner, already done).
+  await notifyFollowersOfActivity({
+    actorId: user.id,
+    title: `${name} commented`,
+    body: preview,
+    excludeIds: postOwnerId ? [postOwnerId] : [],
+  });
 
   revalidatePath("/feed");
   revalidatePath(`/feed/${parsed.data.postId}`);
