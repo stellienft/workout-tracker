@@ -12,6 +12,7 @@ const onboardingSchema = z.object({
     .enum(["never", "lt_6m", "6_12m", "1_3y", "3y_plus", "returning"])
     .optional(),
   experience: z.enum(["beginner", "intermediate", "advanced"]),
+  trainingLocation: z.enum(["home", "gym", "both"]).optional(),
   weeklyFrequency: z.coerce.number().int().min(1).max(7),
   sessionMinutes: z.coerce.number().int().min(10).max(180),
   equipment: z.array(z.string()).default([]),
@@ -55,6 +56,16 @@ export async function completeOnboarding(raw: OnboardingInput) {
     .eq("id", user.id);
   if (profileError) return { ok: false, error: profileError.message };
 
+  // training_location is added by a later migration — write it best-effort so a
+  // not-yet-migrated database can't break onboarding. supabase-js returns the
+  // error rather than throwing, so we simply ignore it.
+  if (data.trainingLocation) {
+    await supabase
+      .from("profiles")
+      .update({ training_location: data.trainingLocation })
+      .eq("id", user.id);
+  }
+
   // Clear any prior primary flag, then set the chosen goal as primary.
   await supabase
     .from("user_goals")
@@ -92,6 +103,82 @@ export async function completeOnboarding(raw: OnboardingInput) {
 
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+export interface RecommendedProgram {
+  id: string;
+  name: string;
+  slug: string;
+  short_description: string | null;
+  cover_image_path: string | null;
+  experience_level: string;
+  duration_weeks: number;
+  minimum_days_per_week: number;
+  maximum_days_per_week: number;
+  estimated_session_minutes: number;
+}
+
+const HOME_RE = /home|bodyweight|dumbbell|no equipment|no-equipment/i;
+
+/**
+ * Recommend a few published programs that fit the member's goal, fitness level
+ * and where they train (home vs gym). Scored, not filtered, so it always
+ * returns something sensible.
+ */
+export async function recommendProgramsForOnboarding(input: {
+  goalId?: string | null;
+  experience?: "beginner" | "intermediate" | "advanced";
+  location?: "home" | "gym" | "both";
+}): Promise<RecommendedProgram[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("programs")
+    .select(
+      "id, name, slug, short_description, cover_image_path, fitness_goal_id, experience_level, duration_weeks, minimum_days_per_week, maximum_days_per_week, estimated_session_minutes, featured"
+    )
+    .eq("status", "published")
+    .limit(200);
+
+  const order = { beginner: 0, intermediate: 1, advanced: 2, all: 1 } as const;
+  const userLvl = order[input.experience ?? "beginner"];
+
+  const scored = (data ?? []).map((p) => {
+    let score = 0;
+    if (input.goalId && p.fitness_goal_id === input.goalId) score += 5;
+
+    const lvl = (p.experience_level as string) ?? "all";
+    if (lvl === input.experience) score += 3;
+    else if (lvl === "all") score += 1;
+    else {
+      // Penalise by how far the program level is from the member's.
+      const dist = Math.abs((order[lvl as keyof typeof order] ?? 1) - userLvl);
+      score += dist === 1 ? 0 : -2;
+    }
+
+    const homeFriendly = HOME_RE.test(`${p.name} ${p.short_description ?? ""} ${p.slug}`);
+    if (input.location === "home") score += homeFriendly ? 5 : -4;
+    else if (input.location === "gym") score += homeFriendly ? -1 : 2;
+
+    if (p.featured) score += 0.5;
+    return { p, score };
+  });
+
+  return scored
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score || a.p.name.localeCompare(b.p.name))
+    .slice(0, 4)
+    .map(({ p }) => ({
+      id: p.id as string,
+      name: p.name as string,
+      slug: p.slug as string,
+      short_description: (p.short_description as string | null) ?? null,
+      cover_image_path: (p.cover_image_path as string | null) ?? null,
+      experience_level: (p.experience_level as string) ?? "all",
+      duration_weeks: (p.duration_weeks as number) ?? 0,
+      minimum_days_per_week: (p.minimum_days_per_week as number) ?? 0,
+      maximum_days_per_week: (p.maximum_days_per_week as number) ?? 0,
+      estimated_session_minutes: (p.estimated_session_minutes as number) ?? 0,
+    }));
 }
 
 /** Change the primary goal later (from Goals page). */

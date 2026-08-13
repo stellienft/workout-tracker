@@ -1,15 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { CoverImage } from "@/components/ui/cover-image";
 import { cn } from "@/lib/utils";
-import { completeOnboarding } from "@/lib/actions/onboarding";
+import {
+  completeOnboarding,
+  recommendProgramsForOnboarding,
+  type RecommendedProgram,
+} from "@/lib/actions/onboarding";
+import { enrolInProgram } from "@/lib/actions/enrolment";
 import { processReferral } from "@/lib/actions/referrals";
 import { INJURY_AREAS } from "@/lib/injury";
 import type { FitnessGoal } from "@/lib/types";
-import { Check } from "lucide-react";
+import { Check, CalendarDays, Clock, Dumbbell, Home, Building2 } from "lucide-react";
 
 const EQUIPMENT = [
   "dumbbell",
@@ -41,6 +46,7 @@ export function OnboardingWizard({
   const [experience, setExperience] = useState<
     "beginner" | "intermediate" | "advanced"
   >("beginner");
+  const [trainingLocation, setTrainingLocation] = useState<"home" | "gym" | "both">("gym");
   const [weeklyFrequency, setWeeklyFrequency] = useState(3);
   const [sessionMinutes, setSessionMinutes] = useState(45);
   const [equipment, setEquipment] = useState<string[]>(["dumbbell", "bodyweight"]);
@@ -49,9 +55,29 @@ export function OnboardingWizard({
   const [trainingDays, setTrainingDays] = useState<string[]>(["Mon", "Wed", "Fri"]);
   const [medicationTracking, setMedicationTracking] = useState(false);
 
-  // Grouped into 6 quick screens instead of 10 one-question steps.
-  // Step 5 (body composition scan upload) is optional.
-  const totalSteps = 6;
+  // Program recommendations (final step).
+  const [recs, setRecs] = useState<RecommendedProgram[] | null>(null);
+  const [loadingRecs, setLoadingRecs] = useState(false);
+  const [chosenProgramId, setChosenProgramId] = useState<string | null>(null);
+
+  // Grouped quick screens. Step 5 (body-scan) is optional; step 6 recommends
+  // programs matched to the member's goal, level and where they train.
+  const totalSteps = 7;
+  const RECS_STEP = 6;
+
+  // Fetch recommendations when the member reaches the final step.
+  useEffect(() => {
+    if (step !== RECS_STEP || recs !== null || !goalId) return;
+    setLoadingRecs(true);
+    recommendProgramsForOnboarding({
+      goalId,
+      experience,
+      location: trainingLocation,
+    })
+      .then((r) => setRecs(r))
+      .catch(() => setRecs([]))
+      .finally(() => setLoadingRecs(false));
+  }, [step, recs, goalId, experience, trainingLocation]);
 
   function toggle(list: string[], value: string, set: (v: string[]) => void) {
     set(list.includes(value) ? list.filter((x) => x !== value) : [...list, value]);
@@ -69,6 +95,7 @@ export function OnboardingWizard({
       goalId,
       age: age ? Number(age) : undefined,
       experience,
+      trainingLocation,
       weeklyFrequency,
       sessionMinutes,
       equipment,
@@ -78,10 +105,19 @@ export function OnboardingWizard({
       medicationTracking,
     });
     if (res.ok) {
-      // Redeem any referral invite (grants both sides a free month), then land
-      // on the membership offer once onboarding is done.
+      // Redeem any referral invite (grants both sides a free month).
       await processReferral().catch(() => {});
-      router.push("/billing?welcome=1");
+      // Start the program they picked from the recommendations, if any.
+      let enrolled = false;
+      if (chosenProgramId) {
+        const e = await enrolInProgram({
+          programId: chosenProgramId,
+          daysPerWeek: weeklyFrequency,
+        }).catch(() => ({ ok: false }));
+        enrolled = !!e.ok;
+      }
+      // If they started a program, take them to it; otherwise the membership offer.
+      router.push(enrolled ? "/dashboard" : "/billing?welcome=1");
       router.refresh();
     } else {
       setError(res.error ?? "Could not save. Please try again.");
@@ -142,7 +178,7 @@ export function OnboardingWizard({
                 </span>
               </div>
             </Field>
-            <Field label="Your training experience">
+            <Field label="Your fitness level">
               <Choices
                 columns={3}
                 options={[
@@ -153,6 +189,29 @@ export function OnboardingWizard({
                 value={experience}
                 onChange={(v) => setExperience(v as typeof experience)}
               />
+            </Field>
+            <Field label="Where do you train?">
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: "home", label: "Home", icon: <Home className="h-4 w-4" /> },
+                  { value: "gym", label: "Gym", icon: <Building2 className="h-4 w-4" /> },
+                  { value: "both", label: "Both", icon: <Dumbbell className="h-4 w-4" /> },
+                ].map((o) => (
+                  <button
+                    key={o.value}
+                    onClick={() => setTrainingLocation(o.value as typeof trainingLocation)}
+                    className={cn(
+                      "flex flex-col items-center gap-1.5 rounded-xl border p-3 text-sm font-semibold transition-colors",
+                      trainingLocation === o.value
+                        ? "border-[var(--border-active)] bg-[var(--accent-muted)] text-[var(--accent-primary)]"
+                        : "border-[var(--border-subtle)] bg-[var(--surface-primary)] text-[var(--text-secondary)]"
+                    )}
+                  >
+                    {o.icon}
+                    {o.label}
+                  </button>
+                ))}
+              </div>
             </Field>
           </div>
         )}
@@ -329,6 +388,84 @@ export function OnboardingWizard({
             </p>
           </div>
         )}
+
+        {step === RECS_STEP && (
+          <div className="space-y-5">
+            <div>
+              <h2 className="text-2xl font-bold">Programs picked for you</h2>
+              <p className="mt-1 text-[var(--text-secondary)]">
+                Based on your goal, {experience} level and training{" "}
+                {trainingLocation === "both" ? "at home & the gym" : `at ${trainingLocation === "home" ? "home" : "the gym"}`}.
+                Tap one to start it now, or skip and browse later.
+              </p>
+            </div>
+
+            {loadingRecs && (
+              <p className="text-sm text-[var(--text-muted)]">Finding your best matches…</p>
+            )}
+
+            {!loadingRecs && recs && recs.length === 0 && (
+              <p className="text-sm text-[var(--text-muted)]">
+                We couldn&apos;t match a program to those answers — you can browse
+                the full library from your dashboard.
+              </p>
+            )}
+
+            <div className="grid gap-3">
+              {(recs ?? []).map((p) => {
+                const active = chosenProgramId === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => setChosenProgramId(active ? null : p.id)}
+                    className={cn(
+                      "flex items-stretch gap-3 overflow-hidden rounded-[var(--radius-card)] border text-left transition-transform active:scale-[0.99]",
+                      active ? "border-[var(--border-active)]" : "border-[var(--border-subtle)]"
+                    )}
+                  >
+                    <div className="relative h-auto w-28 shrink-0">
+                      <CoverImage path={p.cover_image_path} alt={p.name} sizes="112px" />
+                      {active && (
+                        <span className="absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent-primary)] text-[var(--accent-ink)]">
+                          <Check className="h-4 w-4" />
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1 p-3">
+                      <p className="font-bold leading-tight">{p.name}</p>
+                      {p.short_description && (
+                        <p className="mt-0.5 line-clamp-2 text-xs text-[var(--text-secondary)]">
+                          {p.short_description}
+                        </p>
+                      )}
+                      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[var(--text-muted)]">
+                        <span className="inline-flex items-center gap-1">
+                          <CalendarDays className="h-3 w-3" />
+                          {p.duration_weeks} wks
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <Dumbbell className="h-3 w-3" />
+                          {p.minimum_days_per_week}–{p.maximum_days_per_week}/wk
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {p.estimated_session_minutes} min
+                        </span>
+                        <span className="capitalize">{p.experience_level}</span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {chosenProgramId && (
+              <p className="text-sm font-medium text-[var(--accent-primary)]">
+                We&apos;ll start this program and take you straight to your dashboard.
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {error && <p className="mt-4 text-sm text-[var(--danger)]">{error}</p>}
@@ -357,7 +494,7 @@ export function OnboardingWizard({
           </Button>
         ) : (
           <Button onClick={finish} disabled={saving}>
-            {saving ? "Saving…" : "Finish setup"}
+            {saving ? "Saving…" : chosenProgramId ? "Start program" : "Finish setup"}
           </Button>
         )}
       </div>
