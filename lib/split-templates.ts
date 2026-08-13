@@ -396,6 +396,27 @@ export const SPLIT_TEMPLATES: SplitTemplate[] = [
       },
     ],
   },
+  {
+    key: "home-shoulders",
+    name: "Home Gym Shoulders",
+    level: "Beginner",
+    daysPerWeek: "1 day",
+    summary:
+      "A complete shoulder session you can do at home with just dumbbells and bodyweight — presses, raises and rear delts.",
+    days: [
+      {
+        name: "Shoulder Day",
+        focusMuscles: ["shoulders", "back"],
+        exercises: [
+          S("seated-db-shoulder-press", 4, "8–12", 120),
+          S("lateral-raise-light", 4, "12–15", 60),
+          S("one-arm-dumbbell-row", 3, "10–12"),
+          S("incline-push-up", 3, "AMRAP", 60),
+          S("farmers-carry", 3, "40m", 60),
+        ],
+      },
+    ],
+  },
 ];
 
 export function getTemplate(key: string): SplitTemplate | undefined {
