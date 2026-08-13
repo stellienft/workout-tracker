@@ -32,6 +32,7 @@ export interface Profile {
     | null;
   experience_level: "beginner" | "intermediate" | "advanced" | null;
   training_location: "home" | "gym" | "both" | null;
+  feed_notifications_enabled?: boolean;
   weekly_frequency: number | null;
   session_minutes: number | null;
   equipment: string[];

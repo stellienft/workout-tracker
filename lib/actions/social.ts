@@ -143,22 +143,66 @@ export async function addComment(postId: string, body: string) {
 
   if (error) return { ok: false as const, error: error.message };
 
+  const name = profile?.full_name ?? "Someone";
+  const preview = parsed.data.body.slice(0, 100);
+
   // Notify the post owner (unless they commented on their own post).
   const { data: post } = await supabase
     .from("social_posts")
     .select("user_id")
     .eq("id", parsed.data.postId)
     .maybeSingle();
-  if (post && post.user_id !== user.id) {
+  const postOwnerId = (post?.user_id as string | undefined) ?? undefined;
+  if (postOwnerId && postOwnerId !== user.id) {
     const { notifyUser } = await import("@/lib/notify");
-    const name = profile?.full_name ?? "Someone";
     await notifyUser({
-      userId: post.user_id as string,
+      userId: postOwnerId,
       type: "post_comment",
       title: `${name} commented on your post`,
-      body: parsed.data.body.slice(0, 100),
+      body: preview,
       link: "/feed",
     });
+  }
+
+  // Notify followers of the commenter who opted in to feed activity — so people
+  // get pinged when someone they follow comments. Skip the commenter and the
+  // post owner (already notified above). Uses the service role to read other
+  // members' follow rows + preference. Best-effort.
+  try {
+    const { serviceSupabase } = await import("@/lib/push");
+    const svc = serviceSupabase();
+    const { data: followerRows } = await svc
+      .from("social_follows")
+      .select("follower_id")
+      .eq("following_id", user.id);
+    const followerIds = (followerRows ?? [])
+      .map((r) => r.follower_id as string)
+      .filter((id) => id !== user.id && id !== postOwnerId);
+
+    if (followerIds.length) {
+      const { data: prefs } = await svc
+        .from("profiles")
+        .select("id")
+        .in("id", followerIds)
+        .eq("feed_notifications_enabled", true);
+      const recipients = (prefs ?? []).map((p) => p.id as string);
+      if (recipients.length) {
+        const { notifyUser } = await import("@/lib/notify");
+        await Promise.all(
+          recipients.map((rid) =>
+            notifyUser({
+              userId: rid,
+              type: "feed_activity",
+              title: `${name} commented`,
+              body: preview,
+              link: "/feed",
+            })
+          )
+        );
+      }
+    }
+  } catch {
+    // best-effort — never block the comment
   }
 
   revalidatePath("/feed");

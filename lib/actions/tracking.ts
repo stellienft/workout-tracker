@@ -147,6 +147,7 @@ export async function updateSettings(input: Record<string, unknown>) {
     medicationTracking: z.boolean().optional(),
     dailyQuoteEnabled: z.boolean().optional(),
     motivationPushEnabled: z.boolean().optional(),
+    feedNotificationsEnabled: z.boolean().optional(),
     injuryAreas: z.array(z.string()).max(20).optional(),
     considerations: z.string().max(1000).optional(),
     timezone: z.string().max(64).optional(),
@@ -179,6 +180,16 @@ export async function updateSettings(input: Record<string, unknown>) {
     .update(update)
     .eq("id", user.id);
   if (error) return { ok: false, error: error.message };
+
+  // feed_notifications_enabled is added by a later migration — write it
+  // best-effort so a not-yet-migrated database can't fail the whole save.
+  if (d.feedNotificationsEnabled !== undefined) {
+    await supabase
+      .from("profiles")
+      .update({ feed_notifications_enabled: d.feedNotificationsEnabled })
+      .eq("id", user.id);
+  }
+
   revalidatePath("/settings");
   revalidatePath("/", "layout");
   return { ok: true };

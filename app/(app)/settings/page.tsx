@@ -119,6 +119,7 @@ export default async function SettingsPage() {
             medicationTracking: profile?.medication_tracking_enabled ?? false,
             dailyQuote: profile?.daily_quote_enabled ?? true,
             motivationPush: profile?.motivation_push_enabled ?? false,
+            feedNotifications: profile?.feed_notifications_enabled ?? false,
             injuryAreas: profile?.injury_areas ?? [],
             considerations: profile?.considerations ?? "",
             timezone: profile?.timezone ?? "Australia/Brisbane",
