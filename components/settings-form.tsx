@@ -19,6 +19,7 @@ export function SettingsForm({
     medicationTracking: boolean;
     dailyQuote: boolean;
     motivationPush: boolean;
+    feedNotifications: boolean;
     injuryAreas: string[];
     considerations: string;
     timezone: string;
@@ -33,6 +34,7 @@ export function SettingsForm({
   const [medication, setMedication] = useState(initial.medicationTracking);
   const [dailyQuote, setDailyQuote] = useState(initial.dailyQuote);
   const [motivationPush, setMotivationPush] = useState(initial.motivationPush);
+  const [feedNotifications, setFeedNotifications] = useState(initial.feedNotifications);
   const [injuryAreas, setInjuryAreas] = useState<string[]>(initial.injuryAreas);
   const [considerations, setConsiderations] = useState(initial.considerations);
   const [timezone, setTimezone] = useState(initial.timezone);
@@ -70,6 +72,7 @@ export function SettingsForm({
         medicationTracking: medication,
         dailyQuoteEnabled: dailyQuote,
         motivationPushEnabled: motivationPush,
+        feedNotificationsEnabled: feedNotifications,
         injuryAreas,
         considerations,
         timezone,
@@ -164,6 +167,12 @@ export function SettingsForm({
         hint="Get the daily quote as a morning push (needs reminders enabled)."
         checked={motivationPush}
         onChange={setMotivationPush}
+      />
+      <Toggle
+        label="Feed activity notifications"
+        hint="Get notified when someone you follow comments on the feed."
+        checked={feedNotifications}
+        onChange={setFeedNotifications}
       />
 
       <div>

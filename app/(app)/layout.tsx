@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { getAuthContext, isAdminRole, isTrainerRole } from "@/lib/auth";
 import { getUserPlan } from "@/lib/entitlements";
 import { createClient } from "@/lib/supabase/server";
@@ -16,10 +17,14 @@ export default async function AppLayout({
   const { user, profile, roles } = await getAuthContext();
   if (!user) redirect("/login");
 
-  // Safety net: redeem a referral stamped on the account at signup, in case the
-  // end-of-onboarding redemption didn't run (e.g. trainer signup, interrupted
-  // flow). Cleared once handled, so this is a no-op on later loads.
-  if ((user.user_metadata as { ref_code?: string } | undefined)?.ref_code) {
+  // Safety net: redeem a referral on the first authenticated load, in case the
+  // end-of-onboarding redemption didn't run (trainer signup, interrupted flow,
+  // or a Google/OAuth signup where the code only lives in the cookie, not the
+  // auth metadata). Fires when EITHER signal is present; processReferral is
+  // idempotent and clears both, so this is a no-op on later loads.
+  const refCookie = (await cookies()).get("ref_code")?.value;
+  const refMeta = (user.user_metadata as { ref_code?: string } | undefined)?.ref_code;
+  if (refCookie || refMeta) {
     const { processReferral } = await import("@/lib/actions/referrals");
     await processReferral().catch(() => {});
   }
