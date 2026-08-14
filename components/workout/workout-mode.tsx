@@ -156,6 +156,10 @@ export function WorkoutMode({
   const [pending, setPending] = useState(0);
   const [removed, setRemoved] = useState<Set<string>>(new Set());
 
+  // Exercises added ad-hoc during this session (not part of the template).
+  const [added, setAdded] = useState<WorkoutExerciseVM[]>([]);
+  const [showAdd, setShowAdd] = useState(false);
+
   // Per-exercise overlays, keyed by exerciseId.
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [replaceFor, setReplaceFor] = useState<string | null>(null);
@@ -196,9 +200,11 @@ export function WorkoutMode({
     return initial;
   });
 
+  const allExercises = useMemo(() => [...exercises, ...added], [exercises, added]);
+
   const workingExercises = useMemo(
-    () => exercises.filter((e) => !removed.has(e.exerciseId)),
-    [exercises, removed]
+    () => allExercises.filter((e) => !removed.has(e.exerciseId)),
+    [allExercises, removed]
   );
 
   // Superset / circuit grouping by exerciseId.
@@ -457,6 +463,75 @@ export function WorkoutMode({
     void logWarmup({ sessionId, type, seconds });
   }
 
+  function addExercise(alt: AltOption) {
+    setShowAdd(false);
+    // If it's already in the workout (even removed), just un-remove it.
+    if (removed.has(alt.id)) {
+      setRemoved((prev) => {
+        const n = new Set(prev);
+        n.delete(alt.id);
+        return n;
+      });
+      return;
+    }
+    if (allExercises.some((e) => e.exerciseId === alt.id)) return;
+
+    const vm: WorkoutExerciseVM = {
+      templateExerciseId: null,
+      exerciseId: alt.id,
+      name: alt.name,
+      trackingType: "reps",
+      primaryMuscles: [],
+      instructions: null,
+      techniqueCues: [],
+      shoulderSafe: alt.shoulder_safe,
+      shoulderNotes: null,
+      coverPath: alt.cover_image_path,
+      sets: 3,
+      repTarget: "8–12",
+      restSeconds: 90,
+      notes: null,
+      isOptional: false,
+      supersetGroup: null,
+      video: null,
+      alternatives: [],
+      moreAlternatives: [],
+      previous: [],
+    };
+    setAdded((prev) => [...prev, vm]);
+    setState((prev) => ({
+      ...prev,
+      [alt.id]: Array.from({ length: vm.sets }, (_, i) => ({
+        n: i + 1,
+        weight: "",
+        reps: "",
+        seconds: "",
+        rpe: "",
+        pain: "",
+        done: false,
+      })),
+    }));
+    // Enrich with full technique detail (muscles, cues, cover) in the background.
+    void getExerciseDetail(alt.id).then((detail) => {
+      if (!detail) return;
+      setAdded((prev) =>
+        prev.map((e) =>
+          e.exerciseId === alt.id
+            ? {
+                ...e,
+                instructions: detail.instructions,
+                techniqueCues: detail.techniqueCues,
+                coverPath: detail.coverPath ?? e.coverPath,
+                primaryMuscles: detail.primaryMuscles,
+                shoulderNotes: detail.shoulderNotes,
+                video: detail.video,
+              }
+            : e
+        )
+      );
+    });
+  }
+
   function pickReplacement(alt: AltOption) {
     const exId = replaceFor;
     if (!exId) return;
@@ -507,7 +582,13 @@ export function WorkoutMode({
       <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-[var(--background-primary)] p-6 text-center">
         <p className="text-[var(--text-secondary)]">All exercises removed from this workout.</p>
         {finishError && <p className="max-w-xs text-sm text-[var(--warning)]">{finishError}</p>}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap justify-center gap-2">
+          <button
+            onClick={() => setShowAdd(true)}
+            className="inline-flex items-center gap-1.5 rounded-2xl border border-[var(--border-subtle)] px-4 py-3 text-sm"
+          >
+            <Plus className="h-4 w-4" /> Add exercise
+          </button>
           <button onClick={onSaveExit} className="rounded-2xl border border-[var(--border-subtle)] px-4 py-3 text-sm">
             Save &amp; exit
           </button>
@@ -519,6 +600,25 @@ export function WorkoutMode({
             {finishing ? "Finishing…" : "Complete workout"}
           </button>
         </div>
+        {showAdd && (
+          <div className="fixed inset-0 z-[170] flex items-end justify-center bg-black/70 p-4 sm:items-center">
+            <div className="flex max-h-[80vh] w-full max-w-md flex-col rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-5 text-left">
+              <h3 className="text-lg font-bold">Add an exercise</h3>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                Search the library and add it to today&apos;s workout.
+              </p>
+              <div className="mt-4 flex-1 overflow-y-auto">
+                <ReplaceSearch onPick={addExercise} />
+              </div>
+              <button
+                onClick={() => setShowAdd(false)}
+                className="mt-4 w-full rounded-2xl py-2 text-sm text-[var(--text-secondary)]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -623,6 +723,13 @@ export function WorkoutMode({
           </div>
 
           {workingExercises.map((ex) => renderCard(ex))}
+
+          <button
+            onClick={() => setShowAdd(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--border-subtle)] py-3.5 text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)]"
+          >
+            <Plus className="h-4 w-4" /> Add exercise
+          </button>
         </div>
       </div>
 
@@ -810,6 +917,27 @@ export function WorkoutMode({
             </div>
             <button
               onClick={() => setReplaceFor(null)}
+              className="mt-4 w-full rounded-2xl py-2 text-sm text-[var(--text-secondary)]"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Add-exercise sheet */}
+      {showAdd && (
+        <div className="fixed inset-0 z-[170] flex items-end justify-center bg-black/70 p-4 sm:items-center">
+          <div className="flex max-h-[80vh] w-full max-w-md flex-col rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-5">
+            <h3 className="text-lg font-bold">Add an exercise</h3>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              Search the library and add it to today&apos;s workout.
+            </p>
+            <div className="mt-4 flex-1 overflow-y-auto">
+              <ReplaceSearch onPick={addExercise} />
+            </div>
+            <button
+              onClick={() => setShowAdd(false)}
               className="mt-4 w-full rounded-2xl py-2 text-sm text-[var(--text-secondary)]"
             >
               Cancel
