@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Pause, Play, X, Plus } from "lucide-react";
 
 /**
@@ -56,14 +56,51 @@ export function RestTimer({
   // app, so a counter would freeze. We also resync on return to foreground.
   const endAtRef = useRef<number>(Date.now() + seconds * 1000);
   const firedRef = useRef(false);
+  const tokenRef = useRef<string | null>(null);
 
+  const pushReady = () =>
+    typeof Notification !== "undefined" && Notification.permission === "granted";
+
+  // Ask the server to deliver a "rest complete" push at the end time. This is
+  // what makes the notification reliable once an iOS PWA freezes its JS — the
+  // send happens server-side, independent of this tab being alive.
+  const scheduleServerPush = useCallback((restSeconds: number) => {
+    if (!pushReady() || restSeconds <= 0) return;
+    fetch("/api/rest-timer", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ restSeconds, url: window.location.pathname }),
+      keepalive: true,
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.token) tokenRef.current = d.token;
+      })
+      .catch(() => {});
+  }, []);
+
+  const cancelServerPush = useCallback(() => {
+    if (!pushReady()) return;
+    fetch("/api/rest-timer", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ cancel: true, token: tokenRef.current }),
+      keepalive: true,
+    }).catch(() => {});
+    tokenRef.current = null;
+  }, []);
+
+  // A new rest starts (component is keyed per rest, so this is effectively a
+  // mount): reset the clock and schedule the server push; cancel it on unmount.
   useEffect(() => {
     setRemaining(seconds);
     setTotal(seconds);
     setRunning(true);
     endAtRef.current = Date.now() + seconds * 1000;
     firedRef.current = false;
-  }, [seconds]);
+    scheduleServerPush(seconds);
+    return () => cancelServerPush();
+  }, [seconds, scheduleServerPush, cancelServerPush]);
 
   useEffect(() => {
     if (!running) return;
@@ -71,7 +108,14 @@ export function RestTimer({
       if (firedRef.current) return;
       firedRef.current = true;
       if (haptics && "vibrate" in navigator) navigator.vibrate?.(200);
-      notifyRestOver();
+      // If they're looking at the app when rest ends, the on-screen timer +
+      // vibration are enough — cancel the queued server push so it can't arrive
+      // as a duplicate a moment later. When hidden, we leave it to fire.
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        cancelServerPush();
+      } else {
+        notifyRestOver();
+      }
     };
     const tick = () => {
       const rem = Math.max(0, Math.round((endAtRef.current - Date.now()) / 1000));
@@ -95,13 +139,19 @@ export function RestTimer({
       window.removeEventListener("focus", onVisible);
     };
     // `total` is included so adding +15s re-arms the wall-clock timeout.
-  }, [running, haptics, total]);
+  }, [running, haptics, total, cancelServerPush]);
 
   function toggleRunning() {
     setRunning((r) => {
       const next = !r;
-      // Resuming: rebuild the deadline from whatever time is left.
-      if (next) endAtRef.current = Date.now() + remaining * 1000;
+      if (next) {
+        // Resuming: rebuild the deadline and re-schedule the server push.
+        endAtRef.current = Date.now() + remaining * 1000;
+        scheduleServerPush(remaining);
+      } else {
+        // Paused — no fixed end time, so cancel the queued push.
+        cancelServerPush();
+      }
       return next;
     });
   }
@@ -111,6 +161,13 @@ export function RestTimer({
     firedRef.current = false;
     setTotal((t) => t + 15);
     setRemaining((r) => r + 15);
+    // Push the server reminder out to the new end time (supersedes the old one).
+    scheduleServerPush(Math.round((endAtRef.current - Date.now()) / 1000));
+  }
+
+  function handleClose() {
+    cancelServerPush();
+    onClose();
   }
 
   const pct = total > 0 ? ((total - remaining) / total) * 100 : 100;
@@ -152,7 +209,7 @@ export function RestTimer({
           </div>
         </div>
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]"
           aria-label="Dismiss timer"
         >
