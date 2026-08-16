@@ -49,7 +49,10 @@ export interface NavSection {
 // consumers that just need every destination.
 export const navSections: NavSection[] = [
   {
-    items: [{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard }],
+    items: [
+      { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { label: "Feed", href: "/feed", icon: Users },
+    ],
   },
   {
     title: "Train",
@@ -63,16 +66,21 @@ export const navSections: NavSection[] = [
     ],
   },
   {
-    title: "Track",
+    title: "Progress",
     items: [
       { label: "Progress", href: "/progress", icon: TrendingUp },
       { label: "Achievements", href: "/achievements", icon: Medal },
-      { label: "Feed", href: "/feed", icon: Users },
-      { label: "Friends", href: "/friends", icon: UserPlus },
-      { label: "Nutrition", href: "/nutrition", icon: Utensils, pro: true },
       { label: "Check-ins", href: "/check-ins", icon: ClipboardCheck },
-      { label: "Recovery", href: "/therapy", icon: Activity },
+      { label: "Friends", href: "/friends", icon: UserPlus },
+    ],
+  },
+  {
+    title: "Wellbeing",
+    items: [
+      { label: "Nutrition", href: "/nutrition", icon: Utensils, pro: true },
       { label: "Health", href: "/health", icon: HeartPulse, pro: true },
+      { label: "Recovery", href: "/therapy", icon: Activity },
+      { label: "Supplements", href: "/supplements", icon: FlaskConical, pro: true },
     ],
   },
   {
@@ -80,7 +88,6 @@ export const navSections: NavSection[] = [
     items: [
       { label: "AI Coach", href: "/ai-coach", icon: Sparkles, pro: true },
       { label: "Ask Coach", href: "/ai-coach/chat", icon: MessageSquare, pro: true },
-      { label: "Supplements", href: "/supplements", icon: FlaskConical, pro: true },
       { label: "My Coach", href: "/my-coach", icon: UserRound, clientOnly: true },
       { label: "Trainer Portal", href: "/trainer", icon: Briefcase, trainerOnly: true },
       { label: "Clients", href: "/trainer/clients", icon: Users, trainerOnly: true },
