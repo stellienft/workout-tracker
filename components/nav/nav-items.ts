@@ -14,6 +14,7 @@ import {
   Home,
   User,
   Users,
+  UsersRound,
   MessageSquare,
   Briefcase,
   UserRound,
@@ -52,6 +53,7 @@ export const navSections: NavSection[] = [
     items: [
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { label: "Feed", href: "/feed", icon: Users },
+      { label: "Communities", href: "/communities", icon: UsersRound },
     ],
   },
   {
