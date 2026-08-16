@@ -55,6 +55,7 @@ const createPostSchema = z.object({
   mediaUrl: z.string().max(500).optional().or(z.literal("")),
   mediaType: z.enum(MEDIA_TYPES).default("none"),
   workoutSessionId: z.string().uuid().optional(),
+  communityId: z.string().uuid().optional(),
 });
 
 /**
@@ -111,19 +112,32 @@ export async function createPost(input: {
   mediaUrl?: string;
   mediaType?: "image" | "video" | "none";
   workoutSessionId?: string;
+  communityId?: string;
 }) {
   const { supabase, user, profile } = await getAuthContext();
   if (!user) return { ok: false as const, error: "Not authenticated" };
 
   const parsed = createPostSchema.safeParse(input);
   if (!parsed.success) return { ok: false as const, error: "Invalid input" };
-  const { caption, mediaUrl, mediaType, workoutSessionId } = parsed.data;
+  const { caption, mediaUrl, mediaType, workoutSessionId, communityId } = parsed.data;
 
   // Free members can post text and share workouts; photo/video is a Pro perk.
   if (mediaType !== "none") {
     const { isPro } = await getUserPlan();
     if (!isPro)
       return { ok: false as const, error: "Photo & video posts are a Pro feature." };
+  }
+
+  // Community posts require membership of that community.
+  if (communityId) {
+    const { data: member } = await supabase
+      .from("community_members")
+      .select("user_id")
+      .eq("community_id", communityId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!member)
+      return { ok: false as const, error: "Join the community to post in it." };
   }
 
   const { data, error } = await supabase
@@ -134,6 +148,7 @@ export async function createPost(input: {
       media_url: mediaUrl || null,
       media_type: mediaType,
       workout_session_id: workoutSessionId ?? null,
+      community_id: communityId ?? null,
       ai_moderation_status: "pending",
     })
     .select("id")
@@ -146,14 +161,17 @@ export async function createPost(input: {
   // Kick off AI moderation (fire-and-forget; fail-open).
   moderatePost(postId, caption || "").catch(() => {});
 
-  // Ping opted-in followers that someone they follow shared a post.
-  await notifyFollowersOfActivity({
-    actorId: user.id,
-    title: `${profile?.full_name ?? "Someone"} shared a post`,
-    body: (caption || "New post").slice(0, 100),
-  });
+  // Ping opted-in followers — but only for the public feed, not community posts.
+  if (!communityId) {
+    await notifyFollowersOfActivity({
+      actorId: user.id,
+      title: `${profile?.full_name ?? "Someone"} shared a post`,
+      body: (caption || "New post").slice(0, 100),
+    });
+  }
 
   revalidatePath("/feed");
+  if (communityId) revalidatePath("/communities", "layout");
   return { ok: true as const, postId };
 }
 
@@ -484,14 +502,16 @@ export async function suggestedUsers(limit = 6): Promise<SuggestedUser[]> {
 export async function getFeed(
   page = 1,
   perPage = 20,
-  scope: "discover" | "following" = "discover"
+  scope: "discover" | "following" = "discover",
+  communityId?: string | null
 ): Promise<FeedPost[]> {
   const { supabase, user } = await getAuthContext();
   if (!user) return [];
 
   // "Following" scope: only people the member follows, plus their own posts.
+  // (Ignored when a community is specified.)
   let followingAuthorIds: string[] | null = null;
-  if (scope === "following") {
+  if (!communityId && scope === "following") {
     const { data: follows } = await supabase
       .from("social_follows")
       .select("following_id")
@@ -525,6 +545,14 @@ export async function getFeed(
     )
     .order("created_at", { ascending: false })
     .range(offset, offset + perPage - 1);
+
+  // A community feed shows only that community's posts; the global feed shows
+  // only non-community posts (community posts live inside their community).
+  if (communityId) {
+    postsQuery = postsQuery.eq("community_id", communityId);
+  } else {
+    postsQuery = postsQuery.is("community_id", null);
+  }
 
   if (followingAuthorIds !== null) {
     // No follows yet → nothing in the Following feed (client shows who-to-follow).
