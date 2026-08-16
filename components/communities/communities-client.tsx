@@ -98,7 +98,7 @@ export function CommunitiesClient({ initial }: { initial: CommunitySummary[] }) 
           <input
             value={name}
             onChange={(e) => setName(e.target.value.slice(0, 80))}
-            placeholder="Community name (e.g. GLP-1 Warriors)"
+            placeholder="Community name (e.g. Morning Lifters)"
             className="h-11 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
           />
           <textarea
