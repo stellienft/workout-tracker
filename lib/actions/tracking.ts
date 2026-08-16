@@ -137,6 +137,25 @@ export async function saveMedicationLog(input: Record<string, unknown>) {
   return { ok: true };
 }
 
+/** Set (or clear) the member's goal body weight in kg. */
+export async function saveGoalWeight(kg: number | null) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false, error: "Not authenticated" };
+  const parsed = z
+    .object({ kg: z.number().min(20).max(500).nullable() })
+    .safeParse({ kg });
+  if (!parsed.success) return { ok: false, error: "Enter a weight between 20 and 500 kg" };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ goal_weight_kg: parsed.data.kg })
+    .eq("id", user.id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/health");
+  revalidatePath("/progress");
+  return { ok: true };
+}
+
 export async function updateSettings(input: Record<string, unknown>) {
   const { supabase, user } = await auth();
   if (!user) return { ok: false, error: "Not authenticated" };

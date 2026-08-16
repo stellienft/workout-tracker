@@ -75,6 +75,7 @@ export function buildGlp1Data(
   medLogs: RawDose[],
   weights: { recorded_on: string; weight_kg: number | null }[],
   tz: string,
+  goalWeightKg: number | null = null,
   now: Date = new Date()
 ): Glp1Data | null {
   const glp1Logs = medLogs.filter((l) => isGlp1(l.medication_name));
@@ -126,13 +127,43 @@ export function buildGlp1Data(
         new Date(wPoints[0].x).getTime()) /
       DAY;
     const weeks = spanDays / 7;
+    const perWeekKg = weeks >= 1 ? lostKg / weeks : null;
+
+    // Goal + projected date (only meaningful when a goal is set below current
+    // weight and weight is actually trending down).
+    let remainingKg: number | null = null;
+    let progressPct: number | null = null;
+    let projectedDateLabel: string | null = null;
+    let reached = false;
+    if (goalWeightKg != null && goalWeightKg > 0) {
+      remainingKg = Math.max(0, currentKg - goalWeightKg);
+      reached = currentKg <= goalWeightKg;
+      const toLoseTotal = startKg - goalWeightKg;
+      if (toLoseTotal > 0) {
+        progressPct = Math.max(0, Math.min(100, ((startKg - currentKg) / toLoseTotal) * 100));
+      }
+      if (!reached && perWeekKg != null && perWeekKg > 0.05) {
+        const weeksToGoal = remainingKg / perWeekKg;
+        const eta = new Date(now.getTime() + weeksToGoal * 7 * DAY);
+        projectedDateLabel = eta.toLocaleDateString(undefined, {
+          month: "short",
+          year: "numeric",
+        });
+      }
+    }
+
     journey = {
       startKg,
       currentKg,
       lostKg,
       pct: startKg > 0 ? (lostKg / startKg) * 100 : 0,
       weeks,
-      perWeekKg: weeks >= 1 ? lostKg / weeks : null,
+      perWeekKg,
+      goalKg: goalWeightKg && goalWeightKg > 0 ? goalWeightKg : null,
+      remainingKg,
+      progressPct,
+      projectedDateLabel,
+      reached,
     };
   }
 

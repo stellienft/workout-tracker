@@ -1,7 +1,11 @@
 "use client";
 
-import { Syringe, TrendingDown, CalendarClock, Activity } from "lucide-react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Syringe, TrendingDown, CalendarClock, Activity, Target, Pencil } from "lucide-react";
 import { LineChart } from "@/components/ui/line-chart";
+import { saveGoalWeight } from "@/lib/actions/tracking";
+import { useToast } from "@/components/ui/toast";
 
 export interface Glp1NextDose {
   dateLabel: string;
@@ -15,6 +19,11 @@ export interface Glp1Journey {
   pct: number; // positive = lost
   weeks: number;
   perWeekKg: number | null;
+  goalKg: number | null;
+  remainingKg: number | null; // to lose to reach goal (positive)
+  progressPct: number | null; // 0–100 toward goal
+  projectedDateLabel: string | null; // est. date to reach goal
+  reached: boolean;
 }
 
 export interface Glp1SideEffects {
@@ -110,6 +119,8 @@ export function Glp1Insights({ data }: { data: Glp1Data }) {
                   Math.abs(journey.perWeekKg)
                 )} kg/wk`}
             </p>
+
+            <GoalBlock journey={journey} />
           </div>
         )}
       </div>
@@ -177,5 +188,121 @@ export function Glp1Insights({ data }: { data: Glp1Data }) {
         </div>
       )}
     </section>
+  );
+}
+
+/** Goal-weight target + projected date, with an inline setter. */
+function GoalBlock({ journey }: { journey: Glp1Journey }) {
+  const router = useRouter();
+  const toast = useToast();
+  const [pending, start] = useTransition();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(journey.goalKg != null ? String(journey.goalKg) : "");
+
+  const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+
+  function save(kg: number | null) {
+    start(async () => {
+      const res = await saveGoalWeight(kg);
+      if (res.ok) {
+        setEditing(false);
+        toast(kg == null ? "Goal cleared." : "Goal saved.", "success");
+        router.refresh();
+      } else {
+        toast(res.error ?? "Couldn't save goal", "error");
+      }
+    });
+  }
+
+  if (editing || journey.goalKg == null) {
+    return (
+      <div className="mt-3 border-t border-[var(--border-subtle)] pt-3">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Target className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+            <input
+              inputMode="decimal"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="Goal weight (kg)"
+              className="h-10 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] pl-9 pr-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
+            />
+          </div>
+          <button
+            onClick={() => value && save(Number(value))}
+            disabled={pending || !value}
+            className="rounded-xl bg-[var(--accent-primary)] px-3 py-2 text-sm font-semibold text-[var(--accent-ink)] disabled:opacity-50"
+          >
+            Save
+          </button>
+          {journey.goalKg != null && (
+            <button
+              onClick={() => setEditing(false)}
+              className="rounded-xl px-2 py-2 text-sm text-[var(--text-secondary)]"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 border-t border-[var(--border-subtle)] pt-3">
+      <div className="flex items-center justify-between text-sm">
+        <span className="flex items-center gap-1.5 text-[var(--text-secondary)]">
+          <Target className="h-4 w-4" /> Goal {fmt(journey.goalKg)} kg
+        </span>
+        <button
+          onClick={() => setEditing(true)}
+          className="inline-flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+        >
+          <Pencil className="h-3 w-3" /> Edit
+        </button>
+      </div>
+
+      {journey.progressPct != null && (
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--surface-secondary)]">
+          <div
+            className="h-full rounded-full bg-[var(--accent-primary)]"
+            style={{ width: `${journey.progressPct}%` }}
+          />
+        </div>
+      )}
+
+      <p className="mt-2 text-sm">
+        {journey.reached ? (
+          <span className="font-semibold text-[var(--accent-primary)]">
+            🎉 Goal reached — amazing work!
+          </span>
+        ) : (
+          <>
+            <span className="font-semibold">{fmt(journey.remainingKg ?? 0)} kg to go</span>
+            {journey.projectedDateLabel ? (
+              <span className="text-[var(--text-secondary)]">
+                {" "}
+                · on track for <span className="text-[var(--accent-primary)]">~{journey.projectedDateLabel}</span>
+              </span>
+            ) : (
+              <span className="text-[var(--text-muted)]">
+                {" "}
+                · keep a steady deficit to project a date
+              </span>
+            )}
+          </>
+        )}
+      </p>
+
+      {!journey.reached && (
+        <button
+          onClick={() => save(null)}
+          disabled={pending}
+          className="mt-1 text-xs text-[var(--text-muted)] hover:text-[var(--danger)]"
+        >
+          Clear goal
+        </button>
+      )}
+    </div>
   );
 }

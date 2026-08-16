@@ -61,7 +61,12 @@ export default async function HealthPage() {
 
   // GLP-1 companion: weekly-dose reminder, weight-loss journey, dose + side
   // effect trends. Only shows for members logging a recognised GLP-1 med.
-  const glp1 = buildGlp1Data(medLogs ?? [], weightRows ?? [], tz);
+  const glp1 = buildGlp1Data(
+    medLogs ?? [],
+    weightRows ?? [],
+    tz,
+    profile?.goal_weight_kg ?? null
+  );
 
   // Recent injection sites (most-recent-first) power the rotation suggestion.
   const recentSites = (medLogs ?? [])
