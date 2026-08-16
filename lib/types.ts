@@ -33,6 +33,7 @@ export interface Profile {
   experience_level: "beginner" | "intermediate" | "advanced" | null;
   training_location: "home" | "gym" | "both" | null;
   feed_notifications_enabled?: boolean;
+  feed_autoshare_enabled?: boolean;
   goal_weight_kg?: number | null;
   glp1_medication?: boolean;
   weekly_frequency: number | null;

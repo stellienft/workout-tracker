@@ -167,6 +167,7 @@ export async function updateSettings(input: Record<string, unknown>) {
     dailyQuoteEnabled: z.boolean().optional(),
     motivationPushEnabled: z.boolean().optional(),
     feedNotificationsEnabled: z.boolean().optional(),
+    feedAutoshareEnabled: z.boolean().optional(),
     injuryAreas: z.array(z.string()).max(20).optional(),
     considerations: z.string().max(1000).optional(),
     timezone: z.string().max(64).optional(),
@@ -206,6 +207,14 @@ export async function updateSettings(input: Record<string, unknown>) {
     await supabase
       .from("profiles")
       .update({ feed_notifications_enabled: d.feedNotificationsEnabled })
+      .eq("id", user.id);
+  }
+
+  // feed_autoshare_enabled — also a later migration, so best-effort too.
+  if (d.feedAutoshareEnabled !== undefined) {
+    await supabase
+      .from("profiles")
+      .update({ feed_autoshare_enabled: d.feedAutoshareEnabled })
       .eq("id", user.id);
   }
 

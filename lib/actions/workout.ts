@@ -416,6 +416,33 @@ export async function completeWorkout(input: {
             : {}),
         })
         .eq("id", enrolment.id);
+
+      // Opt-in: auto-share a "finished program" milestone to the feed.
+      if (finishedProgram) {
+        try {
+          const { data: prof } = await supabase
+            .from("profiles")
+            .select("feed_autoshare_enabled")
+            .eq("id", user.id)
+            .maybeSingle();
+          if (prof?.feed_autoshare_enabled) {
+            const { data: prog } = await supabase
+              .from("programs")
+              .select("name")
+              .eq("id", session.program_id)
+              .maybeSingle();
+            await supabase.from("social_posts").insert({
+              user_id: user.id,
+              caption: `Just finished the ${prog?.name ?? "program"} 🎉 Another milestone in the books!`,
+              media_type: "none",
+              workout_session_id: session.id,
+              ai_moderation_status: "approved",
+            });
+          }
+        } catch {
+          // best-effort — never block workout completion on an auto-post
+        }
+      }
     }
   }
 
