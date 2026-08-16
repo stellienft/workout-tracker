@@ -137,7 +137,62 @@ export async function saveMedicationLog(input: Record<string, unknown>) {
   return { ok: true };
 }
 
-/** Set (or clear) the member's goal body weight in kg. */
+/** Update an existing medication/injection log (owner only). */
+export async function updateMedicationLog(id: string, input: Record<string, unknown>) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false, error: "Not authenticated" };
+  if (!z.string().uuid().safeParse(id).success)
+    return { ok: false, error: "Invalid id" };
+
+  const schema = z.object({
+    medicationName: z.string().min(1).default("Mounjaro"),
+    doseMg: z.coerce.number().min(0).max(100).optional().nullable(),
+    takenOn: z.string().optional(),
+    injectionSite: z.string().max(60).optional(),
+    sideEffects: z.array(z.string()).default([]),
+    sideEffectSeverity: z.coerce.number().int().min(0).max(5).optional().nullable(),
+    notes: z.string().max(500).optional(),
+  });
+  const parsed = schema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+  const d = parsed.data;
+
+  const update: Record<string, unknown> = {
+    medication_name: d.medicationName,
+    dose_mg: d.doseMg ?? null,
+    injection_site: d.injectionSite ?? null,
+    side_effects: d.sideEffects,
+    side_effect_severity: d.sideEffectSeverity ?? null,
+    notes: d.notes ?? null,
+  };
+  if (d.takenOn) update.taken_on = d.takenOn;
+
+  const { error } = await supabase
+    .from("medication_logs")
+    .update(update)
+    .eq("id", id)
+    .eq("user_id", user.id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/health");
+  return { ok: true };
+}
+
+/** Delete a medication/injection log (owner only). */
+export async function deleteMedicationLog(id: string) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false, error: "Not authenticated" };
+  if (!z.string().uuid().safeParse(id).success)
+    return { ok: false, error: "Invalid id" };
+
+  const { error } = await supabase
+    .from("medication_logs")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/health");
+  return { ok: true };
+}
 export async function saveGoalWeight(kg: number | null) {
   const { supabase, user } = await auth();
   if (!user) return { ok: false, error: "Not authenticated" };
