@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Users, Check, Lock, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CoverImage } from "@/components/ui/cover-image";
 import { useToast } from "@/components/ui/toast";
 import {
   createCommunity,
@@ -12,6 +13,7 @@ import {
   leaveCommunity,
   type CommunitySummary,
 } from "@/lib/actions/communities";
+import { COMMUNITY_COVERS } from "@/lib/community-covers";
 
 export function CommunitiesClient({ initial }: { initial: CommunitySummary[] }) {
   const router = useRouter();
@@ -22,6 +24,7 @@ export function CommunitiesClient({ initial }: { initial: CommunitySummary[] }) 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [privacy, setPrivacy] = useState<"public" | "private">("public");
+  const [cover, setCover] = useState<string>(COMMUNITY_COVERS[0]);
 
   function create() {
     if (name.trim().length < 2) {
@@ -29,7 +32,12 @@ export function CommunitiesClient({ initial }: { initial: CommunitySummary[] }) 
       return;
     }
     startTransition(async () => {
-      const res = await createCommunity({ name: name.trim(), description: description.trim(), privacy });
+      const res = await createCommunity({
+        name: name.trim(),
+        description: description.trim(),
+        privacy,
+        coverImagePath: cover,
+      });
       if (res.ok && res.slug) {
         toast("Community created!", "success");
         router.push(`/communities/${res.slug}`);
@@ -130,6 +138,26 @@ export function CommunitiesClient({ initial }: { initial: CommunitySummary[] }) 
               </button>
             ))}
           </div>
+          <p className="mt-3 mb-1.5 text-xs font-medium text-[var(--text-secondary)]">Cover image</p>
+          <div className="grid grid-cols-4 gap-2">
+            {COMMUNITY_COVERS.map((url) => (
+              <button
+                key={url}
+                type="button"
+                onClick={() => setCover(url)}
+                className={`relative aspect-[3/2] overflow-hidden rounded-xl border-2 ${
+                  cover === url ? "border-[var(--accent-primary)]" : "border-transparent"
+                }`}
+              >
+                <CoverImage path={url} alt="Cover option" sizes="120px" />
+                {cover === url && (
+                  <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent-primary)] text-[var(--accent-ink)]">
+                    <Check className="h-3 w-3" />
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
           <div className="mt-3 flex gap-2">
             <Button onClick={create} disabled={pending} size="sm">
               {pending ? "Creating…" : "Create community"}
@@ -158,8 +186,14 @@ export function CommunitiesClient({ initial }: { initial: CommunitySummary[] }) 
           {communities.map((c) => (
             <div
               key={c.id}
-              className="flex flex-col rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4"
+              className="flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)]"
             >
+              {c.coverImagePath && (
+                <Link href={`/communities/${c.slug}`} className="relative block aspect-[3/1]">
+                  <CoverImage path={c.coverImagePath} alt={c.name} sizes="(max-width: 640px) 100vw, 50vw" />
+                </Link>
+              )}
+              <div className="flex flex-1 flex-col p-4">
               <Link href={`/communities/${c.slug}`} className="min-w-0 flex-1">
                 <p className="flex items-center gap-1.5 truncate font-bold">
                   {c.privacy === "private" && (
@@ -211,6 +245,7 @@ export function CommunitiesClient({ initial }: { initial: CommunitySummary[] }) 
                     )}
                   </button>
                 )}
+              </div>
               </div>
             </div>
           ))}

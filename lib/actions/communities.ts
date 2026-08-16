@@ -12,6 +12,8 @@ export interface CommunitySummary {
   description: string | null;
   coverImagePath: string | null;
   privacy: "public" | "private";
+  postPolicy: "members" | "owner";
+  allowMedia: boolean;
   memberCount: number;
   isMember: boolean; // approved member
   isPending: boolean; // requested, awaiting approval
@@ -39,6 +41,7 @@ export async function createCommunity(input: {
   name: string;
   description?: string;
   privacy?: "public" | "private";
+  coverImagePath?: string;
 }): Promise<{ ok: boolean; slug?: string; error?: string }> {
   const { supabase, user } = await getAuthContext();
   if (!user) return { ok: false, error: "Not authenticated" };
@@ -48,6 +51,7 @@ export async function createCommunity(input: {
       name: z.string().trim().min(2).max(80),
       description: z.string().trim().max(1000).optional().default(""),
       privacy: z.enum(["public", "private"]).default("public"),
+      coverImagePath: z.string().max(500).optional().default(""),
     })
     .safeParse(input);
   if (!parsed.success) return { ok: false, error: "Enter a name (2–80 characters)." };
@@ -60,6 +64,7 @@ export async function createCommunity(input: {
       name: parsed.data.name,
       description: parsed.data.description || null,
       privacy: parsed.data.privacy,
+      cover_image_path: parsed.data.coverImagePath || null,
       created_by: user.id,
     })
     .select("id, slug")
@@ -75,6 +80,54 @@ export async function createCommunity(input: {
 
   revalidatePath("/communities");
   return { ok: true, slug: community.slug };
+}
+
+/** Owner updates community settings (name, description, privacy, permissions). */
+export async function updateCommunity(
+  communityId: string,
+  input: {
+    name?: string;
+    description?: string;
+    privacy?: "public" | "private";
+    postPolicy?: "members" | "owner";
+    allowMedia?: boolean;
+    coverImagePath?: string | null;
+  }
+) {
+  const { supabase, user } = await getAuthContext();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+  const parsed = z
+    .object({
+      communityId: z.string().uuid(),
+      name: z.string().trim().min(2).max(80).optional(),
+      description: z.string().trim().max(1000).optional(),
+      privacy: z.enum(["public", "private"]).optional(),
+      postPolicy: z.enum(["members", "owner"]).optional(),
+      allowMedia: z.boolean().optional(),
+      coverImagePath: z.string().max(500).nullable().optional(),
+    })
+    .safeParse({ communityId, ...input });
+  if (!parsed.success) return { ok: false as const, error: "Invalid input" };
+  const d = parsed.data;
+
+  const update: Record<string, unknown> = {};
+  if (d.name !== undefined) update.name = d.name;
+  if (d.description !== undefined) update.description = d.description || null;
+  if (d.privacy !== undefined) update.privacy = d.privacy;
+  if (d.postPolicy !== undefined) update.post_policy = d.postPolicy;
+  if (d.allowMedia !== undefined) update.allow_media = d.allowMedia;
+  if (d.coverImagePath !== undefined) update.cover_image_path = d.coverImagePath;
+  if (Object.keys(update).length === 0) return { ok: true as const };
+
+  // RLS restricts the update to the community owner.
+  const { error } = await supabase
+    .from("communities")
+    .update(update)
+    .eq("id", d.communityId)
+    .eq("created_by", user.id);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath("/communities", "layout");
+  return { ok: true as const };
 }
 
 export async function joinCommunity(communityId: string) {
@@ -220,7 +273,7 @@ export async function listCommunities(): Promise<CommunitySummary[]> {
   const [{ data: communities }, { data: members }] = await Promise.all([
     supabase
       .from("communities")
-      .select("id, slug, name, description, cover_image_path, privacy, created_by")
+      .select("id, slug, name, description, cover_image_path, privacy, post_policy, allow_media, created_by")
       .order("created_at", { ascending: false })
       .limit(200),
     supabase.from("community_members").select("community_id, user_id, status"),
@@ -243,6 +296,8 @@ export async function listCommunities(): Promise<CommunitySummary[]> {
     description: (c.description as string | null) ?? null,
     coverImagePath: (c.cover_image_path as string | null) ?? null,
     privacy: ((c.privacy as string) ?? "public") as "public" | "private",
+    postPolicy: ((c.post_policy as string) ?? "members") as "members" | "owner",
+    allowMedia: (c.allow_media as boolean | null) ?? true,
     memberCount: counts.get(c.id as string) ?? 0,
     isMember: mine.has(c.id as string),
     isPending: pending.has(c.id as string),
@@ -262,7 +317,7 @@ export async function getCommunityBySlug(
 
   const { data: c } = await supabase
     .from("communities")
-    .select("id, slug, name, description, cover_image_path, privacy, created_by")
+    .select("id, slug, name, description, cover_image_path, privacy, post_policy, allow_media, created_by")
     .eq("slug", slug)
     .maybeSingle();
   if (!c) return null;
@@ -288,6 +343,8 @@ export async function getCommunityBySlug(
     description: (c.description as string | null) ?? null,
     coverImagePath: (c.cover_image_path as string | null) ?? null,
     privacy: ((c.privacy as string) ?? "public") as "public" | "private",
+    postPolicy: ((c.post_policy as string) ?? "members") as "members" | "owner",
+    allowMedia: (c.allow_media as boolean | null) ?? true,
     memberCount: count ?? 0,
     isMember: (mine?.status as string | undefined) === "approved",
     isPending: (mine?.status as string | undefined) === "pending",

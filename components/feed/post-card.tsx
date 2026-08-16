@@ -100,7 +100,8 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
   const [following, setFollowing] = useState(post.author.isFollowing);
 
   const menuRef = useRef<HTMLDivElement>(null);
-  const isAuthor = post.author.id === currentUserId;
+  const isAuthor = post.canManage;
+  const anon = post.anonymous;
   const isFlagged = post.aiModerationStatus === "flagged" || post.aiModerationStatus === "rejected";
 
   // Resolve signed URL for media (post.mediaUrl is a storage path).
@@ -366,20 +367,33 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
     <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)]">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 p-4">
-        <Link href={isAuthor ? "/profile" : `/profile/${post.author.id}`} className="flex items-center gap-3">
-          <Avatar name={post.author.name} url={post.author.avatarUrl} />
-          <div>
-            <p className="text-sm font-semibold leading-tight">
-              {post.author.name ?? "Someone"}
-            </p>
-            <p className="text-xs text-[var(--text-muted)]">{timeAgo(post.createdAt)}</p>
+        {anon ? (
+          <div className="flex items-center gap-3">
+            <Avatar name="?" url={null} />
+            <div>
+              <p className="text-sm font-semibold leading-tight">Anonymous</p>
+              <p className="text-xs text-[var(--text-muted)]">{timeAgo(post.createdAt)}</p>
+            </div>
           </div>
-        </Link>
+        ) : (
+          <Link
+            href={isAuthor ? "/profile" : `/profile/${post.author.id}`}
+            className="flex items-center gap-3"
+          >
+            <Avatar name={post.author.name} url={post.author.avatarUrl} />
+            <div>
+              <p className="text-sm font-semibold leading-tight">
+                {post.author.name ?? "Someone"}
+              </p>
+              <p className="text-xs text-[var(--text-muted)]">{timeAgo(post.createdAt)}</p>
+            </div>
+          </Link>
+        )}
 
         {/* Actions: follow + menu, grouped on the right */}
         <div className="flex shrink-0 items-center gap-2">
-          {/* Inline follow button (not shown for own posts) */}
-          {!isAuthor && (
+          {/* Inline follow button (not for own posts or anonymous authors) */}
+          {!isAuthor && !anon && (
             <button
               onClick={handleFollow}
               disabled={pending}
@@ -408,22 +422,26 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
             <div className="absolute right-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] shadow-lg">
               {!isAuthor && (
                 <>
-                  <button
-                    onClick={handleFollow}
-                    disabled={pending}
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm hover:bg-[var(--surface-secondary)]"
-                  >
-                    <UserPlus className="h-4 w-4" />
-                    Follow / Unfollow
-                  </button>
-                  <button
-                    onClick={handleBlock}
-                    disabled={pending}
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm hover:bg-[var(--surface-secondary)]"
-                  >
-                    <Ban className="h-4 w-4" />
-                    Block
-                  </button>
+                  {!anon && (
+                    <>
+                      <button
+                        onClick={handleFollow}
+                        disabled={pending}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm hover:bg-[var(--surface-secondary)]"
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        Follow / Unfollow
+                      </button>
+                      <button
+                        onClick={handleBlock}
+                        disabled={pending}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm hover:bg-[var(--surface-secondary)]"
+                      >
+                        <Ban className="h-4 w-4" />
+                        Block
+                      </button>
+                    </>
+                  )}
                   <button
                     onClick={() => setReportOpen((v) => !v)}
                     disabled={pending}
@@ -526,7 +544,7 @@ export function PostCard({ post, isPro, currentUserId, onDeleted }: PostCardProp
                       </div>
                     ))}
                   </div>
-                  {isPro && post.author.id !== currentUserId && (
+                  {isPro && !isAuthor && (
                     <button
                       onClick={handleSaveWorkout}
                       disabled={savingWorkout}

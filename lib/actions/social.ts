@@ -44,6 +44,8 @@ export interface FeedPost {
   currentUserReactions: string[];
   workoutSessionId: string | null;
   aiModerationStatus: "pending" | "approved" | "flagged" | "rejected";
+  anonymous: boolean;
+  canManage: boolean; // current user owns this post (even when anonymous)
 }
 
 // ---------------------------------------------------------------------------
@@ -56,6 +58,7 @@ const createPostSchema = z.object({
   mediaType: z.enum(MEDIA_TYPES).default("none"),
   workoutSessionId: z.string().uuid().optional(),
   communityId: z.string().uuid().optional(),
+  isAnonymous: z.boolean().optional().default(false),
 });
 
 /**
@@ -113,13 +116,15 @@ export async function createPost(input: {
   mediaType?: "image" | "video" | "none";
   workoutSessionId?: string;
   communityId?: string;
+  isAnonymous?: boolean;
 }) {
   const { supabase, user, profile } = await getAuthContext();
   if (!user) return { ok: false as const, error: "Not authenticated" };
 
   const parsed = createPostSchema.safeParse(input);
   if (!parsed.success) return { ok: false as const, error: "Invalid input" };
-  const { caption, mediaUrl, mediaType, workoutSessionId, communityId } = parsed.data;
+  const { caption, mediaUrl, mediaType, workoutSessionId, communityId, isAnonymous } =
+    parsed.data;
 
   // Free members can post text and share workouts; photo/video is a Pro perk.
   if (mediaType !== "none") {
@@ -128,16 +133,27 @@ export async function createPost(input: {
       return { ok: false as const, error: "Photo & video posts are a Pro feature." };
   }
 
-  // Community posts require an approved membership of that community.
+  // Community posts: approved membership + honour the group's posting rules.
   if (communityId) {
-    const { data: member } = await supabase
-      .from("community_members")
-      .select("status")
-      .eq("community_id", communityId)
-      .eq("user_id", user.id)
-      .maybeSingle();
+    const [{ data: member }, { data: community }] = await Promise.all([
+      supabase
+        .from("community_members")
+        .select("status")
+        .eq("community_id", communityId)
+        .eq("user_id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("communities")
+        .select("created_by, post_policy, allow_media")
+        .eq("id", communityId)
+        .maybeSingle(),
+    ]);
     if (member?.status !== "approved")
       return { ok: false as const, error: "Join the community to post in it." };
+    if (community?.post_policy === "owner" && community.created_by !== user.id)
+      return { ok: false as const, error: "Only the owner can post in this community." };
+    if (mediaType !== "none" && community?.allow_media === false)
+      return { ok: false as const, error: "Media posts are turned off in this community." };
   }
 
   const { data, error } = await supabase
@@ -149,6 +165,7 @@ export async function createPost(input: {
       media_type: mediaType,
       workout_session_id: workoutSessionId ?? null,
       community_id: communityId ?? null,
+      is_anonymous: isAnonymous ?? false,
       ai_moderation_status: "pending",
     })
     .select("id")
@@ -541,7 +558,7 @@ export async function getFeed(
     .from("social_posts")
     .select(
       `id, caption, media_url, media_type, created_at, user_id,
-       workout_session_id, ai_moderation_status`,
+       workout_session_id, ai_moderation_status, is_anonymous`,
     )
     .order("created_at", { ascending: false })
     .range(offset, offset + perPage - 1);
@@ -642,24 +659,33 @@ export async function getFeed(
 
   // --- 4. Assemble final FeedPost[] ---
   return posts.map((p) => {
+    const anonymous = (p.is_anonymous as boolean | null) ?? false;
+    const canManage = (p.user_id as string) === user.id;
     const profile = profileMap.get(p.user_id as string);
+    // Anonymous posts never expose the author's identity (id/name/avatar) to
+    // anyone — the owner can still manage theirs via canManage.
+    const author = anonymous
+      ? { id: "", name: "Anonymous", avatarUrl: null, isFollowing: false }
+      : {
+          id: p.user_id as string,
+          name: profile?.full_name ?? null,
+          avatarUrl: profile?.avatar_url ?? null,
+          isFollowing: followingSet.has(p.user_id as string),
+        };
     return {
       id: p.id as string,
       caption: p.caption as string | null,
       mediaUrl: p.media_url as string | null,
       mediaType: (p.media_type ?? "none") as "image" | "video" | "none",
       createdAt: p.created_at as string,
-      author: {
-        id: p.user_id as string,
-        name: profile?.full_name ?? null,
-        avatarUrl: profile?.avatar_url ?? null,
-        isFollowing: followingSet.has(p.user_id as string),
-      },
+      author,
       reactionCounts: reactionCountsMap[p.id] ?? {},
       commentCount: commentCountMap[p.id] ?? 0,
       currentUserReactions: userReactionsMap[p.id] ?? [],
       workoutSessionId: p.workout_session_id as string | null,
       aiModerationStatus: (p.ai_moderation_status ?? "pending") as "pending" | "approved" | "flagged" | "rejected",
+      anonymous,
+      canManage,
     } as FeedPost;
   });
 }
