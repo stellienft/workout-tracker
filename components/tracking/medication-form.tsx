@@ -2,14 +2,16 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { saveMedicationLog } from "@/lib/actions/tracking";
+import { GLP1_SITES, nextInjectionSite, siteRecentlyUsed } from "@/lib/glp1";
 
-const SITES = ["Left abdomen", "Right abdomen", "Left thigh", "Right thigh", "Left arm", "Right arm"];
+const SITES = GLP1_SITES;
 const EFFECTS = ["Nausea", "Fatigue", "Headache", "Reduced appetite", "Constipation", "Injection site reaction"];
 
-export function MedicationForm() {
+export function MedicationForm({ recentSites = [] }: { recentSites?: string[] }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
@@ -19,6 +21,10 @@ export function MedicationForm() {
   const [effects, setEffects] = useState<string[]>([]);
   const [severity, setSeverity] = useState<string>("");
   const [notes, setNotes] = useState("");
+
+  // Rotation guidance: suggest the least-recently-used site and warn on reuse.
+  const suggestedSite = recentSites.length > 0 ? nextInjectionSite(recentSites) : null;
+  const reuseWarning = site !== "" && siteRecentlyUsed(site, recentSites);
 
   function toggleEffect(e: string) {
     setEffects((list) =>
@@ -73,22 +79,44 @@ export function MedicationForm() {
       </div>
 
       <div>
-        <span className="text-xs text-[var(--text-secondary)]">Injection site</span>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {SITES.map((s) => (
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-[var(--text-secondary)]">Injection site</span>
+          {suggestedSite && (
             <button
-              key={s}
-              onClick={() => setSite(site === s ? "" : s)}
-              className={`rounded-full border px-3 py-1.5 text-xs ${
-                site === s
-                  ? "border-[var(--border-active)] bg-[var(--accent-muted)] text-[var(--accent-primary)]"
-                  : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
-              }`}
+              type="button"
+              onClick={() => setSite(suggestedSite)}
+              className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-muted)] px-2.5 py-1 text-xs font-medium text-[var(--accent-primary)]"
             >
-              {s}
+              <Sparkles className="h-3 w-3" /> Rotate to {suggestedSite}
             </button>
-          ))}
+          )}
         </div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {SITES.map((s) => {
+            const isSuggested = s === suggestedSite && site !== s;
+            return (
+              <button
+                key={s}
+                onClick={() => setSite(site === s ? "" : s)}
+                className={`rounded-full border px-3 py-1.5 text-xs ${
+                  site === s
+                    ? "border-[var(--border-active)] bg-[var(--accent-muted)] text-[var(--accent-primary)]"
+                    : isSuggested
+                      ? "border-[var(--accent-primary)]/60 text-[var(--text-primary)]"
+                      : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
+                }`}
+              >
+                {s}
+                {isSuggested && " ✦"}
+              </button>
+            );
+          })}
+        </div>
+        {reuseWarning && (
+          <p className="mt-2 text-xs text-[var(--warning)]">
+            You used this site in your last {recentSites.indexOf(site) === 0 ? "dose" : "couple of doses"} — rotating sites helps avoid irritation and lumps.
+          </p>
+        )}
       </div>
 
       <div>

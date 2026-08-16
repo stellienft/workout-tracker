@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { serviceSupabase, sendToSubscriptions } from "@/lib/push";
 import { computeStreak } from "@/lib/streak";
+import { isGlp1 } from "@/lib/glp1";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -40,19 +41,38 @@ export async function GET(req: Request) {
 
   const userIds = Array.from(new Set(subs.map((s) => s.user_id as string)));
 
-  const [{ data: profiles }, { data: sessions }] = await Promise.all([
-    supabase.from("profiles").select("id, timezone").in("id", userIds),
+  const [{ data: profiles }, { data: sessions }, { data: doses }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, timezone, medication_tracking_enabled")
+      .in("id", userIds),
     supabase
       .from("workout_sessions")
       .select("user_id, completed_at")
       .eq("status", "completed")
       .in("user_id", userIds)
       .gte("completed_at", new Date(Date.now() - 8 * DAY).toISOString()),
+    supabase
+      .from("medication_logs")
+      .select("user_id, medication_name, taken_on")
+      .in("user_id", userIds)
+      .order("taken_on", { ascending: false }),
   ]);
 
   const tzByUser = new Map<string, string>(
     (profiles ?? []).map((p) => [p.id as string, (p.timezone as string) || DEFAULT_TZ])
   );
+  const medEnabledByUser = new Map<string, boolean>(
+    (profiles ?? []).map((p) => [p.id as string, !!p.medication_tracking_enabled])
+  );
+  // Most recent GLP-1 dose date per user (doses are ordered newest-first).
+  const lastGlp1DoseByUser = new Map<string, string>();
+  for (const d of doses ?? []) {
+    const uid = d.user_id as string;
+    if (lastGlp1DoseByUser.has(uid)) continue;
+    if (!isGlp1(d.medication_name as string | null)) continue;
+    lastGlp1DoseByUser.set(uid, d.taken_on as string);
+  }
   const sessionsByUser = new Map<string, string[]>();
   for (const s of sessions ?? []) {
     const arr = sessionsByUser.get(s.user_id as string) ?? [];
@@ -72,6 +92,28 @@ export async function GET(req: Request) {
   for (const uid of userIds) {
     const tz = tzByUser.get(uid) ?? DEFAULT_TZ;
     const today = localDate(now, tz);
+
+    // Weekly GLP-1 dose reminder — fires on the day the next weekly dose is due
+    // (last dose + 7 days), independent of the training nudge below.
+    if (medEnabledByUser.get(uid)) {
+      const last = lastGlp1DoseByUser.get(uid);
+      if (last) {
+        const dueOn = localDate(
+          new Date(new Date(`${last}T12:00:00`).getTime() + 7 * DAY),
+          tz
+        );
+        if (dueOn === today) {
+          const r = await sendToSubscriptions(supabase, subsByUser.get(uid) ?? [], {
+            title: "Weekly dose due 💉",
+            body: "Time for your GLP-1 injection — remember to rotate your site.",
+            url: "/health",
+            tag: "dose-reminder",
+          });
+          sent += r.sent;
+        }
+      }
+    }
+
     const dates = sessionsByUser.get(uid) ?? [];
     if (dates.some((d) => localDate(new Date(d), tz) === today)) continue; // trained today
 

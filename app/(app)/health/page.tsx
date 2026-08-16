@@ -8,6 +8,9 @@ import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { HealthPanel } from "@/components/tracking/health-panel";
 import { MedicationForm } from "@/components/tracking/medication-form";
 import { getHealthData } from "@/lib/health";
+import { Glp1Insights } from "@/components/health/glp1-insights";
+import { buildGlp1Data } from "@/lib/glp1";
+import { DEFAULT_TZ } from "@/lib/timezone";
 
 export const metadata = { title: "Health" };
 
@@ -37,17 +40,34 @@ export default async function HealthPage() {
     );
   }
 
-  const [health, { data: medLogs }] = await Promise.all([
+  const [health, { data: medLogs }, { data: weightRows }] = await Promise.all([
     getHealthData(user.id),
     supabase
       .from("medication_logs")
       .select("*")
       .eq("user_id", user.id)
       .order("taken_on", { ascending: false })
-      .limit(20),
+      .limit(60),
+    supabase
+      .from("body_metrics")
+      .select("recorded_on, weight_kg")
+      .eq("user_id", user.id)
+      .order("recorded_on", { ascending: true })
+      .limit(1000),
   ]);
 
   const lastDose = medLogs?.[0];
+  const tz = profile?.timezone || DEFAULT_TZ;
+
+  // GLP-1 companion: weekly-dose reminder, weight-loss journey, dose + side
+  // effect trends. Only shows for members logging a recognised GLP-1 med.
+  const glp1 = buildGlp1Data(medLogs ?? [], weightRows ?? [], tz);
+
+  // Recent injection sites (most-recent-first) power the rotation suggestion.
+  const recentSites = (medLogs ?? [])
+    .map((l) => l.injection_site as string | null)
+    .filter((s): s is string => !!s)
+    .slice(0, 8);
 
   return (
     <PageShell>
@@ -70,6 +90,9 @@ export default async function HealthPage() {
           />
         )}
       </div>
+
+      {/* GLP-1 companion insights */}
+      {glp1 && <Glp1Insights data={glp1} />}
 
       {/* Medications */}
       <section className="mt-10">
@@ -99,7 +122,7 @@ export default async function HealthPage() {
         )}
 
         <div className="mt-4">
-          <MedicationForm />
+          <MedicationForm recentSites={recentSites} />
         </div>
 
         {medLogs && medLogs.length > 0 && (
