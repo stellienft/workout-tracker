@@ -139,7 +139,7 @@ export async function joinCommunity(communityId: string) {
   // Public → join instantly; private → request (pending owner approval).
   const { data: community } = await supabase
     .from("communities")
-    .select("privacy")
+    .select("privacy, name, slug, created_by")
     .eq("id", parsed.data)
     .maybeSingle();
   const status = community?.privacy === "private" ? "pending" : "approved";
@@ -151,6 +151,20 @@ export async function joinCommunity(communityId: string) {
       { onConflict: "community_id,user_id" }
     );
   if (error) return { ok: false as const, error: error.message };
+
+  // Tell the owner about a new join request (private communities).
+  if (status === "pending" && community?.created_by && community.created_by !== user.id) {
+    const { notifyUser } = await import("@/lib/notify");
+    const { profile } = await getAuthContext();
+    await notifyUser({
+      userId: community.created_by as string,
+      type: "community_request",
+      title: `${profile?.full_name ?? "Someone"} asked to join ${community.name}`,
+      body: "Review the request in your community.",
+      link: `/communities/${community.slug}`,
+    });
+  }
+
   revalidatePath("/communities", "layout");
   return { ok: true as const, pending: status === "pending" };
 }
@@ -171,6 +185,24 @@ export async function approveMember(communityId: string, userId: string) {
     .eq("community_id", parsed.data.communityId)
     .eq("user_id", parsed.data.userId);
   if (error) return { ok: false as const, error: error.message };
+
+  // Tell the new member they're in.
+  const { data: community } = await supabase
+    .from("communities")
+    .select("name, slug")
+    .eq("id", parsed.data.communityId)
+    .maybeSingle();
+  if (community) {
+    const { notifyUser } = await import("@/lib/notify");
+    await notifyUser({
+      userId: parsed.data.userId,
+      type: "community_approved",
+      title: `You're in — welcome to ${community.name}!`,
+      body: "Your request was approved. Come say hi.",
+      link: `/communities/${community.slug}`,
+    });
+  }
+
   revalidatePath("/communities", "layout");
   return { ok: true as const };
 }
