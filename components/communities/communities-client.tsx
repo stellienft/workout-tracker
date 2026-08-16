@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Users, Check } from "lucide-react";
+import { Plus, Users, Check, Lock, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -21,6 +21,7 @@ export function CommunitiesClient({ initial }: { initial: CommunitySummary[] }) 
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [privacy, setPrivacy] = useState<"public" | "private">("public");
 
   function create() {
     if (name.trim().length < 2) {
@@ -28,7 +29,7 @@ export function CommunitiesClient({ initial }: { initial: CommunitySummary[] }) 
       return;
     }
     startTransition(async () => {
-      const res = await createCommunity({ name: name.trim(), description: description.trim() });
+      const res = await createCommunity({ name: name.trim(), description: description.trim(), privacy });
       if (res.ok && res.slug) {
         toast("Community created!", "success");
         router.push(`/communities/${res.slug}`);
@@ -39,26 +40,50 @@ export function CommunitiesClient({ initial }: { initial: CommunitySummary[] }) 
   }
 
   function toggleMembership(c: CommunitySummary) {
-    const joining = !c.isMember;
-    // Optimistic.
-    setCommunities((prev) =>
-      prev.map((x) =>
-        x.id === c.id
-          ? { ...x, isMember: joining, memberCount: x.memberCount + (joining ? 1 : -1) }
-          : x
-      )
-    );
+    // Leaving (approved member).
+    if (c.isMember) {
+      setCommunities((prev) =>
+        prev.map((x) =>
+          x.id === c.id ? { ...x, isMember: false, memberCount: x.memberCount - 1 } : x
+        )
+      );
+      startTransition(async () => {
+        const res = await leaveCommunity(c.id);
+        if (!res.ok) {
+          setCommunities((prev) =>
+            prev.map((x) =>
+              x.id === c.id ? { ...x, isMember: true, memberCount: x.memberCount + 1 } : x
+            )
+          );
+          toast(res.error ?? "Could not update", "error");
+        }
+      });
+      return;
+    }
+    // Cancelling a pending request.
+    if (c.isPending) {
+      setCommunities((prev) =>
+        prev.map((x) => (x.id === c.id ? { ...x, isPending: false } : x))
+      );
+      startTransition(async () => {
+        await leaveCommunity(c.id);
+      });
+      return;
+    }
+    // Joining (public) or requesting (private).
     startTransition(async () => {
-      const res = joining ? await joinCommunity(c.id) : await leaveCommunity(c.id);
-      if (!res.ok) {
-        // Revert.
+      const res = await joinCommunity(c.id);
+      if (res.ok) {
         setCommunities((prev) =>
           prev.map((x) =>
             x.id === c.id
-              ? { ...x, isMember: !joining, memberCount: x.memberCount + (joining ? -1 : 1) }
+              ? res.pending
+                ? { ...x, isPending: true }
+                : { ...x, isMember: true, memberCount: x.memberCount + 1 }
               : x
           )
         );
+      } else {
         toast(res.error ?? "Could not update", "error");
       }
     });
@@ -83,6 +108,28 @@ export function CommunitiesClient({ initial }: { initial: CommunitySummary[] }) 
             placeholder="What's this community about? (optional)"
             className="mt-2 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
           />
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {([
+              { value: "public", label: "Public", hint: "Anyone can join & see posts", icon: <Globe className="h-4 w-4" /> },
+              { value: "private", label: "Private", hint: "You approve who joins", icon: <Lock className="h-4 w-4" /> },
+            ] as const).map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() => setPrivacy(o.value)}
+                className={`rounded-xl border p-3 text-left transition-colors ${
+                  privacy === o.value
+                    ? "border-[var(--border-active)] bg-[var(--accent-muted)]"
+                    : "border-[var(--border-subtle)] bg-[var(--surface-secondary)]"
+                }`}
+              >
+                <span className="flex items-center gap-1.5 text-sm font-semibold">
+                  {o.icon} {o.label}
+                </span>
+                <span className="mt-0.5 block text-xs text-[var(--text-muted)]">{o.hint}</span>
+              </button>
+            ))}
+          </div>
           <div className="mt-3 flex gap-2">
             <Button onClick={create} disabled={pending} size="sm">
               {pending ? "Creating…" : "Create community"}
@@ -114,7 +161,12 @@ export function CommunitiesClient({ initial }: { initial: CommunitySummary[] }) 
               className="flex flex-col rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4"
             >
               <Link href={`/communities/${c.slug}`} className="min-w-0 flex-1">
-                <p className="truncate font-bold">{c.name}</p>
+                <p className="flex items-center gap-1.5 truncate font-bold">
+                  {c.privacy === "private" && (
+                    <Lock className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" />
+                  )}
+                  {c.name}
+                </p>
                 {c.description && (
                   <p className="mt-1 line-clamp-2 text-sm text-[var(--text-secondary)]">
                     {c.description}
@@ -141,7 +193,7 @@ export function CommunitiesClient({ initial }: { initial: CommunitySummary[] }) 
                     onClick={() => toggleMembership(c)}
                     disabled={pending}
                     className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold ${
-                      c.isMember
+                      c.isMember || c.isPending
                         ? "border border-[var(--border-subtle)] text-[var(--text-secondary)]"
                         : "bg-[var(--accent-primary)] text-[var(--accent-ink)]"
                     }`}
@@ -150,6 +202,10 @@ export function CommunitiesClient({ initial }: { initial: CommunitySummary[] }) 
                       <>
                         <Check className="h-4 w-4" /> Joined
                       </>
+                    ) : c.isPending ? (
+                      "Requested"
+                    ) : c.privacy === "private" ? (
+                      "Request"
                     ) : (
                       "Join"
                     )}
