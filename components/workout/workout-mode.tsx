@@ -36,6 +36,7 @@ import {
 } from "@/lib/actions/workout";
 import { WarmupSheet } from "@/components/workout/warmup-sheet";
 import { enqueue, flush, pendingCount } from "@/lib/offline-queue";
+import { useWakeLock } from "@/lib/use-wake-lock";
 import type { LoadedVideo, AltOption } from "@/lib/workout-loader";
 import { combineConcerns, exerciseConcern } from "@/lib/injury";
 import { cn, formatDuration } from "@/lib/utils";
@@ -134,6 +135,8 @@ export function WorkoutMode({
   }[];
 }) {
   const router = useRouter();
+  // Keep the screen awake for the whole workout so it never sleeps mid-set.
+  useWakeLock(true);
   const resumeBaseRef = useRef(Date.now() - Math.max(0, initialSeconds) * 1000);
   const [elapsed, setElapsed] = useState(Math.max(0, initialSeconds));
 

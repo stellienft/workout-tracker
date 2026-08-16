@@ -4,6 +4,37 @@ import { useEffect, useRef, useState } from "react";
 import { Pause, Play, X, Plus } from "lucide-react";
 
 /**
+ * When rest ends, surface a notification if the member has left the app (screen
+ * off or switched away) so they know to start the next set. We only notify when
+ * the page is hidden — if they're looking at the timer, the on-screen countdown
+ * and vibration are enough. Best-effort: requires notification permission
+ * (granted via Settings) and depends on the browser still running our JS.
+ */
+function notifyRestOver() {
+  try {
+    if (typeof Notification === "undefined" || Notification.permission !== "granted")
+      return;
+    if (typeof document !== "undefined" && document.visibilityState === "visible")
+      return;
+    navigator.serviceWorker?.ready
+      .then((reg) =>
+        reg.showNotification("Rest complete 💪", {
+          body: "Time for your next set.",
+          icon: "/icons/icon-192.png",
+          badge: "/icons/icon-192.png",
+          tag: "stellio-rest",
+          data: { url: window.location.pathname },
+          // vibrate is valid on mobile but absent from the TS type.
+          ...({ vibrate: [120, 40, 120], renotify: true } as object),
+        })
+      )
+      .catch(() => {});
+  } catch {
+    // Notifications unavailable — the on-screen timer still fired.
+  }
+}
+
+/**
  * Persistent rest timer. Stays mounted at the bottom of workout mode so it
  * keeps ticking while the user navigates between exercises.
  */
@@ -36,16 +67,22 @@ export function RestTimer({
 
   useEffect(() => {
     if (!running) return;
+    const fire = () => {
+      if (firedRef.current) return;
+      firedRef.current = true;
+      if (haptics && "vibrate" in navigator) navigator.vibrate?.(200);
+      notifyRestOver();
+    };
     const tick = () => {
       const rem = Math.max(0, Math.round((endAtRef.current - Date.now()) / 1000));
       setRemaining(rem);
-      if (rem <= 0 && !firedRef.current) {
-        firedRef.current = true;
-        if (haptics && "vibrate" in navigator) navigator.vibrate?.(200);
-      }
+      if (rem <= 0) fire();
     };
     tick(); // sync immediately
     const id = setInterval(tick, 500);
+    // A wall-clock timeout as well, so the notification can still fire while the
+    // app is briefly backgrounded (when the throttled interval may not run).
+    const to = setTimeout(fire, Math.max(0, endAtRef.current - Date.now()) + 50);
     const onVisible = () => {
       if (document.visibilityState === "visible") tick();
     };
@@ -53,10 +90,12 @@ export function RestTimer({
     window.addEventListener("focus", onVisible);
     return () => {
       clearInterval(id);
+      clearTimeout(to);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onVisible);
     };
-  }, [running, haptics]);
+    // `total` is included so adding +15s re-arms the wall-clock timeout.
+  }, [running, haptics, total]);
 
   function toggleRunning() {
     setRunning((r) => {
