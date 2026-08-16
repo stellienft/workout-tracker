@@ -62,6 +62,25 @@ describe("progressionSuggestion", () => {
     expect(s?.reps).toBe(8);
   });
 
+  it("deloads when it stalled below the range at max effort", () => {
+    const s = progressionSuggestion(
+      [{ weight_kg: 40, reps: 6, rpe: 9.5 }], // missed reps AND a grind
+      "8-12"
+    );
+    expect(s?.action).toBe("deload");
+    expect(s?.weightKg).toBe(35); // ~10% back-off, snapped to a loadable 2.5 kg
+    expect(s?.reps).toBe(8);
+  });
+
+  it("holds at the top instead of adding load after a max-effort top set", () => {
+    const s = progressionSuggestion(
+      [{ weight_kg: 40, reps: 12, rpe: 9.5 }], // hit top of range, but maxed out
+      "8-12"
+    );
+    expect(s?.action).toBe("hold");
+    expect(s?.weightKg).toBe(40);
+  });
+
   it("uses the minimum reps across the heaviest sets", () => {
     const s = progressionSuggestion(
       [
