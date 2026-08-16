@@ -20,6 +20,7 @@ const onboardingSchema = z.object({
   considerations: z.string().max(1000).optional().default(""),
   trainingDays: z.array(z.string()).default([]),
   medicationTracking: z.boolean().default(false),
+  glp1: z.boolean().default(false),
 });
 
 export type OnboardingInput = z.input<typeof onboardingSchema>;
@@ -51,7 +52,8 @@ export async function completeOnboarding(raw: OnboardingInput) {
       training_days: data.trainingDays,
       injury_areas: data.injuryAreas,
       considerations: data.considerations,
-      medication_tracking_enabled: data.medicationTracking,
+      // GLP-1 users get the Health tab on by default so they can log doses.
+      medication_tracking_enabled: data.medicationTracking || data.glp1,
     })
     .eq("id", user.id);
   if (profileError) return { ok: false, error: profileError.message };
@@ -63,6 +65,15 @@ export async function completeOnboarding(raw: OnboardingInput) {
     await supabase
       .from("profiles")
       .update({ training_location: data.trainingLocation })
+      .eq("id", user.id);
+  }
+
+  // glp1_medication is a later migration too — best-effort so onboarding never
+  // fails on a not-yet-migrated database.
+  if (data.glp1) {
+    await supabase
+      .from("profiles")
+      .update({ glp1_medication: true })
       .eq("id", user.id);
   }
 
@@ -129,6 +140,7 @@ export async function recommendProgramsForOnboarding(input: {
   goalId?: string | null;
   experience?: "beginner" | "intermediate" | "advanced";
   location?: "home" | "gym" | "both";
+  glp1?: boolean;
 }): Promise<RecommendedProgram[]> {
   const supabase = await createClient();
   const { data } = await supabase
@@ -158,6 +170,9 @@ export async function recommendProgramsForOnboarding(input: {
     const homeFriendly = HOME_RE.test(`${p.name} ${p.short_description ?? ""} ${p.slug}`);
     if (input.location === "home") score += homeFriendly ? 5 : -4;
     else if (input.location === "gym") score += homeFriendly ? -1 : 2;
+
+    // For GLP-1 members, strongly favour the GLP-1-specific programs.
+    if (input.glp1 && (p.slug as string).startsWith("glp1-")) score += 6;
 
     if (p.featured) score += 0.5;
     return { p, score };

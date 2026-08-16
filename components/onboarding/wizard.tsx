@@ -54,6 +54,7 @@ export function OnboardingWizard({
   const [considerations, setConsiderations] = useState("");
   const [trainingDays, setTrainingDays] = useState<string[]>(["Mon", "Wed", "Fri"]);
   const [medicationTracking, setMedicationTracking] = useState(false);
+  const [glp1, setGlp1] = useState<boolean | null>(null);
 
   // Program recommendations (final step).
   const [recs, setRecs] = useState<RecommendedProgram[] | null>(null);
@@ -73,11 +74,12 @@ export function OnboardingWizard({
       goalId,
       experience,
       location: trainingLocation,
+      glp1: glp1 === true,
     })
       .then((r) => setRecs(r))
       .catch(() => setRecs([]))
       .finally(() => setLoadingRecs(false));
-  }, [step, recs, goalId, experience, trainingLocation]);
+  }, [step, recs, goalId, experience, trainingLocation, glp1]);
 
   function toggle(list: string[], value: string, set: (v: string[]) => void) {
     set(list.includes(value) ? list.filter((x) => x !== value) : [...list, value]);
@@ -102,7 +104,8 @@ export function OnboardingWizard({
       injuryAreas,
       considerations,
       trainingDays,
-      medicationTracking,
+      medicationTracking: medicationTracking || glp1 === true,
+      glp1: glp1 === true,
     });
     if (res.ok) {
       // Redeem any referral invite (grants both sides a free month).
@@ -341,31 +344,76 @@ export function OnboardingWizard({
         )}
 
         {step === 4 && (
-          <div>
-            <h2 className="text-2xl font-bold">Enable health &amp; symptom tracking?</h2>
-            <p className="mt-1 text-[var(--text-secondary)]">
-              Track the symptoms, vitals and medications that matter to you. You
-              can change this any time in Settings.
-            </p>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {[
-                { value: true, label: "Yes, enable it", hint: "Adds the Health tab" },
-                { value: false, label: "Not now", hint: "Keep it simple" },
-              ].map((o) => (
-                <button
-                  key={String(o.value)}
-                  onClick={() => setMedicationTracking(o.value)}
-                  className={cn(
-                    "rounded-2xl border p-5 text-left transition-colors",
-                    medicationTracking === o.value
-                      ? "border-[var(--border-active)] bg-[var(--accent-muted)]"
-                      : "border-[var(--border-subtle)] bg-[var(--surface-primary)] hover:border-[var(--text-muted)]"
-                  )}
-                >
-                  <p className="font-semibold">{o.label}</p>
-                  <p className="text-sm text-[var(--text-secondary)]">{o.hint}</p>
-                </button>
-              ))}
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-2xl font-bold">Enable health &amp; symptom tracking?</h2>
+              <p className="mt-1 text-[var(--text-secondary)]">
+                Track the symptoms, vitals and medications that matter to you. You
+                can change this any time in Settings.
+              </p>
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                {[
+                  { value: true, label: "Yes, enable it", hint: "Adds the Health tab" },
+                  { value: false, label: "Not now", hint: "Keep it simple" },
+                ].map((o) => (
+                  <button
+                    key={String(o.value)}
+                    onClick={() => setMedicationTracking(o.value)}
+                    className={cn(
+                      "rounded-2xl border p-5 text-left transition-colors",
+                      medicationTracking === o.value
+                        ? "border-[var(--border-active)] bg-[var(--accent-muted)]"
+                        : "border-[var(--border-subtle)] bg-[var(--surface-primary)] hover:border-[var(--text-muted)]"
+                    )}
+                  >
+                    <p className="font-semibold">{o.label}</p>
+                    <p className="text-sm text-[var(--text-secondary)]">{o.hint}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold">
+                Are you using a GLP-1 medication?
+              </h2>
+              <p className="mt-1 text-[var(--text-secondary)]">
+                Mounjaro, Ozempic, Wegovy, Zepbound and similar. Stellio is built
+                to help you <span className="text-[var(--text-primary)]">keep your muscle while you lose weight</span> —
+                with tailored programs, a protein target, and dose &amp; side-effect
+                tracking. Totally optional and private.
+              </p>
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                {[
+                  { value: true, label: "Yes, I am", hint: "Unlocks the GLP-1 companion & programs" },
+                  { value: false, label: "No / prefer not to say", hint: "" },
+                ].map((o) => (
+                  <button
+                    key={String(o.value)}
+                    onClick={() => {
+                      setGlp1(o.value);
+                      if (o.value) setMedicationTracking(true);
+                    }}
+                    className={cn(
+                      "rounded-2xl border p-5 text-left transition-colors",
+                      glp1 === o.value
+                        ? "border-[var(--border-active)] bg-[var(--accent-muted)]"
+                        : "border-[var(--border-subtle)] bg-[var(--surface-primary)] hover:border-[var(--text-muted)]"
+                    )}
+                  >
+                    <p className="font-semibold">{o.label}</p>
+                    {o.hint && (
+                      <p className="text-sm text-[var(--text-secondary)]">{o.hint}</p>
+                    )}
+                  </button>
+                ))}
+              </div>
+              {glp1 === true && (
+                <div className="mt-4 rounded-2xl border border-[var(--accent-primary)]/40 bg-[var(--accent-muted)] p-4 text-sm text-[var(--text-secondary)]">
+                  Great — we&apos;ll recommend GLP-1 programs built for muscle
+                  preservation, and your Health tab is ready for logging doses.
+                </div>
+              )}
             </div>
           </div>
         )}

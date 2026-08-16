@@ -34,6 +34,7 @@ export interface Profile {
   training_location: "home" | "gym" | "both" | null;
   feed_notifications_enabled?: boolean;
   goal_weight_kg?: number | null;
+  glp1_medication?: boolean;
   weekly_frequency: number | null;
   session_minutes: number | null;
   equipment: string[];
