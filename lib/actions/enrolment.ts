@@ -73,11 +73,23 @@ export async function enrolInProgram(input: {
   let previousId: string | null = null;
   if (existing) {
     previousId = existing.id;
-    // Pause the outgoing program (keeps all its history).
+    // The partial unique index `program_enrolments_one_active` allows only one
+    // row per user with status active OR paused. So the outgoing program must
+    // leave that set before we insert the new one:
+    //  - immediate switch  → abandon it (removes the program, keeps history)
+    //  - pause_only        → pause it (new program starts pending)
+    const outgoingStatus =
+      parsed.data.switchMode === "pause_only" ? "paused" : "abandoned";
     await supabase
       .from("program_enrolments")
-      .update({ status: "paused", paused_at: new Date().toISOString() })
-      .eq("id", existing.id);
+      .update({
+        status: outgoingStatus,
+        ...(outgoingStatus === "paused"
+          ? { paused_at: new Date().toISOString() }
+          : {}),
+      })
+      .eq("id", existing.id)
+      .eq("user_id", user.id);
   }
 
   const { error } = await supabase.from("program_enrolments").insert({
@@ -92,6 +104,7 @@ export async function enrolInProgram(input: {
 
   revalidatePath("/dashboard");
   revalidatePath("/programs");
+  revalidatePath("/programs/current");
   return { ok: true };
 }
 

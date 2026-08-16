@@ -110,18 +110,19 @@ export function EnrolButton({
             <p className="mt-1 text-sm text-[var(--text-secondary)]">
               You&apos;re currently on{" "}
               <span className="text-[var(--text-primary)]">{otherProgramName ?? "another program"}</span>
-              . Your history is always kept. What would you like to do?
+              . Starting this one will end your current program — but all your
+              workout history and progress are kept.
             </p>
             <div className="mt-5 flex flex-col gap-2">
               <Button onClick={() => doEnrol("immediate")} disabled={pending}>
-                Start this program now
+                {pending ? "Switching…" : "End current & start this"}
               </Button>
               <Button
                 variant="secondary"
                 onClick={() => doEnrol("pause_only")}
                 disabled={pending}
               >
-                Save current as paused, keep it active
+                Pause current, save this for later
               </Button>
               <Button variant="ghost" onClick={() => setShowSwitch(false)}>
                 Cancel
