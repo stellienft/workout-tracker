@@ -1,15 +1,22 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Upload, Send, Lock } from "lucide-react";
+import { Upload, Send, Lock, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
-import { getFeed, createPost } from "@/lib/actions/social";
-import type { FeedPost } from "@/lib/actions/social";
+import {
+  getFeed,
+  createPost,
+  suggestedUsers,
+  toggleFollow,
+  type FeedPost,
+  type SuggestedUser,
+} from "@/lib/actions/social";
 import { PostCard } from "@/components/feed/post-card";
+
+type Scope = "discover" | "following";
 
 const BUCKET = "social-feed";
 const MAX_CAPTION = 2000;
@@ -30,7 +37,6 @@ interface FeedClientProps {
 }
 
 export function FeedClient({ initialPosts, isPro, currentUserId }: FeedClientProps) {
-  const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
 
@@ -38,6 +44,46 @@ export function FeedClient({ initialPosts, isPro, currentUserId }: FeedClientPro
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(initialPosts.length === 20);
   const [loadingMore, setLoadingMore] = useState(false);
+
+  // Discover (everyone) vs Following (people you follow).
+  const [scope, setScope] = useState<Scope>("discover");
+  const [switchingScope, setSwitchingScope] = useState(false);
+
+  // Who-to-follow suggestions.
+  const [suggested, setSuggested] = useState<SuggestedUser[]>([]);
+  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    suggestedUsers(8).then(setSuggested).catch(() => {});
+  }, []);
+
+  async function switchScope(next: Scope) {
+    if (next === scope) return;
+    setScope(next);
+    setSwitchingScope(true);
+    try {
+      const fresh = await getFeed(1, 20, next);
+      setPosts(fresh);
+      setPage(1);
+      setHasMore(fresh.length === 20);
+    } finally {
+      setSwitchingScope(false);
+    }
+  }
+
+  function followSuggested(id: string) {
+    setFollowingIds((prev) => new Set(prev).add(id));
+    startTransition(async () => {
+      const res = await toggleFollow(id);
+      if (!res.ok) {
+        setFollowingIds((prev) => {
+          const n = new Set(prev);
+          n.delete(id);
+          return n;
+        });
+        toast(res.error ?? "Could not follow", "error");
+      }
+    });
+  }
 
   // Post creation form state
   const [caption, setCaption] = useState("");
@@ -113,7 +159,6 @@ export function FeedClient({ initialPosts, isPro, currentUserId }: FeedClientPro
 
   function handleSubmitPost(e: React.FormEvent) {
     e.preventDefault();
-    if (!isPro) return;
     if (!caption.trim() && !file) {
       toast("Add a caption or media to post.", "error");
       return;
@@ -168,7 +213,7 @@ export function FeedClient({ initialPosts, isPro, currentUserId }: FeedClientPro
         clearMedia();
         setSelectedSessionId("");
         // Reload the feed fresh from the server.
-        const fresh = await getFeed(1, 20);
+        const fresh = await getFeed(1, 20, scope);
         setPosts(fresh);
         setPage(1);
         setHasMore(fresh.length === 20);
@@ -183,7 +228,7 @@ export function FeedClient({ initialPosts, isPro, currentUserId }: FeedClientPro
     setLoadingMore(true);
     try {
       const next = page + 1;
-      const more = await getFeed(next, 20);
+      const more = await getFeed(next, 20, scope);
       if (more.length === 0) {
         setHasMore(false);
       } else {
@@ -198,23 +243,60 @@ export function FeedClient({ initialPosts, isPro, currentUserId }: FeedClientPro
     }
   }
 
+  const toFollow = suggested.filter((u) => !followingIds.has(u.id)).slice(0, 6);
+  function WhoToFollow() {
+    if (toFollow.length === 0) return null;
+    return (
+      <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4">
+        <p className="mb-3 text-sm font-semibold">Who to follow</p>
+        <div className="flex flex-col gap-2">
+          {toFollow.map((u) => (
+            <div key={u.id} className="flex items-center gap-3">
+              <Link href={`/profile/${u.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                {u.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={u.avatarUrl} alt={u.name ?? "User"} className="h-9 w-9 rounded-full object-cover" />
+                ) : (
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--accent-muted)] text-sm font-bold text-[var(--accent-primary)]">
+                    {(u.name ?? "?").charAt(0).toUpperCase()}
+                  </span>
+                )}
+                <span className="truncate text-sm font-medium">{u.name ?? "Member"}</span>
+              </Link>
+              <button
+                onClick={() => followSuggested(u.id)}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[var(--accent-primary)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-ink)]"
+              >
+                <UserPlus className="h-3.5 w-3.5" /> Follow
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Free member banner */}
-      {!isPro && (
-        <div className="flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--accent-muted)] p-4">
-          <Lock className="h-5 w-5 shrink-0 text-[var(--accent-primary)]" />
-          <p className="flex-1 text-sm text-[var(--text-secondary)]">
-            Free members can browse the feed.{" "}
-            <Link href="/billing" className="font-semibold text-[var(--accent-primary)] underline">
-              Upgrade to Pro to post, comment, and react.
-            </Link>
-          </p>
-        </div>
-      )}
+      {/* Following / Discover tabs */}
+      <div className="flex gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-1">
+        {(["discover", "following"] as Scope[]).map((s) => (
+          <button
+            key={s}
+            onClick={() => switchScope(s)}
+            className={`flex-1 rounded-full py-2 text-sm font-semibold capitalize transition-colors ${
+              scope === s
+                ? "bg-[var(--accent-primary)] text-[var(--accent-ink)]"
+                : "text-[var(--text-secondary)]"
+            }`}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
 
-      {/* Post creation form (Pro only) */}
-      {isPro && (
+      {/* Post creation form (all members; photo/video is a Pro perk) */}
+      {(
         <form
           onSubmit={handleSubmitPost}
           className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4"
@@ -259,14 +341,24 @@ export function FeedClient({ initialPosts, isPro, currentUserId }: FeedClientPro
               className="hidden"
               onChange={(e) => handleFilePick(e.target.files?.[0])}
             />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={pending || uploading}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:border-[var(--border-active)]"
-            >
-              <Upload className="h-4 w-4" /> Add media
-            </button>
+            {isPro ? (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={pending || uploading}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:border-[var(--border-active)]"
+              >
+                <Upload className="h-4 w-4" /> Add media
+              </button>
+            ) : (
+              <Link
+                href="/billing"
+                title="Photo & video posts are a Pro feature"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-muted)]"
+              >
+                <Lock className="h-4 w-4" /> Add media (Pro)
+              </Link>
+            )}
 
             {/* Session link */}
             {recentSessions.length > 0 && (
@@ -299,14 +391,22 @@ export function FeedClient({ initialPosts, isPro, currentUserId }: FeedClientPro
       )}
 
       {/* Feed list */}
-      {posts.length === 0 ? (
-        <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-8 text-center">
-          <p className="text-sm text-[var(--text-muted)]">
-            No posts yet. {isPro ? "Be the first to share something!" : "Check back soon."}
-          </p>
+      {switchingScope ? (
+        <p className="py-8 text-center text-sm text-[var(--text-muted)]">Loading…</p>
+      ) : posts.length === 0 ? (
+        <div className="space-y-4">
+          <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-8 text-center">
+            <p className="text-sm text-[var(--text-muted)]">
+              {scope === "following"
+                ? "Your Following feed is empty — follow a few people to fill it."
+                : "No posts yet. Be the first to share something!"}
+            </p>
+          </div>
+          <WhoToFollow />
         </div>
       ) : (
         <div className="space-y-4">
+          {scope === "following" && <WhoToFollow />}
           {posts.map((post) => (
             <PostCard
               key={post.id}
