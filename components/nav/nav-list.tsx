@@ -31,16 +31,18 @@ export function NavList({
   navBadges?: Record<string, number>;
   onNavigate?: () => void;
 }) {
-  // Deterministic first render (matches SSR): open only the active section.
+  // Everything starts expanded; members collapse the sections they don't use
+  // and those choices are remembered. Deterministic here so SSR matches.
   const [open, setOpen] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
     for (const s of sections) {
-      if (s.title) init[s.title] = s.items.some((i) => isActive(pathname, i.href));
+      if (s.title) init[s.title] = true;
     }
     return init;
   });
 
-  // After mount, apply the member's saved open/closed preferences.
+  // After mount, apply the member's saved open/closed preferences (their
+  // collapses); anything they haven't touched stays open.
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
