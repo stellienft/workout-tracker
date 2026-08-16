@@ -5,22 +5,48 @@ import { useRouter } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { saveMedicationLog } from "@/lib/actions/tracking";
+import { saveMedicationLog, updateMedicationLog } from "@/lib/actions/tracking";
 import { GLP1_SITES, nextInjectionSite, siteRecentlyUsed } from "@/lib/glp1";
 
 const SITES = GLP1_SITES;
 const EFFECTS = ["Nausea", "Fatigue", "Headache", "Reduced appetite", "Constipation", "Injection site reaction"];
 
-export function MedicationForm({ recentSites = [] }: { recentSites?: string[] }) {
+export interface MedicationLogEdit {
+  id: string;
+  medicationName: string;
+  doseMg: number | null;
+  takenOn: string;
+  injectionSite: string | null;
+  sideEffects: string[];
+  sideEffectSeverity: number | null;
+  notes: string | null;
+}
+
+function today(): string {
+  return new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
+}
+
+export function MedicationForm({
+  recentSites = [],
+  editing,
+  onDone,
+}: {
+  recentSites?: string[];
+  editing?: MedicationLogEdit;
+  onDone?: () => void;
+}) {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
-  const [name, setName] = useState("Mounjaro");
-  const [dose, setDose] = useState("");
-  const [site, setSite] = useState("");
-  const [effects, setEffects] = useState<string[]>([]);
-  const [severity, setSeverity] = useState<string>("");
-  const [notes, setNotes] = useState("");
+  const [name, setName] = useState(editing?.medicationName ?? "Mounjaro");
+  const [dose, setDose] = useState(editing?.doseMg != null ? String(editing.doseMg) : "");
+  const [takenOn, setTakenOn] = useState(editing?.takenOn ?? today());
+  const [site, setSite] = useState(editing?.injectionSite ?? "");
+  const [effects, setEffects] = useState<string[]>(editing?.sideEffects ?? []);
+  const [severity, setSeverity] = useState<string>(
+    editing?.sideEffectSeverity != null ? String(editing.sideEffectSeverity) : ""
+  );
+  const [notes, setNotes] = useState(editing?.notes ?? "");
 
   // Rotation guidance: suggest the least-recently-used site and warn on reuse.
   const suggestedSite = recentSites.length > 0 ? nextInjectionSite(recentSites) : null;
@@ -34,20 +60,29 @@ export function MedicationForm({ recentSites = [] }: { recentSites?: string[] })
 
   function submit() {
     startTransition(async () => {
-      const res = await saveMedicationLog({
+      const payload = {
         medicationName: name,
         doseMg: dose || null,
+        takenOn: takenOn || undefined,
         injectionSite: site || undefined,
         sideEffects: effects,
         sideEffectSeverity: severity || null,
         notes,
-      });
+      };
+      const res = editing
+        ? await updateMedicationLog(editing.id, payload)
+        : await saveMedicationLog(payload);
       if (res.ok) {
-        toast("Dose logged.", "success");
-        setDose("");
-        setEffects([]);
-        setSeverity("");
-        setNotes("");
+        toast(editing ? "Injection updated." : "Dose logged.", "success");
+        if (editing) {
+          onDone?.();
+        } else {
+          setDose("");
+          setEffects([]);
+          setSeverity("");
+          setNotes("");
+          setTakenOn(today());
+        }
         router.refresh();
       } else {
         toast(res.error ?? "Could not save", "error");
@@ -77,6 +112,17 @@ export function MedicationForm({ recentSites = [] }: { recentSites?: string[] })
           />
         </label>
       </div>
+
+      <label className="flex flex-col gap-1">
+        <span className="text-xs text-[var(--text-secondary)]">Date</span>
+        <input
+          type="date"
+          value={takenOn}
+          max={today()}
+          onChange={(e) => setTakenOn(e.target.value)}
+          className="h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm focus:border-[var(--border-active)] focus:outline-none"
+        />
+      </label>
 
       <div>
         <div className="flex items-center justify-between gap-2">
@@ -161,9 +207,16 @@ export function MedicationForm({ recentSites = [] }: { recentSites?: string[] })
         />
       </label>
 
-      <Button onClick={submit} disabled={pending} className="w-full">
-        {pending ? "Saving…" : "Log dose"}
-      </Button>
+      <div className="flex gap-2">
+        <Button onClick={submit} disabled={pending} className="flex-1">
+          {pending ? "Saving…" : editing ? "Save changes" : "Log dose"}
+        </Button>
+        {editing && (
+          <Button variant="ghost" onClick={() => onDone?.()} disabled={pending}>
+            Cancel
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

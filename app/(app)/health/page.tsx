@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { HealthPanel } from "@/components/tracking/health-panel";
 import { MedicationForm } from "@/components/tracking/medication-form";
+import { MedicationHistory } from "@/components/tracking/medication-history";
 import { getHealthData } from "@/lib/health";
 import { Glp1Insights } from "@/components/health/glp1-insights";
 import { buildGlp1Data } from "@/lib/glp1";
@@ -116,10 +117,10 @@ export default async function HealthPage() {
               {lastDose.dose_mg ? ` · ${lastDose.dose_mg} mg` : ""}
             </p>
             <p className="text-sm text-[var(--text-secondary)]">
-              {new Date(lastDose.taken_on).toLocaleDateString(undefined, {
+              {new Date(`${lastDose.taken_on}T12:00:00`).toLocaleDateString("en-AU", {
                 weekday: "long",
-                month: "short",
                 day: "numeric",
+                month: "short",
               })}
               {lastDose.injection_site ? ` · ${lastDose.injection_site}` : ""}
             </p>
@@ -131,32 +132,19 @@ export default async function HealthPage() {
         </div>
 
         {medLogs && medLogs.length > 0 && (
-          <div className="mt-6">
-            <h3 className="font-semibold">History</h3>
-            <div className="mt-3 divide-y divide-[var(--border-subtle)] rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)]">
-              {medLogs.map((l) => (
-                <div key={l.id} className="p-4 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">
-                      {l.medication_name}
-                      {l.dose_mg ? ` · ${l.dose_mg} mg` : ""}
-                    </span>
-                    <span className="text-[var(--text-muted)]">
-                      {new Date(l.taken_on).toLocaleDateString()}
-                    </span>
-                  </div>
-                  {l.side_effects?.length > 0 && (
-                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                      Side effects: {l.side_effects.join(", ")}
-                      {l.side_effect_severity != null
-                        ? ` (severity ${l.side_effect_severity}/5)`
-                        : ""}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
+          <MedicationHistory
+            logs={medLogs.map((l) => ({
+              id: l.id as string,
+              medication_name: l.medication_name as string,
+              dose_mg: (l.dose_mg as number | null) ?? null,
+              taken_on: l.taken_on as string,
+              injection_site: (l.injection_site as string | null) ?? null,
+              side_effects: (l.side_effects as string[] | null) ?? null,
+              side_effect_severity: (l.side_effect_severity as number | null) ?? null,
+              notes: (l.notes as string | null) ?? null,
+            }))}
+            recentSites={recentSites}
+          />
         )}
       </section>
     </PageShell>
