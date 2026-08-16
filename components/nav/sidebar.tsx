@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navSections } from "./nav-items";
-import { cn } from "@/lib/utils";
+import { NavList } from "./nav-list";
 import { signOut } from "@/lib/actions/auth";
-import { LogOut, Lock } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 
 export function Sidebar({
@@ -52,46 +52,12 @@ export function Sidebar({
         <NotificationBell unread={unread} />
       </div>
       <nav className="flex-1 overflow-y-auto px-3 pb-4">
-        {sections.map((section, si) => (
-          <div key={section.title ?? `top-${si}`} className={si > 0 ? "mt-4" : ""}>
-            {section.title && (
-              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                {section.title}
-              </p>
-            )}
-            <ul className="flex flex-col gap-1">
-              {section.items.map((item) => {
-                const active =
-                  pathname === item.href || pathname.startsWith(item.href + "/");
-                const Icon = item.icon;
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-colors",
-                        active
-                          ? "bg-[var(--accent-muted)] text-[var(--accent-primary)] font-semibold"
-                          : "text-[var(--text-secondary)] hover:bg-[var(--surface-primary)] hover:text-[var(--text-primary)]"
-                      )}
-                    >
-                      <Icon className="h-5 w-5 shrink-0" />
-                      <span className="flex-1">{item.label}</span>
-                      {navBadges && navBadges[item.href] > 0 && (
-                        <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--accent-primary)] px-1 text-[10px] font-bold text-[var(--accent-ink)]">
-                          {navBadges[item.href]}
-                        </span>
-                      )}
-                      {item.pro && !isPro && (
-                        <Lock className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-                      )}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+        <NavList
+          sections={sections}
+          pathname={pathname}
+          isPro={isPro}
+          navBadges={navBadges}
+        />
       </nav>
       <div className="border-t border-[var(--border-subtle)] p-3">
         <div className="flex items-center gap-3 rounded-2xl px-3 py-2">
