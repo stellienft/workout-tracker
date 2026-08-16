@@ -16,6 +16,10 @@ import { BodyScanUpload } from "@/components/progress/body-scan-upload";
 import { BodyCompCard } from "@/components/progress/body-comp-card";
 import { BodyCompTrends } from "@/components/progress/body-comp-trends";
 import {
+  MusclePreservation,
+  type PreservationInsight,
+} from "@/components/progress/muscle-preservation";
+import {
   WellnessProgress,
   type WellnessSummary,
 } from "@/components/progress/wellness-progress";
@@ -170,6 +174,23 @@ export default async function ProgressPage() {
 
   const latestWeight = weightData.at(-1)?.y ?? null;
 
+  // Muscle preservation: body-weight trend vs a composite strength trend, plus
+  // a protein target. The GLP-1 wedge — catch weight AND strength falling.
+  const preservation = buildPreservation(
+    (metrics ?? []).map((m) => ({
+      recorded_on: m.recorded_on as string,
+      weight_kg: m.weight_kg as number | null,
+    })),
+    (setLogs ?? []).map((l) => ({
+      exercise_id: l.exercise_id as string,
+      weight_kg: l.weight_kg as number | null,
+      reps: l.reps as number | null,
+      created_at: l.created_at as string,
+    })),
+    tz
+  );
+  const proteinTargetG = latestWeight ? Math.round(latestWeight * 2) : null;
+
   // Strength progress: per-exercise max weight per session (top 5 most-trained).
   const strengthCharts = buildStrengthProgress(setLogsWithNames);
   // Total volume per week (last 12 weeks).
@@ -246,6 +267,13 @@ export default async function ProgressPage() {
       <div className="mt-6">
         <WeightProgress data={weightData} tz={tz} />
       </div>
+
+      <MusclePreservation
+        weightSeries={preservation.weightSeries}
+        strengthSeries={preservation.strengthSeries}
+        insight={preservation.insight}
+        proteinTargetG={proteinTargetG}
+      />
 
       <div className="mt-6">
         <WellnessProgress
@@ -660,4 +688,170 @@ function buildMuscleBalance(
   }
 
   return sorted;
+}
+
+/**
+ * Muscle preservation: overlay weekly body weight against a composite weekly
+ * strength index (both indexed to 100% at their own first data point, so the
+ * curves are comparable regardless of absolute units). Strength is the average
+ * of each top-lift's best estimated-1RM that week, each indexed to its own
+ * baseline — robust to which lifts you happened to train in a given week.
+ */
+function buildPreservation(
+  weights: { recorded_on: string; weight_kg: number | null }[],
+  sets: {
+    exercise_id: string;
+    weight_kg: number | null;
+    reps: number | null;
+    created_at: string;
+  }[],
+  tz: string
+): {
+  weightSeries: { t: number; y: number }[];
+  strengthSeries: { t: number; y: number }[];
+  insight: PreservationInsight;
+} {
+  const WEEKS = 12;
+  const thisWeekStart = startOfWeekInTz(new Date(), tz).getTime();
+  const weekStarts: number[] = [];
+  for (let i = WEEKS - 1; i >= 0; i--)
+    weekStarts.push(thisWeekStart - i * 7 * 86_400_000);
+  const firstWeek = weekStarts[0];
+  const weekOf = (d: Date) => startOfWeekInTz(d, tz).getTime();
+
+  // Weekly average body weight.
+  const wAcc = new Map<number, { sum: number; n: number }>();
+  for (const m of weights) {
+    if (m.weight_kg == null) continue;
+    // recorded_on is a plain date; anchor at local noon to avoid tz slippage.
+    const wk = weekOf(new Date(`${m.recorded_on}T12:00:00`));
+    if (wk < firstWeek) continue;
+    const cur = wAcc.get(wk) ?? { sum: 0, n: 0 };
+    cur.sum += Number(m.weight_kg);
+    cur.n += 1;
+    wAcc.set(wk, cur);
+  }
+  const weightWeekly = weekStarts
+    .filter((wk) => wAcc.has(wk))
+    .map((wk) => ({ wk, v: wAcc.get(wk)!.sum / wAcc.get(wk)!.n }));
+
+  // Per-exercise best estimated-1RM per week (Epley).
+  const byEx = new Map<string, Map<number, number>>();
+  const setCount = new Map<string, number>();
+  for (const s of sets) {
+    const w = s.weight_kg != null ? Number(s.weight_kg) : 0;
+    const r = s.reps != null ? Number(s.reps) : 0;
+    if (!(w > 0 && r > 0)) continue;
+    const wk = weekOf(new Date(s.created_at));
+    if (wk < firstWeek) continue;
+    const e1rm = w * (1 + r / 30);
+    setCount.set(s.exercise_id, (setCount.get(s.exercise_id) ?? 0) + 1);
+    const wm = byEx.get(s.exercise_id) ?? new Map<number, number>();
+    wm.set(wk, Math.max(wm.get(wk) ?? 0, e1rm));
+    byEx.set(s.exercise_id, wm);
+  }
+  const topEx = Array.from(setCount.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([id]) => id);
+
+  const sAcc = new Map<number, { sum: number; n: number }>();
+  for (const id of topEx) {
+    const wm = byEx.get(id);
+    if (!wm) continue;
+    const orderedWeeks = Array.from(wm.keys()).sort((a, b) => a - b);
+    const baseline = wm.get(orderedWeeks[0])!;
+    if (!(baseline > 0)) continue;
+    for (const wk of orderedWeeks) {
+      const idx = (wm.get(wk)! / baseline) * 100;
+      const cur = sAcc.get(wk) ?? { sum: 0, n: 0 };
+      cur.sum += idx;
+      cur.n += 1;
+      sAcc.set(wk, cur);
+    }
+  }
+  const strengthWeekly = weekStarts
+    .filter((wk) => sAcc.has(wk))
+    .map((wk) => ({ wk, v: sAcc.get(wk)!.sum / sAcc.get(wk)!.n }));
+
+  const toIndexed = (rows: { wk: number; v: number }[]) => {
+    if (rows.length === 0) return [] as { t: number; y: number }[];
+    const base = rows[0].v;
+    return rows.map((r) => ({
+      t: r.wk,
+      y: base > 0 ? Math.round((r.v / base) * 1000) / 10 : 100,
+    }));
+  };
+  const weightSeries = toIndexed(weightWeekly);
+  const strengthSeries = toIndexed(strengthWeekly);
+
+  return {
+    weightSeries,
+    strengthSeries,
+    insight: preservationInsight(weightSeries, strengthSeries),
+  };
+}
+
+function preservationInsight(
+  weight: { t: number; y: number }[],
+  strength: { t: number; y: number }[]
+): PreservationInsight {
+  if (weight.length < 2 || strength.length < 2) {
+    return {
+      tone: "neutral",
+      title: "Not enough data yet",
+      body: "Keep logging your body weight and workouts for a couple of weeks and we'll tell you whether you're holding muscle.",
+    };
+  }
+  const wChange = weight.at(-1)!.y - 100;
+  const sChange = strength.at(-1)!.y - 100;
+  const losingWeight = wChange <= -1.5;
+  const gainingWeight = wChange >= 1.5;
+  const strengthUp = sChange >= 1;
+  const strengthDown = sChange <= -3;
+  const f = (n: number) => `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`;
+
+  if (losingWeight && !strengthDown) {
+    return {
+      tone: "good",
+      title: "Muscle looks protected 💪",
+      body: `Weight is down ${f(wChange)} while strength is ${
+        strengthUp ? `up ${f(sChange)}` : "holding steady"
+      } — exactly what you want in a weight-loss phase. Keep protein high.`,
+    };
+  }
+  if (losingWeight && strengthDown) {
+    return {
+      tone: "warn",
+      title: "You may be losing muscle",
+      body: `Weight is down ${f(wChange)} but so is strength (${f(
+        sChange
+      )}). Prioritise protein and keep your working weights heavy so the loss comes from fat, not muscle.`,
+    };
+  }
+  if (gainingWeight && strengthUp) {
+    return {
+      tone: "good",
+      title: "Lean gains",
+      body: `Weight and strength are both up (${f(wChange)} / ${f(
+        sChange
+      )}) — you're adding size and getting stronger.`,
+    };
+  }
+  if (gainingWeight && strengthDown) {
+    return {
+      tone: "warn",
+      title: "Weight up, strength down",
+      body: `Weight is up ${f(wChange)} but strength dropped ${f(
+        sChange
+      )}. Check recovery and sleep, and make sure you're progressing your key lifts.`,
+    };
+  }
+  return {
+    tone: "neutral",
+    title: "Holding steady",
+    body: `Weight ${f(wChange)} and strength ${f(
+      sChange
+    )} vs your baseline. Steady is fine — push a key lift this week to nudge strength up.`,
+  };
 }
