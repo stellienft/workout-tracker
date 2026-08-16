@@ -17,6 +17,10 @@ import {
   Flame,
   MoreHorizontal,
   Maximize2,
+  TrendingUp,
+  TrendingDown,
+  ArrowRight,
+  RotateCcw,
 } from "lucide-react";
 import { ExerciseImage } from "@/components/ui/exercise-image";
 import { RestTimer } from "@/components/workout/rest-timer";
@@ -102,6 +106,10 @@ function fmtSecs(s: number): string {
   const m = Math.floor(s / 60);
   const ss = s % 60;
   return `${m}:${String(ss).padStart(2, "0")}`;
+}
+
+function fmtNum(n: number): string {
+  return Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10);
 }
 
 export function WorkoutMode({
@@ -1028,14 +1036,53 @@ export function WorkoutMode({
         {a.substituted && (
           <p className="px-3 pb-1 text-xs text-[var(--accent-primary)]">Substituted for {ex.name}</p>
         )}
-        {suggestion && (
-          <button
-            onClick={applySuggestion}
-            className="mx-3 mb-1 inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-muted)] px-3 py-1 text-xs font-medium text-[var(--accent-primary)]"
-          >
-            {suggestion.headline} · tap to fill
-          </button>
-        )}
+        {suggestion && (() => {
+          const coach = {
+            increase: { Icon: TrendingUp, label: "Level up", tone: "accent" },
+            hold: { Icon: ArrowRight, label: "Hold & build", tone: "neutral" },
+            build: { Icon: RotateCcw, label: "Rebuild", tone: "warn" },
+            deload: { Icon: TrendingDown, label: "Deload", tone: "warn" },
+          }[suggestion.action];
+          const toneClass =
+            coach.tone === "accent"
+              ? "border-[var(--accent-primary)]/40 bg-[var(--accent-muted)]"
+              : coach.tone === "warn"
+                ? "border-[var(--warning)]/40 bg-[var(--warning)]/10"
+                : "border-[var(--border-subtle)] bg-[var(--surface-secondary)]";
+          const fg =
+            coach.tone === "accent"
+              ? "text-[var(--accent-primary)]"
+              : coach.tone === "warn"
+                ? "text-[var(--warning)]"
+                : "text-[var(--text-primary)]";
+          return (
+            <button
+              onClick={applySuggestion}
+              className={cn(
+                "mx-3 mb-2 flex w-[calc(100%-1.5rem)] items-start gap-2.5 rounded-xl border p-3 text-left",
+                toneClass
+              )}
+            >
+              <coach.Icon className={cn("mt-0.5 h-4 w-4 shrink-0", fg)} />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1.5 text-sm font-semibold">
+                  <span className={cn("uppercase tracking-wide text-[11px]", fg)}>
+                    Coach · {coach.label}
+                  </span>
+                </span>
+                <span className="mt-0.5 block text-sm font-semibold">
+                  {suggestion.headline}
+                </span>
+                <span className="mt-0.5 block text-xs text-[var(--text-secondary)]">
+                  {suggestion.detail}
+                </span>
+                <span className={cn("mt-1 block text-[11px] font-medium", fg)}>
+                  Tap to fill →
+                </span>
+              </span>
+            </button>
+          );
+        })()}
         {ex.notes && (
           <p className="mx-3 mb-1 rounded-lg bg-[var(--surface-secondary)] p-2 text-xs text-[var(--warning)]">
             {ex.notes}
@@ -1077,8 +1124,18 @@ export function WorkoutMode({
                 : prev?.reps != null
                   ? String(prev.reps)
                   : "reps";
+            // "Beat your last set" ghost: last session's numbers for this set,
+            // lit up once the current entry matches or beats them (by volume).
+            const prevW = prev?.weight_kg ?? null;
+            const prevR = prev?.reps ?? null;
+            const hasGhost = !timed && prevW != null && prevR != null && prevW > 0 && prevR > 0;
+            const curW = Number(row.weight) || 0;
+            const curR = Number(row.reps) || 0;
+            const beaten =
+              hasGhost && curW > 0 && curR > 0 && curW * curR >= (prevW as number) * (prevR as number);
             return (
-              <div key={row.n} className={cn("grid items-center gap-2 py-1", colsClass)}>
+              <div key={row.n}>
+                <div className={cn("grid items-center gap-2 py-1", colsClass)}>
                 <span className="text-center text-sm font-semibold text-[var(--text-secondary)]">
                   {i + 1}
                 </span>
@@ -1136,6 +1193,21 @@ export function WorkoutMode({
                 >
                   <Check className="h-5 w-5" />
                 </button>
+                </div>
+                {hasGhost && (
+                  <div className="-mt-0.5 flex justify-end px-1 pb-1">
+                    <span
+                      className={cn(
+                        "text-[10px]",
+                        beaten
+                          ? "font-semibold text-[var(--accent-primary)]"
+                          : "text-[var(--text-muted)]"
+                      )}
+                    >
+                      {beaten ? "▲ beat last" : "last"}: {fmtNum(prevW as number)}kg × {prevR}
+                    </span>
+                  </div>
+                )}
               </div>
             );
           })}

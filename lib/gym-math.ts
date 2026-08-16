@@ -128,7 +128,7 @@ export interface ProgressionSet {
 }
 
 export interface Progression {
-  action: "increase" | "hold" | "build";
+  action: "increase" | "hold" | "build" | "deload";
   weightKg: number;
   reps: number; // suggested target reps at that weight
   headline: string; // short call to action, e.g. "Try 42.5 kg × 8"
@@ -164,21 +164,37 @@ export function progressionSuggestion(
   const minReps = Math.min(...topSets.map((s) => s.reps));
   const rpes = topSets.map((s) => s.rpe).filter((r): r is number => r != null);
   const maxRpe = rpes.length ? Math.max(...rpes) : null;
-  const fresh = maxRpe == null || maxRpe <= 9; // not a grind last time
+  const fresh = maxRpe == null || maxRpe <= 9; // had a couple more reps in the tank
+  const grind = maxRpe != null && maxRpe >= 9.5; // basically a max-effort set
+  const rpeNote = maxRpe != null ? ` at RPE ${fmtKg(maxRpe)}` : "";
 
-  if (minReps >= range.high && fresh) {
+  // Hit (or beat) the top of the range.
+  if (minReps >= range.high) {
+    // Auto-regulation: only add load if the last top set wasn't a max grind.
+    if (grind) {
+      return {
+        action: "hold",
+        weightKg: topWeight,
+        reps: range.high,
+        headline: `Repeat ${fmtKg(topWeight)} kg × ${range.high}`,
+        detail: `You reached the top of the range but it was a max-effort set${rpeNote}. Repeat ${fmtKg(
+          topWeight
+        )} kg and make it feel smoother before adding load.`,
+      };
+    }
     const weightKg = roundLoad(topWeight + incrementKg);
     return {
       action: "increase",
       weightKg,
       reps: range.low,
       headline: `Try ${fmtKg(weightKg)} kg × ${range.low}`,
-      detail: `Last time you hit ${minReps} reps at ${fmtKg(topWeight)} kg — add ${fmtKg(
+      detail: `Last time you hit ${minReps} reps at ${fmtKg(topWeight)} kg${rpeNote} — add ${fmtKg(
         weightKg - topWeight
       )} kg and start at the bottom of the range.`,
     };
   }
 
+  // Inside the range: same weight, chase one more rep.
   if (minReps >= range.low) {
     const reps = Math.min(minReps + 1, range.high);
     return {
@@ -186,7 +202,24 @@ export function progressionSuggestion(
       weightKg: topWeight,
       reps,
       headline: `Aim for ${fmtKg(topWeight)} kg × ${reps}`,
-      detail: `Stay at ${fmtKg(topWeight)} kg and add a rep — reach ${range.high} to move up.`,
+      detail: `Last set landed${rpeNote || " mid-range"}. Stay at ${fmtKg(
+        topWeight
+      )} kg and add a rep — reach ${range.high} to move up.`,
+    };
+  }
+
+  // Below the range: if it was already a max-effort grind, back off; otherwise
+  // hold and rebuild the reps.
+  if (grind) {
+    const weightKg = roundLoad(topWeight * 0.9);
+    return {
+      action: "deload",
+      weightKg,
+      reps: range.low,
+      headline: `Drop to ${fmtKg(weightKg)} kg × ${range.low}`,
+      detail: `You stalled at ${minReps} reps and it was max effort${rpeNote}. Back off ~10% to ${fmtKg(
+        weightKg
+      )} kg, rebuild clean reps, then climb again.`,
     };
   }
 
