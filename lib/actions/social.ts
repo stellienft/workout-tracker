@@ -128,15 +128,15 @@ export async function createPost(input: {
       return { ok: false as const, error: "Photo & video posts are a Pro feature." };
   }
 
-  // Community posts require membership of that community.
+  // Community posts require an approved membership of that community.
   if (communityId) {
     const { data: member } = await supabase
       .from("community_members")
-      .select("user_id")
+      .select("status")
       .eq("community_id", communityId)
       .eq("user_id", user.id)
       .maybeSingle();
-    if (!member)
+    if (member?.status !== "approved")
       return { ok: false as const, error: "Join the community to post in it." };
   }
 

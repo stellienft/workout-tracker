@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { getUserPlan } from "@/lib/entitlements";
-import { getCommunityBySlug } from "@/lib/actions/communities";
+import { getCommunityBySlug, listPendingMembers } from "@/lib/actions/communities";
 import { getFeed } from "@/lib/actions/social";
 import { PageShell } from "@/components/ui/page-header";
 import { CommunityDetailClient } from "@/components/communities/community-detail-client";
@@ -26,9 +26,10 @@ export default async function CommunityPage({
   const community = await getCommunityBySlug(slug);
   if (!community) notFound();
 
-  const [{ isPro }, posts] = await Promise.all([
+  const [{ isPro }, posts, pending] = await Promise.all([
     getUserPlan(),
     getFeed(1, 20, "discover", community.id),
+    community.isOwner ? listPendingMembers(community.id) : Promise.resolve([]),
   ]);
 
   return (
@@ -36,6 +37,7 @@ export default async function CommunityPage({
       <CommunityDetailClient
         community={community}
         initialPosts={posts}
+        initialPending={pending}
         isPro={isPro}
         currentUserId={user.id}
       />

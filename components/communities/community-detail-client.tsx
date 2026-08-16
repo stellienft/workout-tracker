@@ -3,14 +3,17 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Users, Send, Check, Trash2 } from "lucide-react";
+import { ArrowLeft, Users, Send, Check, Trash2, Lock, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import {
   joinCommunity,
   leaveCommunity,
   deleteCommunity,
+  approveMember,
+  removeMember,
   type CommunitySummary,
+  type PendingMember,
 } from "@/lib/actions/communities";
 import { getFeed, createPost, type FeedPost } from "@/lib/actions/social";
 import { PostCard } from "@/components/feed/post-card";
@@ -20,11 +23,13 @@ const MAX_CAPTION = 2000;
 export function CommunityDetailClient({
   community,
   initialPosts,
+  initialPending,
   isPro,
   currentUserId,
 }: {
   community: CommunitySummary;
   initialPosts: FeedPost[];
+  initialPending: PendingMember[];
   isPro: boolean;
   currentUserId: string;
 }) {
@@ -33,6 +38,8 @@ export function CommunityDetailClient({
   const [pending, startTransition] = useTransition();
 
   const [isMember, setIsMember] = useState(community.isMember || community.isOwner);
+  const [isPendingReq, setIsPendingReq] = useState(community.isPending);
+  const [requests, setRequests] = useState<PendingMember[]>(initialPending);
   const [memberCount, setMemberCount] = useState(community.memberCount);
   const [posts, setPosts] = useState<FeedPost[]>(initialPosts);
   const [page, setPage] = useState(1);
@@ -41,15 +48,42 @@ export function CommunityDetailClient({
   const [caption, setCaption] = useState("");
 
   function join() {
-    setIsMember(true);
-    setMemberCount((c) => c + 1);
     startTransition(async () => {
       const res = await joinCommunity(community.id);
-      if (!res.ok) {
-        setIsMember(false);
-        setMemberCount((c) => c - 1);
+      if (res.ok) {
+        if (res.pending) {
+          setIsPendingReq(true);
+          toast("Request sent — the owner will review it.", "success");
+        } else {
+          setIsMember(true);
+          setMemberCount((c) => c + 1);
+        }
+      } else {
         toast(res.error ?? "Could not join", "error");
       }
+    });
+  }
+
+  function cancelRequest() {
+    setIsPendingReq(false);
+    startTransition(async () => {
+      await leaveCommunity(community.id);
+    });
+  }
+
+  function approve(userId: string) {
+    setRequests((prev) => prev.filter((r) => r.userId !== userId));
+    setMemberCount((c) => c + 1);
+    startTransition(async () => {
+      const res = await approveMember(community.id, userId);
+      if (!res.ok) toast(res.error ?? "Could not approve", "error");
+    });
+  }
+
+  function reject(userId: string) {
+    setRequests((prev) => prev.filter((r) => r.userId !== userId));
+    startTransition(async () => {
+      await removeMember(community.id, userId);
     });
   }
 
@@ -131,7 +165,12 @@ export function CommunityDetailClient({
 
       {/* Header */}
       <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
-        <h1 className="text-2xl font-extrabold">{community.name}</h1>
+        <h1 className="flex items-center gap-2 text-2xl font-extrabold">
+          {community.privacy === "private" && (
+            <Lock className="h-5 w-5 text-[var(--text-muted)]" />
+          )}
+          {community.name}
+        </h1>
         {community.description && (
           <p className="mt-1 text-sm text-[var(--text-secondary)]">{community.description}</p>
         )}
@@ -139,6 +178,7 @@ export function CommunityDetailClient({
           <span className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)]">
             <Users className="h-4 w-4" />
             {memberCount} member{memberCount === 1 ? "" : "s"}
+            {community.privacy === "private" && " · Private"}
           </span>
           {community.isOwner ? (
             <button
@@ -156,13 +196,57 @@ export function CommunityDetailClient({
             >
               <Check className="h-4 w-4" /> Joined
             </button>
+          ) : isPendingReq ? (
+            <button
+              onClick={cancelRequest}
+              disabled={pending}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)]"
+            >
+              Request pending
+            </button>
           ) : (
             <Button onClick={join} disabled={pending} size="sm">
-              Join community
+              {community.privacy === "private" ? "Request to join" : "Join community"}
             </Button>
           )}
         </div>
       </div>
+
+      {/* Pending join requests (owner) */}
+      {community.isOwner && requests.length > 0 && (
+        <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4">
+          <p className="mb-3 text-sm font-semibold">
+            Join requests ({requests.length})
+          </p>
+          <div className="flex flex-col gap-2">
+            {requests.map((r) => (
+              <div key={r.userId} className="flex items-center gap-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--accent-muted)] text-xs font-bold text-[var(--accent-primary)]">
+                  {(r.name ?? "?").charAt(0).toUpperCase()}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                  {r.name ?? "Member"}
+                </span>
+                <button
+                  onClick={() => approve(r.userId)}
+                  disabled={pending}
+                  className="inline-flex items-center gap-1 rounded-lg bg-[var(--accent-primary)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-ink)]"
+                >
+                  <Check className="h-3.5 w-3.5" /> Approve
+                </button>
+                <button
+                  onClick={() => reject(r.userId)}
+                  disabled={pending}
+                  aria-label="Reject"
+                  className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-[var(--danger)]"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Composer (members only) */}
       {isMember ? (
@@ -190,7 +274,14 @@ export function CommunityDetailClient({
       )}
 
       {/* Posts */}
-      {posts.length === 0 ? (
+      {community.privacy === "private" && !isMember ? (
+        <div className="rounded-[var(--radius-card)] border border-dashed border-[var(--border-subtle)] p-8 text-center">
+          <Lock className="mx-auto h-6 w-6 text-[var(--text-muted)]" />
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
+            This is a private community. {isPendingReq ? "Your request is pending approval." : "Join to see and share posts."}
+          </p>
+        </div>
+      ) : posts.length === 0 ? (
         <p className="py-8 text-center text-sm text-[var(--text-muted)]">
           No posts yet. {isMember ? "Start the conversation!" : "Join to start the conversation."}
         </p>
