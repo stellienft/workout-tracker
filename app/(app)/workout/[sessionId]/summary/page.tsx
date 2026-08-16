@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDuration } from "@/lib/utils";
 import { Confetti } from "@/components/ui/confetti";
 import { ShareAchievement } from "@/components/achievements/share-achievement";
+import { ShareWorkoutButton } from "@/components/feed/share-workout-button";
 import { Check, Trophy, PartyPopper, TrendingUp, TrendingDown, Minus, Star } from "lucide-react";
 
 export const metadata = { title: "Workout complete" };
@@ -316,6 +317,13 @@ export default async function WorkoutSummaryPage({
           description={shareSubtitle}
           dateLabel={dateLabel}
           label="Share workout"
+        />
+
+        <ShareWorkoutButton
+          sessionId={sessionId}
+          defaultCaption={`${workoutName} done — ${setCount} set${
+            setCount === 1 ? "" : "s"
+          }${totalVolume > 0 ? ` · ${Math.round(totalVolume).toLocaleString()}kg volume` : ""} 💪`}
         />
 
         {programComplete ? (

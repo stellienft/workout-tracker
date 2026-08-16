@@ -20,6 +20,7 @@ export function SettingsForm({
     dailyQuote: boolean;
     motivationPush: boolean;
     feedNotifications: boolean;
+    feedAutoshare: boolean;
     injuryAreas: string[];
     considerations: string;
     timezone: string;
@@ -35,6 +36,7 @@ export function SettingsForm({
   const [dailyQuote, setDailyQuote] = useState(initial.dailyQuote);
   const [motivationPush, setMotivationPush] = useState(initial.motivationPush);
   const [feedNotifications, setFeedNotifications] = useState(initial.feedNotifications);
+  const [feedAutoshare, setFeedAutoshare] = useState(initial.feedAutoshare);
   const [injuryAreas, setInjuryAreas] = useState<string[]>(initial.injuryAreas);
   const [considerations, setConsiderations] = useState(initial.considerations);
   const [timezone, setTimezone] = useState(initial.timezone);
@@ -73,6 +75,7 @@ export function SettingsForm({
         dailyQuoteEnabled: dailyQuote,
         motivationPushEnabled: motivationPush,
         feedNotificationsEnabled: feedNotifications,
+        feedAutoshareEnabled: feedAutoshare,
         injuryAreas,
         considerations,
         timezone,
@@ -173,6 +176,12 @@ export function SettingsForm({
         hint="Get notified when someone you follow comments on the feed."
         checked={feedNotifications}
         onChange={setFeedNotifications}
+      />
+      <Toggle
+        label="Auto-share milestones"
+        hint="Automatically post to the feed when you finish a program."
+        checked={feedAutoshare}
+        onChange={setFeedAutoshare}
       />
 
       <div>
