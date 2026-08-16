@@ -113,6 +113,6 @@ export const bottomNavItems: NavItem[] = [
   { label: "Home", href: "/dashboard", icon: Home },
   { label: "Workouts", href: "/workouts", icon: Dumbbell },
   { label: "Progress", href: "/progress", icon: TrendingUp },
-  { label: "Schedule", href: "/schedule", icon: Calendar },
+  { label: "Feed", href: "/feed", icon: Users },
   { label: "Profile", href: "/profile", icon: User },
 ];
