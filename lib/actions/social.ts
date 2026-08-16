@@ -115,12 +115,16 @@ export async function createPost(input: {
   const { supabase, user, profile } = await getAuthContext();
   if (!user) return { ok: false as const, error: "Not authenticated" };
 
-  const { isPro } = await getUserPlan();
-  if (!isPro) return { ok: false as const, error: "Posting to the feed is a Pro feature." };
-
   const parsed = createPostSchema.safeParse(input);
   if (!parsed.success) return { ok: false as const, error: "Invalid input" };
   const { caption, mediaUrl, mediaType, workoutSessionId } = parsed.data;
+
+  // Free members can post text and share workouts; photo/video is a Pro perk.
+  if (mediaType !== "none") {
+    const { isPro } = await getUserPlan();
+    if (!isPro)
+      return { ok: false as const, error: "Photo & video posts are a Pro feature." };
+  }
 
   const { data, error } = await supabase
     .from("social_posts")
@@ -182,9 +186,6 @@ export async function deletePost(postId: string) {
 export async function addComment(postId: string, body: string) {
   const { supabase, user, profile } = await getAuthContext();
   if (!user) return { ok: false as const, error: "Not authenticated" };
-
-  const { isPro } = await getUserPlan();
-  if (!isPro) return { ok: false as const, error: "Commenting is a Pro feature." };
 
   const parsed = z
     .object({ postId: z.string().uuid(), body: z.string().min(1).max(500) })
@@ -263,9 +264,6 @@ export async function toggleReaction(postId: string, emoji: string) {
   const { supabase, user } = await getAuthContext();
   if (!user) return { ok: false as const, error: "Not authenticated" };
 
-  const { isPro } = await getUserPlan();
-  if (!isPro) return { ok: false as const, error: "Reactions are a Pro feature." };
-
   const parsed = z
     .object({ postId: z.string().uuid(), emoji: z.enum(ALLOWED_EMOJIS) })
     .safeParse({ postId, emoji });
@@ -309,9 +307,6 @@ export async function toggleReaction(postId: string, emoji: string) {
 export async function toggleFollow(targetUserId: string) {
   const { supabase, user } = await getAuthContext();
   if (!user) return { ok: false as const, error: "Not authenticated" };
-
-  const { isPro } = await getUserPlan();
-  if (!isPro) return { ok: false as const, error: "Following is a Pro feature." };
 
   const parsed = z.string().uuid().safeParse(targetUserId);
   if (!parsed.success) return { ok: false as const, error: "Invalid user ID" };
@@ -426,9 +421,86 @@ export async function reportPost(postId: string, reason: string, detail?: string
 // 9. getFeed  (server action — returns data, no revalidate)
 // ---------------------------------------------------------------------------
 
-export async function getFeed(page = 1, perPage = 20): Promise<FeedPost[]> {
+export interface SuggestedUser {
+  id: string;
+  name: string | null;
+  avatarUrl: string | null;
+}
+
+/**
+ * People to follow: recent, active posters the member doesn't already follow
+ * (and hasn't blocked / been blocked by). Names resolve via the definer RPC
+ * since profiles are owner-only under RLS.
+ */
+export async function suggestedUsers(limit = 6): Promise<SuggestedUser[]> {
   const { supabase, user } = await getAuthContext();
   if (!user) return [];
+
+  const [{ data: follows }, blockedByMe, blockedMe, { data: recentPosts }] =
+    await Promise.all([
+      supabase.from("social_follows").select("following_id").eq("follower_id", user.id),
+      supabase.from("social_blocks").select("blocked_id").eq("blocker_id", user.id),
+      supabase.from("social_blocks").select("blocker_id").eq("blocked_id", user.id),
+      supabase
+        .from("social_posts")
+        .select("user_id, created_at")
+        .order("created_at", { ascending: false })
+        .limit(200),
+    ]);
+
+  const exclude = new Set<string>([user.id]);
+  (follows ?? []).forEach((f) => exclude.add(f.following_id as string));
+  (blockedByMe.data ?? []).forEach((b) => exclude.add(b.blocked_id as string));
+  (blockedMe.data ?? []).forEach((b) => exclude.add(b.blocker_id as string));
+
+  // Distinct recent authors, most-recently-active first.
+  const candidates: string[] = [];
+  const seen = new Set<string>();
+  for (const p of recentPosts ?? []) {
+    const id = p.user_id as string;
+    if (exclude.has(id) || seen.has(id)) continue;
+    seen.add(id);
+    candidates.push(id);
+    if (candidates.length >= limit) break;
+  }
+  if (candidates.length === 0) return [];
+
+  const { data: profs } = await supabase.rpc("feed_author_profiles", {
+    p_ids: candidates,
+  });
+  const byId = new Map(
+    ((profs ?? []) as { id: string; full_name: string | null; avatar_url: string | null }[]).map(
+      (p) => [p.id, p]
+    )
+  );
+  return candidates
+    .map((id) => {
+      const p = byId.get(id);
+      return { id, name: p?.full_name ?? null, avatarUrl: p?.avatar_url ?? null };
+    })
+    .filter((u) => u.name); // only show people with a display name
+}
+
+export async function getFeed(
+  page = 1,
+  perPage = 20,
+  scope: "discover" | "following" = "discover"
+): Promise<FeedPost[]> {
+  const { supabase, user } = await getAuthContext();
+  if (!user) return [];
+
+  // "Following" scope: only people the member follows, plus their own posts.
+  let followingAuthorIds: string[] | null = null;
+  if (scope === "following") {
+    const { data: follows } = await supabase
+      .from("social_follows")
+      .select("following_id")
+      .eq("follower_id", user.id);
+    followingAuthorIds = [
+      user.id,
+      ...(follows ?? []).map((f) => f.following_id as string),
+    ];
+  }
 
   // --- 1. Gather blocked user IDs (both directions) ---
   const [blockedByMe, blockedMe] = await Promise.all([
@@ -453,6 +525,12 @@ export async function getFeed(page = 1, perPage = 20): Promise<FeedPost[]> {
     )
     .order("created_at", { ascending: false })
     .range(offset, offset + perPage - 1);
+
+  if (followingAuthorIds !== null) {
+    // No follows yet → nothing in the Following feed (client shows who-to-follow).
+    if (followingAuthorIds.length === 0) return [];
+    postsQuery = postsQuery.in("user_id", followingAuthorIds);
+  }
 
   if (blockedIds.size > 0) {
     const blockedFilter = Array.from(blockedIds).join(",");
