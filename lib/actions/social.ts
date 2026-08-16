@@ -110,6 +110,56 @@ async function notifyFollowersOfActivity(opts: {
   }
 }
 
+/**
+ * Notify a community's approved members (who opted into feed notifications)
+ * that there's a new post. Author excluded; identity never included in the
+ * copy, so it's safe for anonymous posts. Best-effort, service role.
+ */
+async function notifyCommunityMembers(opts: {
+  communityId: string;
+  communityName: string;
+  communitySlug: string;
+  actorId: string;
+  body: string;
+}) {
+  try {
+    const { serviceSupabase } = await import("@/lib/push");
+    const svc = serviceSupabase();
+    const { data: rows } = await svc
+      .from("community_members")
+      .select("user_id")
+      .eq("community_id", opts.communityId)
+      .eq("status", "approved");
+    const memberIds = (rows ?? [])
+      .map((r) => r.user_id as string)
+      .filter((id) => id !== opts.actorId);
+    if (!memberIds.length) return;
+
+    const { data: prefs } = await svc
+      .from("profiles")
+      .select("id")
+      .in("id", memberIds)
+      .eq("feed_notifications_enabled", true);
+    const recipients = (prefs ?? []).map((p) => p.id as string);
+    if (!recipients.length) return;
+
+    const { notifyUser } = await import("@/lib/notify");
+    await Promise.all(
+      recipients.map((rid) =>
+        notifyUser({
+          userId: rid,
+          type: "community_post",
+          title: `New post in ${opts.communityName}`,
+          body: opts.body,
+          link: `/communities/${opts.communitySlug}`,
+        })
+      )
+    );
+  } catch {
+    // best-effort — never block the post
+  }
+}
+
 export async function createPost(input: {
   caption?: string;
   mediaUrl?: string;
@@ -134,6 +184,7 @@ export async function createPost(input: {
   }
 
   // Community posts: approved membership + honour the group's posting rules.
+  let communityMeta: { name: string; slug: string } | null = null;
   if (communityId) {
     const [{ data: member }, { data: community }] = await Promise.all([
       supabase
@@ -144,7 +195,7 @@ export async function createPost(input: {
         .maybeSingle(),
       supabase
         .from("communities")
-        .select("created_by, post_policy, allow_media")
+        .select("name, slug, created_by, post_policy, allow_media")
         .eq("id", communityId)
         .maybeSingle(),
     ]);
@@ -154,6 +205,8 @@ export async function createPost(input: {
       return { ok: false as const, error: "Only the owner can post in this community." };
     if (mediaType !== "none" && community?.allow_media === false)
       return { ok: false as const, error: "Media posts are turned off in this community." };
+    if (community)
+      communityMeta = { name: community.name as string, slug: community.slug as string };
   }
 
   const { data, error } = await supabase
@@ -178,8 +231,17 @@ export async function createPost(input: {
   // Kick off AI moderation (fire-and-forget; fail-open).
   moderatePost(postId, caption || "").catch(() => {});
 
-  // Ping opted-in followers — but only for the public feed, not community posts.
-  if (!communityId) {
+  // Ping opted-in followers on the public feed; ping community members inside
+  // a community.
+  if (communityId && communityMeta) {
+    await notifyCommunityMembers({
+      communityId,
+      communityName: communityMeta.name,
+      communitySlug: communityMeta.slug,
+      actorId: user.id,
+      body: (caption || "New post").slice(0, 100),
+    });
+  } else if (!communityId) {
     await notifyFollowersOfActivity({
       actorId: user.id,
       title: `${profile?.full_name ?? "Someone"} shared a post`,
