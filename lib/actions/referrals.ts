@@ -33,19 +33,44 @@ export async function getMyReferral() {
   }
   if (!code) return { ok: false as const, error: "Could not create a code" };
 
-  const [{ count }, { data: grant }] = await Promise.all([
-    supabase
+  // Names/emails of referred users live on owner-only profiles, so read them
+  // (and the referral rows) with the service role — they're this member's own
+  // referrals.
+  const svc = serviceSupabase();
+  const [{ data: refRows }, { data: grant }] = await Promise.all([
+    svc
       .from("referrals")
-      .select("id", { count: "exact", head: true })
-      .eq("referrer_user_id", user.id),
+      .select("referred_user_id, created_at")
+      .eq("referrer_user_id", user.id)
+      .order("created_at", { ascending: false }),
     supabase.from("free_grants").select("pro_until").eq("user_id", user.id).maybeSingle(),
   ]);
+
+  const referredIds = (refRows ?? []).map((r) => r.referred_user_id as string);
+  let referred: { name: string; joinedAt: string }[] = [];
+  if (referredIds.length > 0) {
+    const { data: profs } = await svc
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", referredIds);
+    const byId = new Map(
+      (profs ?? []).map((p) => [p.id as string, p as { full_name: string | null; email: string | null }])
+    );
+    referred = (refRows ?? []).map((r) => {
+      const p = byId.get(r.referred_user_id as string);
+      return {
+        name: p?.full_name || p?.email || "New member",
+        joinedAt: r.created_at as string,
+      };
+    });
+  }
 
   return {
     ok: true as const,
     code,
     link: `${siteUrl()}/signup?ref=${code}`,
-    joined: count ?? 0,
+    joined: referred.length,
+    referred,
     proUntil: (grant?.pro_until as string | null) ?? null,
   };
 }

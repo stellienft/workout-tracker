@@ -62,9 +62,38 @@ export default async function ReferralsPage() {
             </div>
           </div>
 
+          {/* People you've referred */}
+          <div>
+            <h2 className="mb-2 text-lg font-bold">People you&apos;ve referred</h2>
+            {res.referred.length === 0 ? (
+              <p className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4 text-sm text-[var(--text-muted)]">
+                No one recorded yet. A referral only counts when your friend signs
+                up in the same browser they opened your link in — see the note below.
+              </p>
+            ) : (
+              <div className="divide-y divide-[var(--border-subtle)] rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)]">
+                {res.referred.map((r, i) => (
+                  <div key={i} className="flex items-center justify-between gap-3 p-4">
+                    <span className="flex items-center gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--accent-muted)] text-sm font-bold text-[var(--accent-primary)]">
+                        {r.name.charAt(0).toUpperCase()}
+                      </span>
+                      <span className="text-sm font-medium">{r.name}</span>
+                    </span>
+                    <span className="text-xs text-[var(--text-muted)]">
+                      {new Date(r.joinedAt).toLocaleDateString("en-AU")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <p className="text-xs text-[var(--text-muted)]">
             Your code: <span className="font-mono font-semibold">{res.code}</span>.
-            Free months stack — invite more friends to keep Pro going.
+            Free months stack — invite more friends to keep Pro going. A referral
+            is credited when your friend signs up in the same browser they opened
+            your link in; sign-ups on another device or via Google can miss it.
           </p>
         </div>
       )}
