@@ -64,5 +64,17 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // A referral code carried through the OAuth redirect: (re)set the cookie so
+  // processReferral credits it after onboarding — the URL param is reliable
+  // even when the browser dropped our original cookie during the round-trip.
+  const ref = searchParams.get("ref")?.toUpperCase().slice(0, 12);
+  if (ref) {
+    response.cookies.set("ref_code", ref, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+      sameSite: "lax",
+    });
+  }
+
   return response;
 }
