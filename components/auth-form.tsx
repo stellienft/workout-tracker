@@ -118,9 +118,16 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     const supabase = createClient();
     const signupNext = accountType === "trainer" ? "/trainer-setup" : "/onboarding";
     const loginNext = accountType === "trainer" ? "/trainer" : "/dashboard";
+    // Carry any referral code through the OAuth round-trip as a URL param — it
+    // survives Google's redirect even when the browser strips our cookie
+    // (Safari/ITP), so the referral gets credited after sign-up.
+    const refCode =
+      mode === "signup"
+        ? params.get("ref")?.toUpperCase().slice(0, 12) || readRefCookie()
+        : undefined;
     const redirectTo = `${window.location.origin}/auth/callback?next=${
       mode === "signup" ? signupNext : loginNext
-    }`;
+    }${refCode ? `&ref=${encodeURIComponent(refCode)}` : ""}`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
