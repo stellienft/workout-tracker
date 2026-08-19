@@ -1,7 +1,49 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pause, Play, X, Plus } from "lucide-react";
+import { Pause, Play, X, Plus, Volume2, VolumeX } from "lucide-react";
+
+const SOUND_KEY = "stellio-rest-sound";
+
+/** Sound is on unless the member has explicitly turned it off (per-device). */
+function getSoundPref(): boolean {
+  try {
+    return localStorage.getItem(SOUND_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+// A single shared AudioContext, unlocked by the first user gesture (starting a
+// rest). Beeps are synthesised — no audio files to host or fall foul of the
+// PWA's content-security policy.
+let sharedCtx: AudioContext | null = null;
+function playBeep(freq: number, durMs: number) {
+  try {
+    const AC =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
+    if (!AC) return;
+    if (!sharedCtx) sharedCtx = new AC();
+    const ctx = sharedCtx;
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.35, t + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + durMs / 1000);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + durMs / 1000 + 0.03);
+  } catch {
+    // Audio unavailable — the on-screen timer and vibration still work.
+  }
+}
 
 /**
  * When rest ends, surface a notification if the member has left the app (screen
@@ -50,6 +92,13 @@ export function RestTimer({
   const [remaining, setRemaining] = useState(seconds);
   const [running, setRunning] = useState(true);
   const [total, setTotal] = useState(seconds);
+  const [soundOn, setSoundOn] = useState(true);
+  // Mirror sound state in a ref so the tick/fire closures always read the
+  // latest value without re-arming the interval.
+  const soundOnRef = useRef(true);
+  // Tracks which countdown second we last beeped for, so each of the final
+  // 3-2-1 seconds dings exactly once.
+  const lastBeepSecRef = useRef<number | null>(null);
   // Absolute time the rest ends. Computing remaining from this (rather than
   // decrementing a counter) keeps the countdown accurate when the app is
   // backgrounded — mobile browsers suspend setInterval while you're in another
@@ -98,6 +147,13 @@ export function RestTimer({
     setRunning(true);
     endAtRef.current = Date.now() + seconds * 1000;
     firedRef.current = false;
+    lastBeepSecRef.current = null;
+    const on = getSoundPref();
+    soundOnRef.current = on;
+    setSoundOn(on);
+    // A short "go" ding as the rest begins. Also unlocks the AudioContext via
+    // the tap that started the rest, so the later countdown beeps are allowed.
+    if (on) playBeep(660, 150);
     scheduleServerPush(seconds);
     return () => cancelServerPush();
   }, [seconds, scheduleServerPush, cancelServerPush]);
@@ -108,6 +164,8 @@ export function RestTimer({
       if (firedRef.current) return;
       firedRef.current = true;
       if (haptics && "vibrate" in navigator) navigator.vibrate?.(200);
+      // Final, higher "time's up" tone.
+      if (soundOnRef.current) playBeep(1046, 260);
       // If they're looking at the app when rest ends, the on-screen timer +
       // vibration are enough — cancel the queued server push so it can't arrive
       // as a duplicate a moment later. When hidden, we leave it to fire.
@@ -120,6 +178,16 @@ export function RestTimer({
     const tick = () => {
       const rem = Math.max(0, Math.round((endAtRef.current - Date.now()) / 1000));
       setRemaining(rem);
+      // 3-2-1 countdown: one ding per second for the last three seconds so the
+      // member knows rest is about to end.
+      if (soundOnRef.current && rem >= 1 && rem <= 3) {
+        if (lastBeepSecRef.current !== rem) {
+          lastBeepSecRef.current = rem;
+          playBeep(880, 130);
+        }
+      } else if (rem > 3) {
+        lastBeepSecRef.current = null;
+      }
       if (rem <= 0) fire();
     };
     tick(); // sync immediately
@@ -165,6 +233,21 @@ export function RestTimer({
     scheduleServerPush(Math.round((endAtRef.current - Date.now()) / 1000));
   }
 
+  function toggleSound() {
+    setSoundOn((on) => {
+      const next = !on;
+      soundOnRef.current = next;
+      try {
+        localStorage.setItem(SOUND_KEY, next ? "on" : "off");
+      } catch {
+        // Preference is best-effort; sound still toggles for this session.
+      }
+      // A tiny confirmation ding when turning it back on.
+      if (next) playBeep(880, 120);
+      return next;
+    });
+  }
+
   function handleClose() {
     cancelServerPush();
     onClose();
@@ -194,12 +277,26 @@ export function RestTimer({
                 {remaining > 0 ? `${m}:${s.toString().padStart(2, "0")}` : "0:00"}
               </span>
             </div>
-            <button
-              onClick={addFifteen}
-              className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)]"
-            >
-              <Plus className="h-3 w-3" /> 15s
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={toggleSound}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[var(--border-subtle)] text-[var(--text-secondary)]"
+                aria-label={soundOn ? "Mute rest sounds" : "Unmute rest sounds"}
+                aria-pressed={soundOn}
+              >
+                {soundOn ? (
+                  <Volume2 className="h-3.5 w-3.5" />
+                ) : (
+                  <VolumeX className="h-3.5 w-3.5" />
+                )}
+              </button>
+              <button
+                onClick={addFifteen}
+                className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)]"
+              >
+                <Plus className="h-3 w-3" /> 15s
+              </button>
+            </div>
           </div>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--surface-secondary)]">
             <div
