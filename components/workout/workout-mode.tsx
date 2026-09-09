@@ -164,6 +164,9 @@ export function WorkoutMode({
   const [showRpe, setShowRpe] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
+  // Confirm before finishing — the button used to sit in a pinned footer and
+  // was easy to hit by accident, ending the session unintentionally.
+  const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const [pending, setPending] = useState(0);
   const [removed, setRemoved] = useState<Set<string>>(new Set());
 
@@ -741,30 +744,33 @@ export function WorkoutMode({
           >
             <Plus className="h-4 w-4" /> Add exercise
           </button>
+
+          {/* Finish — inline under the last exercise (not a floating footer, so
+              it can't be tapped by accident) and gated behind a confirm modal. */}
+          <div className="pt-2">
+            {finishError && (
+              <p className="mb-2 rounded-xl bg-[var(--surface-secondary)] px-3 py-2 text-xs text-[var(--warning)]">
+                {finishError}
+              </p>
+            )}
+            <button
+              onClick={() => {
+                setFinishError(null);
+                setShowFinishConfirm(true);
+              }}
+              className={cn(
+                "flex w-full items-center justify-center gap-2 rounded-2xl py-4 font-bold",
+                allDone
+                  ? "bg-[var(--accent-primary)] text-[var(--accent-ink)]"
+                  : "bg-[var(--surface-secondary)] text-[var(--text-primary)]"
+              )}
+            >
+              <Check className="h-5 w-5" />
+              {allDone ? "Complete workout" : "Finish workout"}
+            </button>
+          </div>
         </div>
       </div>
-
-      {/* Footer */}
-      <footer className="border-t border-[var(--border-subtle)] px-4 py-3 pb-safe">
-        {finishError && (
-          <p className="mx-auto mb-2 w-full max-w-xl rounded-xl bg-[var(--surface-secondary)] px-3 py-2 text-xs text-[var(--warning)]">
-            {finishError}
-          </p>
-        )}
-        <button
-          onClick={onFinish}
-          disabled={finishing}
-          className={cn(
-            "mx-auto flex w-full max-w-xl items-center justify-center gap-2 rounded-2xl py-4 font-bold disabled:opacity-60",
-            allDone
-              ? "bg-[var(--accent-primary)] text-[var(--accent-ink)]"
-              : "bg-[var(--surface-secondary)] text-[var(--text-primary)]"
-          )}
-        >
-          <Check className="h-5 w-5" />
-          {finishing ? "Finishing…" : allDone ? "Complete workout" : "Finish workout"}
-        </button>
-      </footer>
 
       {/* Enlarge lightbox */}
       {enlargeEx && (() => {
@@ -953,6 +959,53 @@ export function WorkoutMode({
             >
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Finish confirmation */}
+      {showFinishConfirm && (
+        <div
+          className="fixed inset-0 z-[180] flex items-end justify-center bg-black/70 p-4 sm:items-center"
+          onClick={() => {
+            if (!finishing) setShowFinishConfirm(false);
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold">Finish this workout?</h3>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              {allDone
+                ? "Every set is logged — great session."
+                : `You've logged ${completedSets} of ${totalSets} sets. Finish now and we'll save what you've done, or keep going.`}
+            </p>
+            <p className="mt-2 text-xs text-[var(--text-muted)]">
+              Time: {formatDuration(elapsed)}
+            </p>
+            {finishError && (
+              <p className="mt-3 rounded-xl bg-[var(--surface-secondary)] px-3 py-2 text-xs text-[var(--warning)]">
+                {finishError}
+              </p>
+            )}
+            <div className="mt-4 flex flex-col gap-2">
+              <button
+                onClick={onFinish}
+                disabled={finishing}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] py-3.5 font-bold text-[var(--accent-ink)] disabled:opacity-60"
+              >
+                <Check className="h-5 w-5" />
+                {finishing ? "Finishing…" : "Finish workout"}
+              </button>
+              <button
+                onClick={() => setShowFinishConfirm(false)}
+                disabled={finishing}
+                className="w-full rounded-2xl py-3 text-sm font-medium text-[var(--text-secondary)] disabled:opacity-60"
+              >
+                Keep going
+              </button>
+            </div>
           </div>
         </div>
       )}
