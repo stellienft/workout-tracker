@@ -63,6 +63,7 @@ export interface WorkoutExerciseVM {
   exerciseId: string;
   name: string;
   trackingType: "reps" | "time";
+  isBodyweight: boolean;
   primaryMuscles: string[];
   instructions: string | null;
   techniqueCues: string[];
@@ -120,6 +121,7 @@ export function WorkoutMode({
   workoutName,
   considerations,
   injuryAreas,
+  bodyweightKg,
   exercises,
   initialLogs,
   initialWarmup,
@@ -130,6 +132,7 @@ export function WorkoutMode({
   workoutName: string;
   considerations?: string | null;
   injuryAreas?: string[] | null;
+  bodyweightKg?: number | null;
   initialWarmup?: { type: string | null; seconds: number | null };
   exercises: WorkoutExerciseVM[];
   initialLogs: {
@@ -496,6 +499,7 @@ export function WorkoutMode({
       exerciseId: alt.id,
       name: alt.name,
       trackingType: "reps",
+      isBodyweight: false,
       primaryMuscles: [],
       instructions: null,
       techniqueCues: [],
@@ -1022,6 +1026,11 @@ export function WorkoutMode({
     const rows = state[ex.exerciseId] ?? [];
     const meta = groupByExId.get(ex.exerciseId) ?? null;
     const timed = ex.trackingType === "time";
+    // Bodyweight movements (push-ups, pull-ups, dips…): the "weight" field is an
+    // OPTIONAL added load (vest/belt), and effective load includes the member's
+    // own bodyweight.
+    const bw = ex.isBodyweight && !timed;
+    const bwKg = bodyweightKg ?? 0;
     const concernLabel = a.substituted ? null : exerciseConcern(concerns, a.primaryMuscles);
     const rpeCol = !timed && showRpe;
     const colsClass = timed
@@ -1034,7 +1043,7 @@ export function WorkoutMode({
       ["quads", "quadriceps", "hamstrings", "glutes", "back", "lats"].includes(m.toLowerCase())
     );
     const suggestion =
-      timed || a.substituted
+      timed || a.substituted || bw
         ? null
         : progressionSuggestion(ex.previous, ex.repTarget, bigLift ? 5 : 2.5);
 
@@ -1079,6 +1088,7 @@ export function WorkoutMode({
               <Badge>Sets {rows.length}</Badge>
               {ex.repTarget && <Badge>Reps {ex.repTarget}</Badge>}
               {ex.restSeconds > 0 && <Badge>Rest {fmtSecs(ex.restSeconds)}</Badge>}
+              {bw && <Badge>Bodyweight</Badge>}
             </div>
           </div>
           <button
@@ -1159,7 +1169,7 @@ export function WorkoutMode({
               <span>Time</span>
             ) : (
               <>
-                <span>Weight</span>
+                <span>{bw ? "+ Added" : "Weight"}</span>
                 <span>Reps</span>
                 {rpeCol && <span className="text-center">RPE</span>}
               </>
@@ -1169,8 +1179,9 @@ export function WorkoutMode({
 
           {rows.map((row, i) => {
             const prev = ex.previous.find((p) => p.set_number === i + 1);
-            const weightPlaceholder =
-              suggestion?.weightKg != null
+            const weightPlaceholder = bw
+              ? "+kg"
+              : suggestion?.weightKg != null
                 ? String(suggestion.weightKg)
                 : prev?.weight_kg != null
                   ? String(prev.weight_kg)
@@ -1183,13 +1194,22 @@ export function WorkoutMode({
                   : "reps";
             // "Beat your last set" ghost: last session's numbers for this set,
             // lit up once the current entry matches or beats them (by volume).
-            const prevW = prev?.weight_kg ?? null;
+            const prevW = prev?.weight_kg ?? null; // added weight for bodyweight
             const prevR = prev?.reps ?? null;
-            const hasGhost = !timed && prevW != null && prevR != null && prevW > 0 && prevR > 0;
             const curW = Number(row.weight) || 0;
             const curR = Number(row.reps) || 0;
+            // Ghost "beat your last set". For bodyweight the load includes the
+            // member's own bodyweight; when we don't know it, compare on reps.
+            const hasGhost =
+              !timed && prevR != null && prevR > 0 && (bw || (prevW != null && prevW > 0));
+            const loadPrev = bw ? bwKg + (prevW ?? 0) : prevW ?? 0;
+            const loadCur = bw ? bwKg + curW : curW;
             const beaten =
-              hasGhost && curW > 0 && curR > 0 && curW * curR >= (prevW as number) * (prevR as number);
+              hasGhost &&
+              curR > 0 &&
+              (bw && bwKg === 0
+                ? curR >= (prevR as number)
+                : loadCur * curR >= loadPrev * (prevR as number));
             return (
               <div key={row.n}>
                 <div className={cn("grid items-center gap-2 py-1", colsClass)}>
@@ -1261,7 +1281,11 @@ export function WorkoutMode({
                           : "text-[var(--text-muted)]"
                       )}
                     >
-                      {beaten ? "▲ beat last" : "last"}: {fmtNum(prevW as number)}kg × {prevR}
+                      {beaten ? "▲ beat last" : "last"}:{" "}
+                      {bw
+                        ? `BW${(prevW ?? 0) > 0 ? ` +${fmtNum(prevW as number)}kg` : ""}`
+                        : `${fmtNum(prevW as number)}kg`}{" "}
+                      × {prevR}
                     </span>
                   </div>
                 )}
