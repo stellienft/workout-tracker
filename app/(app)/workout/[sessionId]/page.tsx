@@ -1,7 +1,14 @@
 import { notFound, redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { loadWorkoutTemplate, loadCustomSplitDay } from "@/lib/workout-loader";
+import {
+  loadWorkoutTemplate,
+  loadCustomSplitDay,
+  loadWorkoutFromSnapshot,
+  type LoadedVideo,
+  type AltOption,
+  type SnapshotSlot,
+} from "@/lib/workout-loader";
 import {
   WorkoutMode,
   type WorkoutExerciseVM,
@@ -15,6 +22,68 @@ export const metadata = { title: "Workout" };
 // them as reps (with optional added weight) rather than a mandatory kg entry.
 function isBodyweight(equipment: string[] | null | undefined): boolean {
   return (equipment ?? []).some((e) => e.toLowerCase().includes("body weight"));
+}
+
+// Common shape across the three exercise sources (live template, frozen
+// snapshot, custom split day) — just the fields the workout screen needs.
+interface VMSource {
+  id: string | null;
+  exercise_id: string;
+  exercise: {
+    name: string;
+    tracking_type?: string | null;
+    equipment?: string[] | null;
+    primary_muscles: string[];
+    instructions: string | null;
+    technique_cues: string[];
+    shoulder_safe: boolean;
+    shoulder_notes: string | null;
+    cover_image_path: string | null;
+  };
+  sets: number;
+  rep_target: string | null;
+  rep_min?: number | null;
+  rep_max?: number | null;
+  rest_seconds: number;
+  notes: string | null;
+  is_optional?: boolean;
+  superset_group: number | null;
+  video: LoadedVideo | null;
+  alternatives: AltOption[];
+  moreAlternatives: AltOption[];
+  previous: WorkoutExerciseVM["previous"];
+}
+
+function mapToVM(ex: VMSource): WorkoutExerciseVM {
+  return {
+    templateExerciseId: ex.id,
+    exerciseId: ex.exercise_id,
+    name: ex.exercise.name,
+    trackingType: ex.exercise.tracking_type === "time" ? "time" : "reps",
+    isBodyweight: isBodyweight(ex.exercise.equipment),
+    primaryMuscles: ex.exercise.primary_muscles,
+    instructions: ex.exercise.instructions,
+    techniqueCues: ex.exercise.technique_cues,
+    shoulderSafe: ex.exercise.shoulder_safe,
+    shoulderNotes: ex.exercise.shoulder_notes,
+    coverPath: ex.exercise.cover_image_path,
+    sets: ex.sets,
+    repTarget:
+      ex.rep_target ??
+      (ex.rep_min && ex.rep_max
+        ? `${ex.rep_min}–${ex.rep_max}`
+        : ex.rep_min
+          ? `${ex.rep_min}`
+          : ""),
+    restSeconds: ex.rest_seconds,
+    notes: ex.notes,
+    isOptional: ex.is_optional ?? false,
+    supersetGroup: ex.superset_group ?? null,
+    video: ex.video,
+    alternatives: ex.alternatives,
+    moreAlternatives: ex.moreAlternatives,
+    previous: ex.previous,
+  };
 }
 
 export default async function WorkoutSessionPage({
@@ -42,75 +111,30 @@ export default async function WorkoutSessionPage({
     (session.program as unknown as { name: string } | null)?.name ?? "";
 
   if (session.workout_template_id) {
-    const loaded = await loadWorkoutTemplate(session.workout_template_id, user.id);
-    if (!loaded) notFound();
-    workoutName =
-      (session.template as unknown as { name: string } | null)?.name ??
-      loaded.template.name;
-    vmExercises = loaded.exercises.map((ex) => ({
-      templateExerciseId: ex.id,
-      exerciseId: ex.exercise_id,
-      name: ex.exercise.name,
-      trackingType:
-        (ex.exercise as { tracking_type?: string }).tracking_type === "time"
-          ? ("time" as const)
-          : ("reps" as const),
-      isBodyweight: isBodyweight((ex.exercise as { equipment?: string[] }).equipment),
-      primaryMuscles: ex.exercise.primary_muscles,
-      instructions: ex.exercise.instructions,
-      techniqueCues: ex.exercise.technique_cues,
-      shoulderSafe: ex.exercise.shoulder_safe,
-      shoulderNotes: ex.exercise.shoulder_notes,
-      coverPath: ex.exercise.cover_image_path,
-      sets: ex.sets,
-      repTarget:
-        ex.rep_target ??
-        (ex.rep_min && ex.rep_max
-          ? `${ex.rep_min}–${ex.rep_max}`
-          : ex.rep_min
-            ? `${ex.rep_min}`
-            : ""),
-      restSeconds: ex.rest_seconds,
-      notes: ex.notes,
-      isOptional: ex.is_optional,
-      supersetGroup: ex.superset_group ?? null,
-      video: ex.video,
-      alternatives: ex.alternatives,
-      moreAlternatives: ex.moreAlternatives,
-      previous: ex.previous,
-    }));
+    const snap = session.exercise_snapshot as
+      | { exercises?: SnapshotSlot[] }
+      | null;
+    const templateName =
+      (session.template as unknown as { name: string } | null)?.name ?? "";
+    if (snap?.exercises?.length) {
+      // Frozen at start — immune to later edits of the shared template.
+      const exs = await loadWorkoutFromSnapshot(snap.exercises, user.id);
+      workoutName = templateName;
+      vmExercises = exs.map(mapToVM);
+    } else {
+      // Older session (no snapshot): read the live template as before.
+      const loaded = await loadWorkoutTemplate(session.workout_template_id, user.id);
+      if (!loaded) notFound();
+      workoutName = templateName || loaded.template.name;
+      vmExercises = loaded.exercises.map(mapToVM);
+    }
   } else if (session.custom_split_day_id) {
     const loaded = await loadCustomSplitDay(session.custom_split_day_id, user.id);
     if (!loaded) notFound();
     workoutName = loaded.day.name;
     programName = loaded.day.split_name;
-    vmExercises = loaded.exercises.map((ex) => ({
-      // Not a workout_template_exercises row, so no template_exercise_id FK.
-      templateExerciseId: null,
-      exerciseId: ex.exercise_id,
-      name: ex.exercise.name,
-      trackingType:
-        (ex.exercise as { tracking_type?: string }).tracking_type === "time"
-          ? ("time" as const)
-          : ("reps" as const),
-      isBodyweight: isBodyweight((ex.exercise as { equipment?: string[] }).equipment),
-      primaryMuscles: ex.exercise.primary_muscles,
-      instructions: ex.exercise.instructions,
-      techniqueCues: ex.exercise.technique_cues,
-      shoulderSafe: ex.exercise.shoulder_safe,
-      shoulderNotes: ex.exercise.shoulder_notes,
-      coverPath: ex.exercise.cover_image_path,
-      sets: ex.sets,
-      repTarget: ex.rep_target ?? "",
-      restSeconds: ex.rest_seconds,
-      notes: ex.notes,
-      isOptional: false,
-      supersetGroup: ex.superset_group ?? null,
-      video: ex.video,
-      alternatives: ex.alternatives,
-      moreAlternatives: ex.moreAlternatives,
-      previous: ex.previous,
-    }));
+    // Custom-split rows have no template_exercise_id FK.
+    vmExercises = loaded.exercises.map((ex) => mapToVM({ ...ex, id: null }));
   } else {
     notFound();
   }
