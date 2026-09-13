@@ -218,6 +218,90 @@ export async function loadWorkoutTemplate(
 }
 
 // ============================================================
+// Session snapshots
+//
+// A workout freezes its exercise list at start (stored on
+// workout_sessions.exercise_snapshot) so later edits to the shared program
+// template can't mutate an in-progress session. We still fetch the live
+// exercise record (name, cover GIF, cues) and enrichment (video, alternatives,
+// previous sets) by id — only the *set of slots* is frozen.
+// ============================================================
+
+export interface SnapshotSlot {
+  template_exercise_id: string | null;
+  exercise_id: string;
+  position?: number;
+  sets: number;
+  rep_min: number | null;
+  rep_max: number | null;
+  rep_target: string | null;
+  rest_seconds: number;
+  notes: string | null;
+  is_optional: boolean;
+  superset_group: number | null;
+}
+
+export interface LoadedSnapshotExercise extends Enrichment {
+  id: string | null; // template_exercise_id (null for non-template sources)
+  exercise_id: string;
+  sets: number;
+  rep_min: number | null;
+  rep_max: number | null;
+  rep_target: string | null;
+  rest_seconds: number;
+  notes: string | null;
+  is_optional: boolean;
+  superset_group: number | null;
+  exercise: Exercise;
+}
+
+/** Build the exercise list for a session from its frozen snapshot. */
+export async function loadWorkoutFromSnapshot(
+  slots: SnapshotSlot[],
+  userId: string
+): Promise<LoadedSnapshotExercise[]> {
+  const supabase = await createClient();
+  const ids = Array.from(new Set(slots.map((s) => s.exercise_id)));
+  const safeIds = ids.length ? ids : ["00000000-0000-0000-0000-000000000000"];
+
+  const { data: exRows } = await supabase
+    .from("exercises")
+    .select("*")
+    .in("id", safeIds);
+  const exList = (exRows ?? []) as Exercise[];
+  const exById = new Map(exList.map((e) => [e.id, e]));
+
+  const enrichment = await enrichExercises(supabase, exList, userId);
+  const empty: Enrichment = {
+    video: null,
+    alternatives: [],
+    moreAlternatives: [],
+    previous: [],
+  };
+
+  const out: LoadedSnapshotExercise[] = [];
+  for (const s of slots) {
+    const exercise = exById.get(s.exercise_id);
+    if (!exercise) continue; // exercise since deleted — drop the slot
+    out.push({
+      id: s.template_exercise_id,
+      exercise_id: s.exercise_id,
+      sets: s.sets,
+      rep_min: s.rep_min,
+      rep_max: s.rep_max,
+      rep_target: s.rep_target,
+      rest_seconds: s.rest_seconds,
+      notes: s.notes,
+      is_optional: s.is_optional,
+      superset_group: s.superset_group,
+      exercise,
+      ...(enrichment.get(s.exercise_id) ?? empty),
+    });
+  }
+  return out;
+}
+
+// ============================================================
 // Custom split days
 // ============================================================
 

@@ -72,6 +72,33 @@ export async function startWorkout(input: {
     .in("status", ["active", "paused"])
     .maybeSingle();
 
+  // Freeze the template's exercises onto the session so later edits to the
+  // shared template can't change this workout once it's underway.
+  const { data: teRows } = await supabase
+    .from("workout_template_exercises")
+    .select(
+      "id, exercise_id, position, sets, rep_min, rep_max, rep_target, rest_seconds, notes, is_optional, superset_group"
+    )
+    .eq("workout_template_id", template.id)
+    .order("position");
+  const exerciseSnapshot = {
+    version: 1,
+    source: "template" as const,
+    exercises: (teRows ?? []).map((r) => ({
+      template_exercise_id: r.id,
+      exercise_id: r.exercise_id,
+      position: r.position,
+      sets: r.sets,
+      rep_min: r.rep_min,
+      rep_max: r.rep_max,
+      rep_target: r.rep_target,
+      rest_seconds: r.rest_seconds,
+      notes: r.notes,
+      is_optional: r.is_optional,
+      superset_group: r.superset_group,
+    })),
+  };
+
   const { data: session, error } = await supabase
     .from("workout_sessions")
     .insert({
@@ -81,6 +108,7 @@ export async function startWorkout(input: {
       workout_template_id: template.id,
       week_number: enrolment?.current_week ?? null,
       status: "in_progress",
+      exercise_snapshot: exerciseSnapshot.exercises.length ? exerciseSnapshot : null,
       pre_shoulder_pain: parsed.data.preShoulderPain ?? null,
       pre_energy: parsed.data.preEnergy ?? null,
       pre_readiness: parsed.data.preReadiness ?? null,
