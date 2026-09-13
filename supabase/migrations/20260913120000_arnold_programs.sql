@@ -99,47 +99,47 @@ select t.id,
        v.rest, v.superset
 from (values
   -- ===== The Golden Six (identical Mon/Wed/Fri sessions) =====
-  ('arnold-golden-six','gs-day-1',1,'barbell squat','quads',4,10,10,120,null::int),
+  ('arnold-golden-six','gs-day-1',1,'barbell full squat','quads',4,10,10,120,null::int),
   ('arnold-golden-six','gs-day-1',2,'barbell bench press','chest',3,10,10,120,null),
   ('arnold-golden-six','gs-day-1',3,'pull-up','lats',3,8,10,90,null),
-  ('arnold-golden-six','gs-day-1',4,'overhead press','shoulders',4,10,10,120,null),
+  ('arnold-golden-six','gs-day-1',4,'barbell seated overhead press','shoulders',4,10,10,120,null),
   ('arnold-golden-six','gs-day-1',5,'barbell curl','biceps',3,10,10,75,null),
-  ('arnold-golden-six','gs-day-1',6,'crunch','core',3,20,30,45,null),
-  ('arnold-golden-six','gs-day-2',1,'barbell squat','quads',4,10,10,120,null),
+  ('arnold-golden-six','gs-day-1',6,'crunch floor','core',3,20,30,45,null),
+  ('arnold-golden-six','gs-day-2',1,'barbell full squat','quads',4,10,10,120,null),
   ('arnold-golden-six','gs-day-2',2,'barbell bench press','chest',3,10,10,120,null),
   ('arnold-golden-six','gs-day-2',3,'pull-up','lats',3,8,10,90,null),
-  ('arnold-golden-six','gs-day-2',4,'overhead press','shoulders',4,10,10,120,null),
+  ('arnold-golden-six','gs-day-2',4,'barbell seated overhead press','shoulders',4,10,10,120,null),
   ('arnold-golden-six','gs-day-2',5,'barbell curl','biceps',3,10,10,75,null),
-  ('arnold-golden-six','gs-day-2',6,'crunch','core',3,20,30,45,null),
-  ('arnold-golden-six','gs-day-3',1,'barbell squat','quads',4,10,10,120,null),
+  ('arnold-golden-six','gs-day-2',6,'crunch floor','core',3,20,30,45,null),
+  ('arnold-golden-six','gs-day-3',1,'barbell full squat','quads',4,10,10,120,null),
   ('arnold-golden-six','gs-day-3',2,'barbell bench press','chest',3,10,10,120,null),
   ('arnold-golden-six','gs-day-3',3,'pull-up','lats',3,8,10,90,null),
-  ('arnold-golden-six','gs-day-3',4,'overhead press','shoulders',4,10,10,120,null),
+  ('arnold-golden-six','gs-day-3',4,'barbell seated overhead press','shoulders',4,10,10,120,null),
   ('arnold-golden-six','gs-day-3',5,'barbell curl','biceps',3,10,10,75,null),
-  ('arnold-golden-six','gs-day-3',6,'crunch','core',3,20,30,45,null),
+  ('arnold-golden-six','gs-day-3',6,'crunch floor','core',3,20,30,45,null),
 
   -- ===== The Arnold Split =====
   -- Chest & Back A — antagonist supersets (push paired with pull)
   ('arnold-split-6day','chest-back-a',1,'barbell bench press','chest',4,8,10,90,1),
   ('arnold-split-6day','chest-back-a',2,'pull-up','lats',4,8,10,90,1),
-  ('arnold-split-6day','chest-back-a',3,'incline barbell press','chest',4,8,10,90,2),
+  ('arnold-split-6day','chest-back-a',3,'barbell incline bench press','chest',4,8,10,90,2),
   ('arnold-split-6day','chest-back-a',4,'barbell row','back',4,8,10,90,2),
-  ('arnold-split-6day','chest-back-a',5,'chest fly','chest',3,10,12,75,3),
+  ('arnold-split-6day','chest-back-a',5,'dumbbell fly','chest',3,10,12,75,3),
   ('arnold-split-6day','chest-back-a',6,'t-bar row','back',3,10,12,75,3),
   ('arnold-split-6day','chest-back-a',7,'dumbbell pullover','chest',3,12,15,60,null),
 
   -- Shoulders & Arms A
-  ('arnold-split-6day','shoulders-arms-a',1,'overhead press','shoulders',4,8,10,120,null),
+  ('arnold-split-6day','shoulders-arms-a',1,'barbell seated overhead press','shoulders',4,8,10,120,null),
   ('arnold-split-6day','shoulders-arms-a',2,'lateral raise','shoulders',4,12,15,60,null),
-  ('arnold-split-6day','shoulders-arms-a',3,'rear delt fly','shoulders',3,12,15,60,null),
+  ('arnold-split-6day','shoulders-arms-a',3,'dumbbell reverse fly','shoulders',3,12,15,60,null),
   ('arnold-split-6day','shoulders-arms-a',4,'barbell curl','biceps',4,8,10,75,1),
   ('arnold-split-6day','shoulders-arms-a',5,'close grip bench press','triceps',4,8,10,75,1),
   ('arnold-split-6day','shoulders-arms-a',6,'preacher curl','biceps',3,10,12,60,2),
   ('arnold-split-6day','shoulders-arms-a',7,'triceps pushdown','triceps',3,10,12,60,2),
-  ('arnold-split-6day','shoulders-arms-a',8,'wrist curl','forearms',3,15,20,45,null),
+  ('arnold-split-6day','shoulders-arms-a',8,'barbell wrist curl','forearms',3,15,20,45,null),
 
   -- Legs & Lower Back A
-  ('arnold-split-6day','legs-a',1,'barbell squat','quads',5,8,12,150,null),
+  ('arnold-split-6day','legs-a',1,'barbell full squat','quads',5,8,12,150,null),
   ('arnold-split-6day','legs-a',2,'leg press','quads',4,10,15,120,null),
   ('arnold-split-6day','legs-a',3,'leg extension','quads',4,12,15,75,null),
   ('arnold-split-6day','legs-a',4,'lying leg curl','hamstrings',4,10,15,90,null),
@@ -152,9 +152,9 @@ from (values
   ('arnold-split-6day','chest-back-b',2,'lat pulldown','lats',4,10,12,90,1),
   ('arnold-split-6day','chest-back-b',3,'dumbbell bench press','chest',4,8,12,90,2),
   ('arnold-split-6day','chest-back-b',4,'seated cable row','back',4,10,12,90,2),
-  ('arnold-split-6day','chest-back-b',5,'cable crossover','chest',3,12,15,60,3),
-  ('arnold-split-6day','chest-back-b',6,'lat pulldown','lats',3,12,15,60,3),
-  ('arnold-split-6day','chest-back-b',7,'deadlift','back',4,6,8,150,null),
+  ('arnold-split-6day','chest-back-b',5,'cable standing fly','chest',3,12,15,60,3),
+  ('arnold-split-6day','chest-back-b',6,'cable rear delt row','back',3,12,15,60,3),
+  ('arnold-split-6day','chest-back-b',7,'barbell deadlift','back',4,6,8,150,null),
 
   -- Shoulders & Arms B
   ('arnold-split-6day','shoulders-arms-b',1,'dumbbell shoulder press','shoulders',4,8,10,120,null),
@@ -164,16 +164,16 @@ from (values
   ('arnold-split-6day','shoulders-arms-b',5,'overhead triceps extension','triceps',4,10,12,75,1),
   ('arnold-split-6day','shoulders-arms-b',6,'hammer curl','biceps',3,12,15,60,2),
   ('arnold-split-6day','shoulders-arms-b',7,'triceps dips','triceps',3,10,12,60,2),
-  ('arnold-split-6day','shoulders-arms-b',8,'concentration curl','biceps',3,12,15,45,null),
+  ('arnold-split-6day','shoulders-arms-b',8,'dumbbell concentration curl','biceps',3,12,15,45,null),
 
   -- Legs & Lower Back B
-  ('arnold-split-6day','legs-b',1,'barbell squat','quads',5,8,12,150,null),
+  ('arnold-split-6day','legs-b',1,'barbell full squat','quads',5,8,12,150,null),
   ('arnold-split-6day','legs-b',2,'bulgarian split squat','quads',3,10,12,90,null),
   ('arnold-split-6day','legs-b',3,'leg extension','quads',4,15,20,60,null),
   ('arnold-split-6day','legs-b',4,'seated leg curl','hamstrings',4,12,15,75,null),
   ('arnold-split-6day','legs-b',5,'romanian deadlift','hamstrings',3,10,12,120,null),
   ('arnold-split-6day','legs-b',6,'seated calf raise','calves',5,15,20,45,null),
-  ('arnold-split-6day','legs-b',7,'crunch','core',4,20,30,45,null)
+  ('arnold-split-6day','legs-b',7,'crunch floor','core',4,20,30,45,null)
 ) as v(program_slug, template_slug, position, kw, muscle, sets, rep_min, rep_max, rest, superset)
 join public.programs p on p.slug = v.program_slug
 join public.workout_templates t on t.program_id = p.id and t.slug = v.template_slug
