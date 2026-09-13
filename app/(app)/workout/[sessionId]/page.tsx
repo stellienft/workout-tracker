@@ -10,6 +10,13 @@ import {
 // Full-screen workout mode lives outside the normal app chrome.
 export const metadata = { title: "Workout" };
 
+// ExerciseDB tags calisthenics with the "body weight" equipment token. Such
+// exercises are loaded/lifted against the member's own bodyweight, so we log
+// them as reps (with optional added weight) rather than a mandatory kg entry.
+function isBodyweight(equipment: string[] | null | undefined): boolean {
+  return (equipment ?? []).some((e) => e.toLowerCase().includes("body weight"));
+}
+
 export default async function WorkoutSessionPage({
   params,
 }: {
@@ -48,6 +55,7 @@ export default async function WorkoutSessionPage({
         (ex.exercise as { tracking_type?: string }).tracking_type === "time"
           ? ("time" as const)
           : ("reps" as const),
+      isBodyweight: isBodyweight((ex.exercise as { equipment?: string[] }).equipment),
       primaryMuscles: ex.exercise.primary_muscles,
       instructions: ex.exercise.instructions,
       techniqueCues: ex.exercise.technique_cues,
@@ -85,6 +93,7 @@ export default async function WorkoutSessionPage({
         (ex.exercise as { tracking_type?: string }).tracking_type === "time"
           ? ("time" as const)
           : ("reps" as const),
+      isBodyweight: isBodyweight((ex.exercise as { equipment?: string[] }).equipment),
       primaryMuscles: ex.exercise.primary_muscles,
       instructions: ex.exercise.instructions,
       techniqueCues: ex.exercise.technique_cues,
@@ -108,14 +117,27 @@ export default async function WorkoutSessionPage({
 
   // Existing set logs so a resumed session restores its state, plus the
   // member's injury/considerations note to surface during the workout.
-  const [{ data: existingLogs }, { data: profile }] = await Promise.all([
-    supabase
-      .from("set_logs")
-      .select("*")
-      .eq("session_id", sessionId)
-      .order("set_number"),
-    supabase.from("profiles").select("considerations, injury_areas").eq("id", user.id).maybeSingle(),
-  ]);
+  const [{ data: existingLogs }, { data: profile }, { data: weightRow }] =
+    await Promise.all([
+      supabase
+        .from("set_logs")
+        .select("*")
+        .eq("session_id", sessionId)
+        .order("set_number"),
+      supabase
+        .from("profiles")
+        .select("considerations, injury_areas")
+        .eq("id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("body_metrics")
+        .select("weight_kg")
+        .eq("user_id", user.id)
+        .not("weight_kg", "is", null)
+        .order("recorded_on", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
 
   return (
     <WorkoutMode
@@ -128,6 +150,7 @@ export default async function WorkoutSessionPage({
       workoutName={workoutName}
       considerations={profile?.considerations ?? null}
       injuryAreas={(profile?.injury_areas as string[] | null) ?? null}
+      bodyweightKg={(weightRow?.weight_kg as number | null) ?? null}
       initialWarmup={{
         type: (session.warmup_type as string | null) ?? null,
         seconds: (session.warmup_seconds as number | null) ?? null,

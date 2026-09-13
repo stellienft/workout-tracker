@@ -33,9 +33,34 @@ export default async function WorkoutSummaryPage({
   // null, which shows the workout as "0 sets".
   const { data: logs } = await supabase
     .from("set_logs")
-    .select("exercise_id, weight_kg, reps, exercise:exercises!exercise_id(name)")
+    .select("exercise_id, weight_kg, reps, exercise:exercises!exercise_id(name, equipment)")
     .eq("session_id", sessionId)
     .eq("completed", true);
+
+  // The member's latest bodyweight, so bodyweight movements (push-ups, pull-ups)
+  // contribute real training volume rather than reading as ~0 kg.
+  const { data: bwRow } = await supabase
+    .from("body_metrics")
+    .select("weight_kg")
+    .eq("user_id", user.id)
+    .not("weight_kg", "is", null)
+    .order("recorded_on", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const bodyweightKg = Number(bwRow?.weight_kg ?? 0);
+
+  const isBodyweight = (equip: unknown): boolean => {
+    const arr = Array.isArray(equip) ? (equip as string[]) : [];
+    return arr.some((e) => String(e).toLowerCase().includes("body weight"));
+  };
+  const equipOf = (l: { exercise?: unknown }): unknown => {
+    const e = (l as { exercise?: { equipment?: unknown } | { equipment?: unknown }[] }).exercise;
+    return (Array.isArray(e) ? e[0]?.equipment : e?.equipment) ?? [];
+  };
+  // Effective load per rep for a log row: external weight plus bodyweight when
+  // the movement is bodyweight-based.
+  const effLoad = (l: { weight_kg?: number | null; exercise?: unknown }) =>
+    Number(l.weight_kg ?? 0) + (isBodyweight(equipOf(l)) ? bodyweightKg : 0);
 
   // Did this session finish the whole program? The enrolment flips to
   // "completed" with the same timestamp as the session that closed it out.
@@ -61,7 +86,7 @@ export default async function WorkoutSummaryPage({
     (session.template as unknown as { name: string } | null)?.name ?? "Workout";
 
   const totalVolume = (logs ?? []).reduce(
-    (a, l) => a + (Number(l.weight_kg ?? 0) * Number(l.reps ?? 0)),
+    (a, l) => a + effLoad(l) * Number(l.reps ?? 0),
     0
   );
   const setCount = (logs ?? []).length;
@@ -84,11 +109,11 @@ export default async function WorkoutSummaryPage({
     if (prevSession) {
       const { data: prevLogs } = await supabase
         .from("set_logs")
-        .select("weight_kg, reps")
+        .select("weight_kg, reps, exercise:exercises!exercise_id(equipment)")
         .eq("session_id", prevSession.id)
         .eq("completed", true);
       prevVolume = (prevLogs ?? []).reduce(
-        (a, l) => a + (Number(l.weight_kg ?? 0) * Number(l.reps ?? 0)),
+        (a, l) => a + effLoad(l) * Number(l.reps ?? 0),
         0
       );
     }
