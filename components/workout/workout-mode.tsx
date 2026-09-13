@@ -39,6 +39,7 @@ import {
   searchReplacementExercises,
 } from "@/lib/actions/workout";
 import { WarmupSheet } from "@/components/workout/warmup-sheet";
+import { SpotifyNowPlaying } from "@/components/spotify/now-playing";
 import { enqueue, flush, pendingCount } from "@/lib/offline-queue";
 import { useWakeLock } from "@/lib/use-wake-lock";
 import type { LoadedVideo, AltOption } from "@/lib/workout-loader";
@@ -698,6 +699,9 @@ export function WorkoutMode({
       {/* Scrollable exercise list */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="mx-auto w-full max-w-xl space-y-3">
+          {/* Now playing (Spotify) */}
+          <SpotifyNowPlaying />
+
           {/* Warm-up chip */}
           {warmup ? (
             <button

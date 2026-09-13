@@ -20,6 +20,8 @@ import { ThemeControls } from "@/components/theme-controls";
 import { PushToggle } from "@/components/settings/push-toggle";
 import { AccountDataControls } from "@/components/settings/account-data";
 import { FeedbackForm } from "@/components/settings/feedback-form";
+import { SpotifyConnect } from "@/components/spotify/spotify-connect";
+import { getSpotifyStatus } from "@/lib/actions/spotify";
 
 export const metadata = { title: "Settings" };
 
@@ -28,6 +30,7 @@ export default async function SettingsPage() {
   const { profile, roles } = await getAuthContext();
   const isTrainer = isTrainerRole(roles);
   const { isPro, source, currentPeriodEnd } = await getUserPlan();
+  const spotify = await getSpotifyStatus();
 
   const planName = !isPro
     ? "Free"
@@ -100,6 +103,11 @@ export default async function SettingsPage() {
       <div className="mt-6">
         <h2 className="mb-3 text-lg font-bold">Notifications</h2>
         <PushToggle />
+      </div>
+
+      <div className="mt-6">
+        <h2 className="mb-3 text-lg font-bold">Music</h2>
+        <SpotifyConnect configured={spotify.configured} connected={spotify.connected} />
       </div>
 
       <div className="mt-6">
