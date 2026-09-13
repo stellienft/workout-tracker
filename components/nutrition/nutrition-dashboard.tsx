@@ -12,6 +12,8 @@ import {
   Clock,
   SlidersHorizontal,
   ScanLine,
+  Link2,
+  ChefHat,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -23,8 +25,11 @@ import {
   deleteMealEntry,
   saveNutritionTargets,
   lookupBarcode,
+  previewRecipeFromUrl,
+  importRecipeToMeal,
   type ScannedProduct,
 } from "@/lib/actions/nutrition";
+import type { ParsedRecipe } from "@/lib/recipe-import";
 import { BarcodeScanner } from "@/components/nutrition/barcode-scanner";
 
 interface Entry {
@@ -357,7 +362,7 @@ function AddModal({
 }) {
   const toast = useToast();
   const [pending, startTransition] = useTransition();
-  const [tab, setTab] = useState<"recipes" | "custom" | "scan">("recipes");
+  const [tab, setTab] = useState<"recipes" | "link" | "custom" | "scan">("recipes");
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<string | null>(null);
   const [selected, setSelected] = useState<Recipe | null>(null);
@@ -376,6 +381,46 @@ function AddModal({
   const [scanBusy, setScanBusy] = useState(false);
   const [scanned, setScanned] = useState<ScannedProduct | null>(null);
   const [grams, setGrams] = useState("100");
+
+  // Link import
+  const [url, setUrl] = useState("");
+  const [importBusy, setImportBusy] = useState(false);
+  const [parsed, setParsed] = useState<ParsedRecipe | null>(null);
+  const [importServings, setImportServings] = useState(1);
+
+  function fetchLink() {
+    const link = url.trim();
+    if (!link) return;
+    setImportBusy(true);
+    startTransition(async () => {
+      const res = await previewRecipeFromUrl(link);
+      setImportBusy(false);
+      if (res.ok) {
+        setParsed(res.recipe);
+        setImportServings(1);
+      } else {
+        toast(res.error, "error");
+      }
+    });
+  }
+
+  function addImported() {
+    if (!parsed) return;
+    startTransition(async () => {
+      const res = await importRecipeToMeal({
+        date,
+        meal,
+        servings: importServings,
+        recipe: parsed,
+      });
+      if (res.ok) {
+        toast("Added to " + meal, "success");
+        onDone();
+      } else {
+        toast(res.error ?? "Could not add", "error");
+      }
+    });
+  }
 
   function handleBarcode(code: string) {
     setScanBusy(true);
@@ -550,20 +595,27 @@ function AddModal({
           </div>
         ) : (
           <>
-            <div className="flex gap-2 border-b border-[var(--border-subtle)] p-3">
-              {(["recipes", "custom", "scan"] as const).map((tb) => (
+            <div className="flex gap-1.5 border-b border-[var(--border-subtle)] p-3">
+              {(["recipes", "link", "custom", "scan"] as const).map((tb) => (
                 <button
                   key={tb}
                   onClick={() => setTab(tb)}
                   className={cn(
-                    "flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-medium",
+                    "flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-medium sm:text-sm",
                     tab === tb
                       ? "bg-[var(--accent-muted)] text-[var(--accent-primary)]"
                       : "text-[var(--text-secondary)]"
                   )}
                 >
                   {tb === "scan" && <ScanLine className="h-4 w-4" />}
-                  {tb === "custom" ? "Quick add" : tb === "scan" ? "Scan" : "Recipes"}
+                  {tb === "link" && <Link2 className="h-4 w-4" />}
+                  {tb === "custom"
+                    ? "Quick add"
+                    : tb === "scan"
+                      ? "Scan"
+                      : tb === "link"
+                        ? "Link"
+                        : "Recipes"}
                 </button>
               ))}
             </div>
@@ -646,6 +698,128 @@ function AddModal({
                   )}
                 </div>
               </>
+            ) : tab === "link" ? (
+              <div className="space-y-4 overflow-y-auto p-4">
+                {!parsed ? (
+                  <>
+                    <p className="text-sm text-[var(--text-secondary)]">
+                      Paste a link to any recipe and we&apos;ll pull in the photo,
+                      ingredients, method and macros.
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") fetchLink();
+                        }}
+                        inputMode="url"
+                        autoCapitalize="off"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        placeholder="https://…"
+                        className="h-11 min-w-0 flex-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm text-[var(--text-primary)] focus:border-[var(--border-active)] focus:outline-none"
+                      />
+                      <Button
+                        onClick={fetchLink}
+                        disabled={importBusy || url.trim().length < 4}
+                        size="lg"
+                      >
+                        {importBusy ? "Reading…" : "Fetch"}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      Works with most recipe sites and blogs. Some pages don&apos;t
+                      publish macros — you can still add it and fill those in.
+                    </p>
+                  </>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      {parsed.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={parsed.imageUrl}
+                          alt=""
+                          className="h-20 w-20 shrink-0 rounded-xl bg-[var(--surface-secondary)] object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-secondary)] text-[var(--text-muted)]">
+                          <ChefHat className="h-7 w-7" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-semibold leading-snug">{parsed.title}</p>
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">
+                          {parsed.calories > 0
+                            ? `${parsed.calories} kcal · ${parsed.protein_g}p / ${parsed.carbs_g}c / ${parsed.fat_g}f`
+                            : "No macros found on the page"}
+                          {parsed.servings > 1 ? ` · makes ${parsed.servings}` : ""}
+                        </p>
+                        {parsed.calories > 0 && parsed.servings > 1 && (
+                          <p className="text-[11px] text-[var(--text-muted)]">
+                            ≈ {Math.round(parsed.calories / parsed.servings)} kcal per
+                            serving
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {parsed.ingredients.length > 0 && (
+                      <div>
+                        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                          Ingredients ({parsed.ingredients.length})
+                        </p>
+                        <ul className="max-h-32 space-y-1 overflow-y-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3 text-xs text-[var(--text-secondary)]">
+                          {parsed.ingredients.map((ing, i) => (
+                            <li key={i} className="flex gap-2">
+                              <span className="text-[var(--accent-primary)]">•</span>
+                              <span>{ing}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {parsed.steps.length > 0 && (
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {parsed.steps.length} step
+                        {parsed.steps.length === 1 ? "" : "s"} saved with the recipe.
+                      </p>
+                    )}
+
+                    <label className="flex items-center gap-3 text-sm">
+                      Servings
+                      <input
+                        type="number"
+                        min={0.25}
+                        step={0.25}
+                        value={importServings}
+                        onChange={(e) => setImportServings(Number(e.target.value))}
+                        className="h-11 w-24 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm text-[var(--text-primary)]"
+                      />
+                    </label>
+
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={addImported}
+                        disabled={pending}
+                        size="lg"
+                        className="flex-1"
+                      >
+                        {pending ? "Adding…" : "Add to " + meal}
+                      </Button>
+                      <Button
+                        onClick={() => setParsed(null)}
+                        variant="secondary"
+                        size="lg"
+                      >
+                        Back
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : tab === "custom" ? (
               <div className="space-y-3 overflow-y-auto p-4">
                 <input

@@ -4,6 +4,11 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { scaleMacros } from "@/lib/nutrition";
+import {
+  parseRecipeFromHtml,
+  isSafeRecipeUrl,
+  type ParsedRecipe,
+} from "@/lib/recipe-import";
 
 async function auth() {
   const supabase = await createClient();
@@ -120,6 +125,157 @@ export async function addCustomFood(input: {
   });
   if (error) return { ok: false as const, error: error.message };
   revalidatePath("/nutrition");
+  return { ok: true as const };
+}
+
+/**
+ * Fetch a recipe web page and parse its structured data (schema.org Recipe
+ * JSON-LD) into a preview. No DB write — the member confirms before saving.
+ */
+export async function previewRecipeFromUrl(
+  rawUrl: string
+): Promise<
+  | { ok: true; recipe: ParsedRecipe }
+  | { ok: false; error: string }
+> {
+  const { user } = await auth();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+
+  const url = (rawUrl || "").trim();
+  if (!url) return { ok: false as const, error: "Paste a recipe link first." };
+  if (!isSafeRecipeUrl(url))
+    return { ok: false as const, error: "That doesn't look like a valid recipe URL." };
+
+  let html: string;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    const res = await fetch(url, {
+      redirect: "follow",
+      signal: controller.signal,
+      headers: {
+        // Some sites serve stripped markup to unknown agents; present as a
+        // normal browser so the JSON-LD block is included.
+        "User-Agent":
+          "Mozilla/5.0 (compatible; StellioFitBot/1.0; +https://stellio.com.au)",
+        Accept: "text/html,application/xhtml+xml",
+      },
+    }).finally(() => clearTimeout(timeout));
+    if (!res.ok)
+      return { ok: false as const, error: `Couldn't load the page (${res.status}).` };
+    const type = res.headers.get("content-type") ?? "";
+    if (type && !type.includes("html") && !type.includes("xml"))
+      return { ok: false as const, error: "That link isn't a web page." };
+    // Cap the body so a huge page can't blow up memory.
+    html = (await res.text()).slice(0, 2_500_000);
+  } catch {
+    return { ok: false as const, error: "Couldn't reach that link. Check the URL and try again." };
+  }
+
+  const recipe = parseRecipeFromHtml(html, url);
+  if (!recipe)
+    return {
+      ok: false as const,
+      error: "Couldn't find a recipe on that page. Try a direct recipe link.",
+    };
+  return { ok: true as const, recipe };
+}
+
+function slugify(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+const parsedRecipeSchema = z.object({
+  title: z.string().min(1).max(140),
+  imageUrl: z.string().url().max(1000).nullable().optional(),
+  description: z.string().max(1000).nullable().optional(),
+  ingredients: z.array(z.string().max(300)).max(80).default([]),
+  steps: z.array(z.string().max(2000)).max(80).default([]),
+  calories: z.coerce.number().int().min(0).max(20000).default(0),
+  protein_g: z.coerce.number().int().min(0).max(2000).default(0),
+  carbs_g: z.coerce.number().int().min(0).max(2000).default(0),
+  fat_g: z.coerce.number().int().min(0).max(2000).default(0),
+  servings: z.coerce.number().int().min(1).max(100).default(1),
+  prepMinutes: z.coerce.number().int().min(0).max(6000).default(0),
+  sourceUrl: z.string().url().max(1000),
+});
+
+/**
+ * Save a link-imported recipe as the member's own recipe (image, ingredients
+ * and steps preserved) and add it to a day/meal. The recipe then also shows in
+ * their library and can be re-added with any servings.
+ */
+export async function importRecipeToMeal(input: {
+  date: string;
+  meal: string;
+  servings?: number;
+  recipe: z.input<typeof parsedRecipeSchema>;
+}) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+
+  const parsed = z
+    .object({
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      meal: mealEnum,
+      servings: z.coerce.number().min(0.25).max(20).default(1),
+      recipe: parsedRecipeSchema,
+    })
+    .safeParse(input);
+  if (!parsed.success)
+    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Invalid" };
+  const d = parsed.data;
+  const r = d.recipe;
+
+  // Per-serving macros: nutrition in structured data is for the whole recipe,
+  // so divide by the recipe's own yield before we scale to the member's serving.
+  const perServing = {
+    calories: Math.round(r.calories / r.servings),
+    protein_g: Math.round(r.protein_g / r.servings),
+    carbs_g: Math.round(r.carbs_g / r.servings),
+    fat_g: Math.round(r.fat_g / r.servings),
+  };
+
+  const rand = Math.random().toString(36).slice(2, 8);
+  const slug = `${slugify(r.title).slice(0, 60) || "recipe"}-${rand}`;
+
+  const { data: saved, error: recipeErr } = await supabase
+    .from("recipes")
+    .insert({
+      slug,
+      title: r.title,
+      category: "Imported",
+      image_url: r.imageUrl ?? null,
+      description: r.description ?? null,
+      ...perServing,
+      servings: 1, // stored macros are already per single serving
+      prep_minutes: r.prepMinutes || 15,
+      tags: ["imported"],
+      ingredients: r.ingredients,
+      steps: r.steps,
+      source: "user_import",
+      source_url: r.sourceUrl,
+      owner_id: user.id,
+    })
+    .select("id, title, calories, protein_g, carbs_g, fat_g")
+    .single();
+  if (recipeErr || !saved)
+    return { ok: false as const, error: recipeErr?.message ?? "Could not save recipe" };
+
+  const m = scaleMacros(saved, d.servings);
+  const { error: entryErr } = await supabase.from("meal_entries").insert({
+    user_id: user.id,
+    entry_date: d.date,
+    meal: d.meal,
+    recipe_id: saved.id,
+    title: saved.title,
+    servings: d.servings,
+    ...m,
+  });
+  if (entryErr) return { ok: false as const, error: entryErr.message };
+
+  revalidatePath("/nutrition");
+  revalidatePath("/nutrition/recipes");
   return { ok: true as const };
 }
 
