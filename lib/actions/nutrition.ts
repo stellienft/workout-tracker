@@ -279,6 +279,113 @@ export async function importRecipeToMeal(input: {
   return { ok: true as const };
 }
 
+export interface MealEstimate {
+  title: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  confidence: "high" | "medium" | "low";
+  note: string | null;
+}
+
+const MEAL_PHOTO_SYSTEM =
+  "You are a nutrition estimation assistant. Look at the meal photo and estimate the nutrition " +
+  "for the whole portion visible. Return ONLY valid JSON with these fields: " +
+  "title (a short dish name, e.g. 'Chicken & rice bowl'), calories (kcal, integer), " +
+  "protein_g, carbs_g, fat_g (grams, integers), confidence ('high'|'medium'|'low'), " +
+  "note (one short caveat about any assumption you made, or null), " +
+  "notFood (true only if the image is clearly not food). " +
+  "Estimate realistically for the serving shown. No markdown, no explanation.";
+
+/**
+ * Estimate a meal's macros from a photo using Claude's vision. The (already
+ * client-downscaled) image is passed straight through — nothing is stored. The
+ * member reviews and can edit the numbers before adding.
+ */
+export async function analyzeMealPhoto(
+  dataUrl: string
+): Promise<{ ok: true; estimate: MealEstimate } | { ok: false; error: string }> {
+  const { user } = await auth();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+
+  const { getUserPlan } = await import("@/lib/entitlements");
+  const { isPro } = await getUserPlan();
+  if (!isPro)
+    return { ok: false as const, error: "Meal photo scanning is a Pro feature." };
+
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) return { ok: false as const, error: "Photo scanning isn't configured yet." };
+
+  const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(dataUrl || "");
+  if (!m) return { ok: false as const, error: "That doesn't look like a photo." };
+  const mediaType = m[1];
+  const b64 = m[2];
+  if (b64.length > 7_000_000)
+    return { ok: false as const, error: "That photo is too large — try again." };
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 500,
+        system: MEAL_PHOTO_SYSTEM,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: mediaType, data: b64 } },
+              { type: "text", text: "Estimate the nutrition for this meal." },
+            ],
+          },
+        ],
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+    if (!res.ok) return { ok: false as const, error: "Couldn't reach the photo analyser." };
+
+    const data = (await res.json()) as { content?: { type: string; text?: string }[] };
+    const text = data.content?.filter((c) => c.type === "text").map((c) => c.text).join(" ").trim();
+    if (!text) return { ok: false as const, error: "No response from the analyser." };
+
+    let parsed: Record<string, unknown>;
+    try {
+      const jm = text.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(jm ? jm[0] : text);
+    } catch {
+      return { ok: false as const, error: "Couldn't read that photo. Try a clearer, closer shot." };
+    }
+
+    if (parsed.notFood === true || parsed.not_food === true) {
+      return { ok: false as const, error: "That doesn't look like food. Try another photo." };
+    }
+
+    const clampInt = (v: unknown, max: number) => {
+      const n = Math.round(Number(v));
+      return Number.isFinite(n) ? Math.min(Math.max(n, 0), max) : 0;
+    };
+    const conf = String(parsed.confidence ?? "medium").toLowerCase();
+    const estimate: MealEstimate = {
+      title: (String(parsed.title ?? "").trim() || "Meal").slice(0, 120),
+      calories: clampInt(parsed.calories, 5000),
+      protein_g: clampInt(parsed.protein_g ?? parsed.protein, 400),
+      carbs_g: clampInt(parsed.carbs_g ?? parsed.carbs, 600),
+      fat_g: clampInt(parsed.fat_g ?? parsed.fat, 300),
+      confidence: (["high", "medium", "low"].includes(conf) ? conf : "medium") as MealEstimate["confidence"],
+      note: parsed.note ? String(parsed.note).slice(0, 200) : null,
+    };
+    return { ok: true as const, estimate };
+  } catch {
+    return { ok: false as const, error: "The analyser is busy. Please try again." };
+  }
+}
+
 /** Toggle a recipe in the member's favourites. */
 export async function toggleRecipeFavorite(recipeId: string) {
   const { supabase, user } = await auth();

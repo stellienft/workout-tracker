@@ -14,6 +14,7 @@ import {
   ScanLine,
   Link2,
   ChefHat,
+  Camera,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -27,7 +28,9 @@ import {
   lookupBarcode,
   previewRecipeFromUrl,
   importRecipeToMeal,
+  analyzeMealPhoto,
   type ScannedProduct,
+  type MealEstimate,
 } from "@/lib/actions/nutrition";
 import type { ParsedRecipe } from "@/lib/recipe-import";
 import { BarcodeScanner } from "@/components/nutrition/barcode-scanner";
@@ -362,7 +365,9 @@ function AddModal({
 }) {
   const toast = useToast();
   const [pending, startTransition] = useTransition();
-  const [tab, setTab] = useState<"recipes" | "link" | "custom" | "scan">("recipes");
+  const [tab, setTab] = useState<"recipes" | "link" | "photo" | "custom" | "scan">(
+    "recipes"
+  );
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<string | null>(null);
   const [selected, setSelected] = useState<Recipe | null>(null);
@@ -387,6 +392,87 @@ function AddModal({
   const [importBusy, setImportBusy] = useState(false);
   const [parsed, setParsed] = useState<ParsedRecipe | null>(null);
   const [importServings, setImportServings] = useState(1);
+
+  // Photo (AI) estimate
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [estimate, setEstimate] = useState<MealEstimate | null>(null);
+  const [phTitle, setPhTitle] = useState("");
+  const [phKcal, setPhKcal] = useState("");
+  const [phP, setPhP] = useState("");
+  const [phC, setPhC] = useState("");
+  const [phF, setPhF] = useState("");
+
+  // Downscale a chosen photo to keep the upload small (and cheap to analyse).
+  async function fileToDataUrl(file: File): Promise<string> {
+    const bitmap = await createImageBitmap(file);
+    const max = 1024;
+    const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+    const w = Math.round(bitmap.width * scale);
+    const h = Math.round(bitmap.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close?.();
+    return canvas.toDataURL("image/jpeg", 0.8);
+  }
+
+  function onPhotoChosen(file: File | undefined) {
+    if (!file) return;
+    setPhotoBusy(true);
+    setEstimate(null);
+    fileToDataUrl(file)
+      .then((dataUrl) => {
+        setPhotoPreview(dataUrl);
+        startTransition(async () => {
+          const res = await analyzeMealPhoto(dataUrl);
+          setPhotoBusy(false);
+          if (res.ok) {
+            const e = res.estimate;
+            setEstimate(e);
+            setPhTitle(e.title);
+            setPhKcal(String(e.calories));
+            setPhP(String(e.protein_g));
+            setPhC(String(e.carbs_g));
+            setPhF(String(e.fat_g));
+          } else {
+            setPhotoPreview(null);
+            toast(res.error, "error");
+          }
+        });
+      })
+      .catch(() => {
+        setPhotoBusy(false);
+        setPhotoPreview(null);
+        toast("Couldn't read that image. Try another.", "error");
+      });
+  }
+
+  function resetPhoto() {
+    setPhotoPreview(null);
+    setEstimate(null);
+  }
+
+  function addPhotoMeal() {
+    startTransition(async () => {
+      const res = await addCustomFood({
+        date,
+        meal,
+        title: phTitle.trim() || "Meal",
+        calories: Number(phKcal) || 0,
+        protein_g: Number(phP) || 0,
+        carbs_g: Number(phC) || 0,
+        fat_g: Number(phF) || 0,
+      });
+      if (res.ok) {
+        toast("Added to " + meal, "success");
+        onDone();
+      } else {
+        toast(res.error ?? "Could not add", "error");
+      }
+    });
+  }
 
   function fetchLink() {
     const link = url.trim();
@@ -595,13 +681,13 @@ function AddModal({
           </div>
         ) : (
           <>
-            <div className="flex gap-1.5 border-b border-[var(--border-subtle)] p-3">
-              {(["recipes", "link", "custom", "scan"] as const).map((tb) => (
+            <div className="no-scrollbar flex gap-1.5 overflow-x-auto border-b border-[var(--border-subtle)] p-3">
+              {(["recipes", "photo", "link", "custom", "scan"] as const).map((tb) => (
                 <button
                   key={tb}
                   onClick={() => setTab(tb)}
                   className={cn(
-                    "flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-medium sm:text-sm",
+                    "flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium sm:text-sm",
                     tab === tb
                       ? "bg-[var(--accent-muted)] text-[var(--accent-primary)]"
                       : "text-[var(--text-secondary)]"
@@ -609,13 +695,16 @@ function AddModal({
                 >
                   {tb === "scan" && <ScanLine className="h-4 w-4" />}
                   {tb === "link" && <Link2 className="h-4 w-4" />}
+                  {tb === "photo" && <Camera className="h-4 w-4" />}
                   {tb === "custom"
                     ? "Quick add"
                     : tb === "scan"
                       ? "Scan"
                       : tb === "link"
                         ? "Link"
-                        : "Recipes"}
+                        : tb === "photo"
+                          ? "Photo"
+                          : "Recipes"}
                 </button>
               ))}
             </div>
@@ -698,6 +787,116 @@ function AddModal({
                   )}
                 </div>
               </>
+            ) : tab === "photo" ? (
+              <div className="space-y-4 overflow-y-auto p-4">
+                {!estimate ? (
+                  <>
+                    <p className="text-sm text-[var(--text-secondary)]">
+                      Snap or upload a photo of your meal and we&apos;ll estimate the
+                      calories and macros. You can adjust anything before adding.
+                    </p>
+                    {photoPreview && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={photoPreview}
+                        alt=""
+                        className="max-h-56 w-full rounded-xl object-cover"
+                      />
+                    )}
+                    <label
+                      className={cn(
+                        "flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--border-subtle)] py-6 text-sm font-medium text-[var(--text-secondary)]",
+                        photoBusy && "pointer-events-none opacity-60"
+                      )}
+                    >
+                      <Camera className="h-5 w-5" />
+                      {photoBusy ? "Analysing photo…" : "Take or choose a photo"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        disabled={photoBusy}
+                        onChange={(e) => onPhotoChosen(e.target.files?.[0])}
+                      />
+                    </label>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      Estimates are approximate — best for a quick log. Tip: a clear,
+                      top-down shot of the whole plate works best.
+                    </p>
+                  </>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      {photoPreview && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={photoPreview}
+                          alt=""
+                          className="h-20 w-20 shrink-0 rounded-xl object-cover"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <span
+                          className={cn(
+                            "inline-block rounded-full px-2 py-0.5 text-[11px] font-medium",
+                            estimate.confidence === "high"
+                              ? "bg-[var(--accent-muted)] text-[var(--accent-primary)]"
+                              : estimate.confidence === "low"
+                                ? "bg-[var(--warning)]/15 text-[var(--warning)]"
+                                : "bg-[var(--surface-secondary)] text-[var(--text-secondary)]"
+                          )}
+                        >
+                          {estimate.confidence} confidence
+                        </span>
+                        {estimate.note && (
+                          <p className="mt-1 text-xs text-[var(--text-muted)]">
+                            {estimate.note}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <input
+                      value={phTitle}
+                      onChange={(e) => setPhTitle(e.target.value)}
+                      placeholder="Meal name"
+                      className="h-11 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm text-[var(--text-primary)] focus:border-[var(--border-active)] focus:outline-none"
+                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      {(
+                        [
+                          ["Calories", phKcal, setPhKcal],
+                          ["Protein (g)", phP, setPhP],
+                          ["Carbs (g)", phC, setPhC],
+                          ["Fat (g)", phF, setPhF],
+                        ] as const
+                      ).map(([label, val, setter]) => (
+                        <label
+                          key={label}
+                          className="flex flex-col gap-1 text-xs text-[var(--text-muted)]"
+                        >
+                          {label}
+                          <input
+                            type="number"
+                            value={val}
+                            onChange={(e) => setter(e.target.value)}
+                            className="h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm text-[var(--text-primary)]"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={addPhotoMeal} disabled={pending} size="lg" className="flex-1">
+                        {pending ? "Adding…" : "Add to " + meal}
+                      </Button>
+                      <Button onClick={resetPhoto} variant="secondary" size="lg">
+                        Retake
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : tab === "link" ? (
               <div className="space-y-4 overflow-y-auto p-4">
                 {!parsed ? (
