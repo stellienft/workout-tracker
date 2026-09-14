@@ -150,18 +150,6 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      {/* Quote of the day */}
-      {profile?.daily_quote_enabled !== false && (
-        <figure className="mt-4 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4">
-          <blockquote className="text-sm italic text-[var(--text-secondary)]">
-            &ldquo;{quote.text}&rdquo;
-          </blockquote>
-          <figcaption className="mt-1 text-xs text-[var(--text-muted)]">
-            — {quote.author}
-          </figcaption>
-        </figure>
-      )}
-
       {/* New-user nudge: try a ready-made starter split */}
       {showStarterNudge && (
         <div className="mt-5 overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-active)] bg-[var(--accent-muted)] p-5">
@@ -372,6 +360,19 @@ export default async function DashboardPage() {
           </span>
         </Link>
       </section>
+
+      {/* Quote of the day — a gentle sign-off, kept off the prime top slot so
+          the primary "today's workout" hero leads. */}
+      {profile?.daily_quote_enabled !== false && (
+        <figure className="mt-8 text-center">
+          <blockquote className="text-sm italic text-[var(--text-secondary)]">
+            &ldquo;{quote.text}&rdquo;
+          </blockquote>
+          <figcaption className="mt-1 text-xs text-[var(--text-muted)]">
+            — {quote.author}
+          </figcaption>
+        </figure>
+      )}
     </PageShell>
   );
 }

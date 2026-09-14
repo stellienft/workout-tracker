@@ -171,6 +171,9 @@ export function WorkoutMode({
   // Confirm before finishing — the button used to sit in a pinned footer and
   // was easy to hit by accident, ending the session unintentionally.
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
+  // Header "close" opens a small sheet with pause / discard, so the top bar
+  // carries a single exit control instead of two competing buttons.
+  const [showExit, setShowExit] = useState(false);
   const [pending, setPending] = useState(0);
   const [removed, setRemoved] = useState<Set<string>>(new Set());
 
@@ -458,12 +461,8 @@ export function WorkoutMode({
   }
 
   async function onCancel() {
-    if (
-      !confirm(
-        "Cancel this workout? It will be discarded and any sets you logged will be deleted. This can't be undone."
-      )
-    )
-      return;
+    // The exit sheet's explicit "Discard" button is the confirmation now.
+    setShowExit(false);
     setCancelling(true);
     const res = await cancelWorkout(sessionId);
     if (res.ok) {
@@ -646,42 +645,29 @@ export function WorkoutMode({
     <div className="fixed inset-0 z-[100] flex flex-col bg-[var(--background-primary)]">
       {/* Header */}
       <header className="pt-safe z-10 border-b border-[var(--border-subtle)] bg-[var(--background-primary)] px-4 py-3">
-        <div className="mx-auto flex w-full max-w-xl items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={onSaveExit}
-              aria-label="Pause workout and exit"
-              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--surface-secondary)] px-3 text-xs font-semibold text-[var(--text-secondary)]"
-            >
-              <Pause className="h-4 w-4" /> Pause
-            </button>
-            <button
-              onClick={onCancel}
-              disabled={cancelling}
-              aria-label="Cancel and discard workout"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--surface-secondary)] hover:text-[var(--danger)] disabled:opacity-50"
-            >
-              <X className="h-4 w-4" />
-            </button>
+        <div className="mx-auto flex w-full max-w-xl items-center gap-3">
+          <button
+            onClick={() => setShowExit(true)}
+            aria-label="Pause or exit workout"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold leading-tight">{workoutName}</p>
+            <p className="truncate text-xs text-[var(--text-muted)]">
+              {completedSets}/{totalSets} sets{programName ? ` · ${programName}` : ""}
+            </p>
           </div>
-          <div className="min-w-0 text-center">
-            <p className="truncate text-xs text-[var(--text-muted)]">{programName}</p>
-            <p className="truncate text-sm font-semibold">{workoutName}</p>
-          </div>
-          <span className="rounded-full bg-[var(--surface-secondary)] px-3 py-1.5 text-sm font-mono font-semibold tabular-nums">
+          <span className="shrink-0 rounded-full bg-[var(--surface-secondary)] px-3 py-1.5 text-sm font-mono font-semibold tabular-nums">
             {formatDuration(elapsed)}
           </span>
         </div>
-        <div className="mx-auto mt-2 flex w-full max-w-xl items-center gap-2">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--surface-secondary)]">
-            <div
-              className="h-full bg-[var(--accent-primary)] transition-[width]"
-              style={{ width: `${totalSets ? (completedSets / totalSets) * 100 : 0}%` }}
-            />
-          </div>
-          <span className="text-xs text-[var(--text-muted)]">
-            {completedSets}/{totalSets}
-          </span>
+        <div className="mx-auto mt-2 h-1 w-full max-w-xl overflow-hidden rounded-full bg-[var(--surface-secondary)]">
+          <div
+            className="h-full bg-[var(--accent-primary)] transition-[width]"
+            style={{ width: `${totalSets ? (completedSets / totalSets) * 100 : 0}%` }}
+          />
         </div>
         {pending > 0 && (
           <p className="mt-1 text-center text-[11px] text-[var(--warning)]">
@@ -966,6 +952,47 @@ export function WorkoutMode({
               className="mt-4 w-full rounded-2xl py-2 text-sm text-[var(--text-secondary)]"
             >
               Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Exit sheet — pause (save) or discard */}
+      {showExit && (
+        <div
+          className="fixed inset-0 z-[180] flex items-end justify-center bg-black/70 p-4 sm:items-center"
+          onClick={() => !cancelling && setShowExit(false)}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-elevated)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b border-[var(--border-subtle)] p-4">
+              <p className="font-bold">Leave this workout?</p>
+              <p className="mt-0.5 text-sm text-[var(--text-secondary)]">
+                Your logged sets are already saved.
+              </p>
+            </div>
+            <MenuItem
+              icon={<Pause className="h-5 w-5" />}
+              label="Pause & exit — resume later"
+              onClick={() => {
+                setShowExit(false);
+                onSaveExit();
+              }}
+            />
+            <MenuItem
+              icon={<Trash2 className="h-5 w-5" />}
+              label={cancelling ? "Discarding…" : "Discard workout"}
+              danger
+              onClick={onCancel}
+            />
+            <button
+              onClick={() => setShowExit(false)}
+              disabled={cancelling}
+              className="w-full border-t border-[var(--border-subtle)] py-3 text-sm text-[var(--text-secondary)] disabled:opacity-50"
+            >
+              Keep training
             </button>
           </div>
         </div>
