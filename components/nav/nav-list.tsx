@@ -31,12 +31,18 @@ export function NavList({
   navBadges?: Record<string, number>;
   onNavigate?: () => void;
 }) {
-  // Everything starts expanded; members collapse the sections they don't use
-  // and those choices are remembered. Deterministic here so SSR matches.
+  // Start calm: only the first section (Train) is open; the rest collapse so the
+  // sidebar is a short, scannable list. The active route's section is force-open
+  // below, and members' expand/collapse choices are remembered. Deterministic
+  // here so SSR matches.
   const [open, setOpen] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
+    let first = true;
     for (const s of sections) {
-      if (s.title) init[s.title] = true;
+      if (s.title) {
+        init[s.title] = first;
+        first = false;
+      }
     }
     return init;
   });

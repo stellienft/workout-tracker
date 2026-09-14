@@ -1084,12 +1084,16 @@ export function WorkoutMode({
               <p className="truncate font-semibold leading-tight">{a.name}</p>
               {concernLabel && <ShieldAlert className="h-4 w-4 shrink-0 text-[var(--warning)]" />}
             </div>
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              <Badge>Sets {rows.length}</Badge>
-              {ex.repTarget && <Badge>Reps {ex.repTarget}</Badge>}
-              {ex.restSeconds > 0 && <Badge>Rest {fmtSecs(ex.restSeconds)}</Badge>}
-              {bw && <Badge>Bodyweight</Badge>}
-            </div>
+            <p className="mt-1 truncate text-xs text-[var(--text-muted)]">
+              {[
+                `${rows.length} ${rows.length === 1 ? "set" : "sets"}`,
+                ex.repTarget ? `${ex.repTarget} reps` : null,
+                ex.restSeconds > 0 ? `${fmtSecs(ex.restSeconds)} rest` : null,
+                bw ? "Bodyweight" : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
           </div>
           <button
             onClick={() => setMenuFor(ex.exerciseId)}
@@ -1316,13 +1320,6 @@ export function WorkoutMode({
   }
 }
 
-function Badge({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="rounded-md bg-[var(--surface-secondary)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">
-      {children}
-    </span>
-  );
-}
 
 function MenuItem({
   icon,
