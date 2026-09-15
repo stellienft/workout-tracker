@@ -71,6 +71,7 @@ export const navSections: NavSection[] = [
     title: "Progress",
     items: [
       { label: "Progress", href: "/progress", icon: TrendingUp },
+      { label: "Activities", href: "/activities", icon: Activity },
       { label: "Achievements", href: "/achievements", icon: Medal },
       { label: "Check-ins", href: "/check-ins", icon: ClipboardCheck },
       { label: "Friends", href: "/friends", icon: UserPlus },
