@@ -22,6 +22,8 @@ import { AccountDataControls } from "@/components/settings/account-data";
 import { FeedbackForm } from "@/components/settings/feedback-form";
 import { SpotifyConnect } from "@/components/spotify/spotify-connect";
 import { getSpotifyStatus } from "@/lib/actions/spotify";
+import { StravaConnect } from "@/components/strava/strava-connect";
+import { getStravaStatus } from "@/lib/actions/strava";
 
 export const metadata = { title: "Settings" };
 
@@ -31,6 +33,7 @@ export default async function SettingsPage() {
   const isTrainer = isTrainerRole(roles);
   const { isPro, source, currentPeriodEnd } = await getUserPlan();
   const spotify = await getSpotifyStatus();
+  const strava = await getStravaStatus();
 
   const planName = !isPro
     ? "Free"
@@ -106,8 +109,15 @@ export default async function SettingsPage() {
       </div>
 
       <div className="mt-6">
-        <h2 className="mb-3 text-lg font-bold">Music</h2>
-        <SpotifyConnect configured={spotify.configured} connected={spotify.connected} />
+        <h2 className="mb-3 text-lg font-bold">Connections</h2>
+        <div className="flex flex-col gap-3">
+          <StravaConnect
+            configured={strava.configured}
+            connected={strava.connected}
+            lastSyncedAt={strava.lastSyncedAt}
+          />
+          <SpotifyConnect configured={spotify.configured} connected={spotify.connected} />
+        </div>
       </div>
 
       <div className="mt-6">
