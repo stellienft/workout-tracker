@@ -19,15 +19,23 @@ export interface ParsedScanData {
   trunkMass?: number;
   leftLegMass?: number;
   rightLegMass?: number;
+  fatMassKg?: number;
+  leanMassKg?: number;
+  boneMineralKg?: number;
+  vatMassKg?: number;
+  androidFatPct?: number;
+  gynoidFatPct?: number;
 }
 
 const EXTRACT_SYSTEM =
   "You are a fitness data extraction assistant. Extract body composition metrics from the scan " +
-  "(which may be provided as text, an image, or a PDF). " +
+  "(which may be provided as text, an image, or a PDF), including DEXA and InBody reports. " +
   "Return ONLY valid JSON with these fields: scanDate (YYYY-MM-DD), source (inbody/dexa/evolt/other), " +
   "weightKg, bodyFatPct, muscleMassKg, waterPct, bmr, bmi, visceralFat, boneMassKg, proteinKg, " +
-  "leftArmMass, rightArmMass, trunkMass, leftLegMass, rightLegMass. " +
-  "Use null for fields not found. No markdown or explanation.";
+  "leftArmMass, rightArmMass, trunkMass, leftLegMass, rightLegMass, " +
+  "fatMassKg, leanMassKg, boneMineralKg, vatMassKg, androidFatPct, gynoidFatPct. " +
+  "IMPORTANT: report every mass in KILOGRAMS — DEXA machines often print grams, so divide by 1000 " +
+  "(e.g. 76753 g -> 76.75). Use null for fields not found. No markdown or explanation.";
 
 /** Send content blocks to Claude and map the returned JSON to ParsedScanData. */
 async function extractMetrics(content: unknown[]) {
@@ -72,24 +80,36 @@ async function extractMetrics(content: unknown[]) {
       const n = typeof v === "number" ? v : Number(v);
       return !isNaN(n) ? n : undefined;
     };
+    // Body masses over ~500 are really grams — bring them back to kg.
+    const kg = (v: unknown): number | undefined => {
+      const n = num(v);
+      if (n === undefined) return undefined;
+      return n > 500 ? Math.round((n / 1000) * 100) / 100 : n;
+    };
 
     const result: ParsedScanData = {
       scanDate: (parsed.scanDate as string) || undefined,
       source: (parsed.source as string) || undefined,
       weightKg: num(parsed.weightKg),
       bodyFatPct: num(parsed.bodyFatPct),
-      muscleMassKg: num(parsed.muscleMassKg),
+      muscleMassKg: kg(parsed.muscleMassKg),
       waterPct: num(parsed.waterPct),
       bmr: num(parsed.bmr) !== undefined ? Math.round(num(parsed.bmr)!) : undefined,
       bmi: num(parsed.bmi),
       visceralFat: num(parsed.visceralFat),
-      boneMassKg: num(parsed.boneMassKg),
-      proteinKg: num(parsed.proteinKg),
-      leftArmMass: num(parsed.leftArmMass),
-      rightArmMass: num(parsed.rightArmMass),
-      trunkMass: num(parsed.trunkMass),
-      leftLegMass: num(parsed.leftLegMass),
-      rightLegMass: num(parsed.rightLegMass),
+      boneMassKg: kg(parsed.boneMassKg),
+      proteinKg: kg(parsed.proteinKg),
+      leftArmMass: kg(parsed.leftArmMass),
+      rightArmMass: kg(parsed.rightArmMass),
+      trunkMass: kg(parsed.trunkMass),
+      leftLegMass: kg(parsed.leftLegMass),
+      rightLegMass: kg(parsed.rightLegMass),
+      fatMassKg: kg(parsed.fatMassKg),
+      leanMassKg: kg(parsed.leanMassKg),
+      boneMineralKg: kg(parsed.boneMineralKg),
+      vatMassKg: kg(parsed.vatMassKg),
+      androidFatPct: num(parsed.androidFatPct),
+      gynoidFatPct: num(parsed.gynoidFatPct),
     };
 
     const hasAny = Object.values(result).some((v) => v !== undefined);
@@ -172,6 +192,12 @@ export async function saveScanResult(data: {
   trunkMass?: number;
   leftLegMass?: number;
   rightLegMass?: number;
+  fatMassKg?: number;
+  leanMassKg?: number;
+  boneMineralKg?: number;
+  vatMassKg?: number;
+  androidFatPct?: number;
+  gynoidFatPct?: number;
   rawText?: string;
   scanImagePath?: string;
 }) {
@@ -191,6 +217,10 @@ export async function saveScanResult(data: {
   const validSources = ["inbody", "dexa", "evolt", "other"];
   const source = data.source && validSources.includes(data.source) ? data.source : null;
 
+  // Belt-and-suspenders: any body mass over ~500 is grams, not kg.
+  const kg = (v: number | undefined) =>
+    v == null ? null : v > 500 ? Math.round((v / 1000) * 100) / 100 : v;
+
   // AI may return an odd/blank date — only trust a strict YYYY-MM-DD, else today.
   const today = new Date().toISOString().slice(0, 10);
   const scanDate = /^\d{4}-\d{2}-\d{2}$/.test(data.scanDate ?? "")
@@ -205,18 +235,24 @@ export async function saveScanResult(data: {
       source,
       weight_kg: data.weightKg ?? null,
       body_fat_pct: data.bodyFatPct ?? null,
-      muscle_mass_kg: data.muscleMassKg ?? null,
+      muscle_mass_kg: kg(data.muscleMassKg),
       water_pct: data.waterPct ?? null,
       basal_metabolic_rate: data.bmr ?? null,
       bmi: data.bmi ?? null,
       visceral_fat_level: data.visceralFat ?? null,
-      bone_mass_kg: data.boneMassKg ?? null,
-      protein_kg: data.proteinKg ?? null,
-      left_arm_mass_kg: data.leftArmMass ?? null,
-      right_arm_mass_kg: data.rightArmMass ?? null,
-      trunk_mass_kg: data.trunkMass ?? null,
-      left_leg_mass_kg: data.leftLegMass ?? null,
-      right_leg_mass_kg: data.rightLegMass ?? null,
+      bone_mass_kg: kg(data.boneMassKg),
+      protein_kg: kg(data.proteinKg),
+      left_arm_mass_kg: kg(data.leftArmMass),
+      right_arm_mass_kg: kg(data.rightArmMass),
+      trunk_mass_kg: kg(data.trunkMass),
+      left_leg_mass_kg: kg(data.leftLegMass),
+      right_leg_mass_kg: kg(data.rightLegMass),
+      fat_mass_kg: kg(data.fatMassKg),
+      lean_mass_kg: kg(data.leanMassKg),
+      bone_mineral_kg: kg(data.boneMineralKg),
+      vat_mass_kg: kg(data.vatMassKg),
+      android_fat_pct: data.androidFatPct ?? null,
+      gynoid_fat_pct: data.gynoidFatPct ?? null,
       raw_text: data.rawText ?? null,
       scan_image_path: data.scanImagePath ?? null,
     }, { onConflict: "user_id,scan_date" })

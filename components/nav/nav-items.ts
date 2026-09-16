@@ -27,6 +27,7 @@ import {
   UserPlus,
   FlaskConical,
   Activity,
+  Ruler,
   type LucideIcon,
 } from "lucide-react";
 
@@ -71,6 +72,7 @@ export const navSections: NavSection[] = [
     title: "Progress",
     items: [
       { label: "Progress", href: "/progress", icon: TrendingUp },
+      { label: "Body Composition", href: "/body-composition", icon: Ruler, pro: true },
       { label: "Activities", href: "/activities", icon: Activity },
       { label: "Achievements", href: "/achievements", icon: Medal },
       { label: "Check-ins", href: "/check-ins", icon: ClipboardCheck },
