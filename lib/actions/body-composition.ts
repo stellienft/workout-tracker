@@ -258,6 +258,8 @@ export interface ScanPlan {
   cardio: string;
   nutrition: string;
   flags: string[];
+  macros: { calories: number; protein_g: number; carbs_g: number; fat_g: number } | null;
+  recommendedPrograms: string[]; // program slugs
 }
 
 const PLAN_SYSTEM =
@@ -265,12 +267,17 @@ const PLAN_SYSTEM =
   "and any change since the member's previous scan, produce a focused training plan that " +
   "targets what the report actually shows. Read the real numbers — regional lean/fat " +
   "asymmetry (left vs right arm/leg), body-fat %, visceral fat, and lean-mass trend. " +
+  "You are given a list of available programs (name — slug); recommend up to 3 by their " +
+  "EXACT slug only if they genuinely fit. " +
   "Return ONLY valid JSON with these fields: headline (<= 8 words), summary (1-2 sentences " +
   "reading the report), priorities (array of 2-4 objects {title, detail}), split (one " +
   "recommended weekly training split with a short rationale), cardio (one sentence of " +
   "guidance), nutrition (one sentence tied to the member's goal), flags (array of short " +
-  "strings for imbalances or health watch-items; may be empty). Be specific and practical. " +
-  "No markdown, no preamble.";
+  "strings for imbalances or health watch-items; may be empty), " +
+  "macros (object {calories, protein_g, carbs_g, fat_g} of suggested DAILY targets based on " +
+  "lean mass, BMR and goal — realistic integers, or null if you can't estimate), " +
+  "recommendedPrograms (array of up to 3 program slugs from the provided list, may be empty). " +
+  "Be specific and practical. No markdown, no preamble.";
 
 function scanMetricsText(
   scan: Record<string, unknown>,
@@ -370,15 +377,33 @@ export async function generateScanPlan(
     | undefined;
   const goalName = Array.isArray(fg) ? fg[0]?.name : fg?.name;
 
-  const text = scanMetricsText(
-    scan as Record<string, unknown>,
-    (prev as Record<string, unknown>) ?? null,
-    {
-      goal: goalName ?? null,
-      level: (profile?.experience_level as string) ?? null,
-      goalWeight: (profile?.goal_weight_kg as number) ?? null,
-    }
-  );
+  // Give the model the real program catalogue so its recommendations resolve.
+  const { data: programRows } = await supabase
+    .from("programs")
+    .select("slug, name, experience_level, short_description")
+    .eq("status", "published")
+    .limit(60);
+  const programs = (programRows ?? []) as {
+    slug: string;
+    name: string;
+    experience_level: string;
+    short_description: string | null;
+  }[];
+  const validSlugs = new Set(programs.map((p) => p.slug));
+  const programList = programs
+    .map((p) => `${p.name} (${p.experience_level}) — ${p.slug}`)
+    .join("\n");
+
+  const text =
+    scanMetricsText(
+      scan as Record<string, unknown>,
+      (prev as Record<string, unknown>) ?? null,
+      {
+        goal: goalName ?? null,
+        level: (profile?.experience_level as string) ?? null,
+        goalWeight: (profile?.goal_weight_kg as number) ?? null,
+      }
+    ) + `\n\nAvailable programs (name (level) — slug):\n${programList}`;
 
   let parsed: Record<string, unknown>;
   try {
@@ -409,6 +434,28 @@ export async function generateScanPlan(
 
   const str = (v: unknown, max = 400) => (v == null ? "" : String(v).slice(0, max));
   const arr = (v: unknown) => (Array.isArray(v) ? v : []);
+  const clampInt = (v: unknown, min: number, max: number): number | null => {
+    const nn = Math.round(Number(v));
+    return Number.isFinite(nn) ? Math.min(Math.max(nn, min), max) : null;
+  };
+  // Suggested macros — only kept if calories look sane (matches the nutrition
+  // targets schema bounds so they can be applied directly).
+  const mo = (parsed.macros ?? null) as Record<string, unknown> | null;
+  const cal = mo ? clampInt(mo.calories, 800, 8000) : null;
+  const macros =
+    mo && cal
+      ? {
+          calories: cal,
+          protein_g: clampInt(mo.protein_g ?? mo.protein, 0, 500) ?? 0,
+          carbs_g: clampInt(mo.carbs_g ?? mo.carbs, 0, 1000) ?? 0,
+          fat_g: clampInt(mo.fat_g ?? mo.fat, 0, 400) ?? 0,
+        }
+      : null;
+  const recommendedPrograms = arr(parsed.recommendedPrograms)
+    .map((s) => str(s, 80))
+    .filter((s) => validSlugs.has(s))
+    .slice(0, 3);
+
   const plan: ScanPlan = {
     headline: str(parsed.headline, 80) || "Your training focus",
     summary: str(parsed.summary, 400),
@@ -423,6 +470,8 @@ export async function generateScanPlan(
     cardio: str(parsed.cardio, 300),
     nutrition: str(parsed.nutrition, 300),
     flags: arr(parsed.flags).slice(0, 6).map((f) => str(f, 140)).filter(Boolean),
+    macros,
+    recommendedPrograms,
   };
 
   await supabase
@@ -433,4 +482,96 @@ export async function generateScanPlan(
 
   revalidatePath("/progress");
   return { ok: true as const, plan };
+}
+
+/** Apply the scan plan's suggested macros as the member's nutrition targets. */
+export async function applyScanMacros(scanId: string) {
+  const { createClient } = await import("@/lib/supabase/server");
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+
+  const { data: scan } = await supabase
+    .from("body_composition_scans")
+    .select("ai_plan")
+    .eq("id", scanId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const macros = (scan?.ai_plan as ScanPlan | null)?.macros ?? null;
+  if (!macros) return { ok: false as const, error: "No suggested macros on this scan." };
+
+  const { error } = await supabase.from("nutrition_targets").upsert(
+    {
+      user_id: user.id,
+      calories: macros.calories,
+      protein_g: macros.protein_g,
+      carbs_g: macros.carbs_g,
+      fat_g: macros.fat_g,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" }
+  );
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath("/nutrition");
+  return { ok: true as const };
+}
+
+/** Send a scan + its AI plan to the member's coach (if they have one). */
+export async function shareScanWithCoach(scanId: string) {
+  const { createClient } = await import("@/lib/supabase/server");
+  const { notifyUser } = await import("@/lib/notify");
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+
+  // Find the member's active coach (tenant owner).
+  const { data: link } = await supabase
+    .from("trainer_clients")
+    .select("tenant_id, display_name")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle();
+  if (!link?.tenant_id)
+    return { ok: false as const, error: "You're not connected to a coach yet." };
+
+  const [{ data: tenant }, { data: scan }, { data: profile }] = await Promise.all([
+    supabase.from("tenants").select("owner_user_id, name").eq("id", link.tenant_id).maybeSingle(),
+    supabase
+      .from("body_composition_scans")
+      .select("scan_date, source, body_fat_pct, muscle_mass_kg, ai_plan")
+      .eq("id", scanId)
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+  ]);
+  const coachId = tenant?.owner_user_id as string | undefined;
+  if (!coachId) return { ok: false as const, error: "Couldn't find your coach." };
+  if (!scan) return { ok: false as const, error: "Scan not found." };
+
+  const who =
+    (link.display_name as string) || (profile?.full_name as string) || "A client";
+  const headline = (scan.ai_plan as ScanPlan | null)?.headline;
+  const bits = [
+    scan.source ? String(scan.source).toUpperCase() : "Scan",
+    scan.body_fat_pct != null ? `${Number(scan.body_fat_pct).toFixed(1)}% BF` : null,
+    scan.muscle_mass_kg != null ? `${Number(scan.muscle_mass_kg).toFixed(1)}kg lean` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  await notifyUser({
+    userId: coachId,
+    type: "scan_shared",
+    title: `${who} shared a body scan`,
+    body: [bits, headline].filter(Boolean).join(" — "),
+    link: "/trainer/clients",
+  });
+
+  return { ok: true as const };
 }

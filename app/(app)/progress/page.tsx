@@ -15,7 +15,9 @@ import { MuscleSuggestions } from "@/components/progress/muscle-suggestions";
 import { BodyScanUpload } from "@/components/progress/body-scan-upload";
 import { BodyCompCard } from "@/components/progress/body-comp-card";
 import { BodyCompTrends } from "@/components/progress/body-comp-trends";
-import { ScanPlanCard } from "@/components/progress/scan-plan-card";
+import { ScanPlanCard, type RecoProgram } from "@/components/progress/scan-plan-card";
+import { SegmentBalance } from "@/components/progress/segment-balance";
+import { GoalProjection } from "@/components/progress/goal-projection";
 import {
   MusclePreservation,
   type PreservationInsight,
@@ -37,7 +39,7 @@ export default async function ProgressPage() {
 
   const { data: prof } = await supabase
     .from("profiles")
-    .select("timezone")
+    .select("timezone, goal_weight_kg")
     .eq("id", user.id)
     .maybeSingle();
   const tz = prof?.timezone || DEFAULT_TZ;
@@ -82,6 +84,58 @@ export default async function ProgressPage() {
   ]);
   const scans = (scanRows ?? []) as Record<string, unknown>[];
   const latestScan = scans[0] ?? null;
+
+  // Resolve the plan's recommended program slugs to real programs, check for a
+  // coach (to enable sharing), and note weeks since the last scan (re-scan nudge).
+  const latestPlan =
+    (latestScan as { ai_plan?: import("@/lib/actions/body-composition").ScanPlan | null })
+      ?.ai_plan ?? null;
+  const recoSlugs = latestPlan?.recommendedPrograms ?? [];
+  const [{ data: recoRows }, { data: coachLink }] = await Promise.all([
+    recoSlugs.length
+      ? supabase
+          .from("programs")
+          .select("slug, name, experience_level")
+          .in("slug", recoSlugs)
+          .eq("status", "published")
+      : Promise.resolve({ data: [] as RecoProgram[] }),
+    supabase
+      .from("trainer_clients")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  // Preserve the AI's recommended order.
+  const recoMap = new Map((recoRows ?? []).map((p) => [p.slug as string, p as RecoProgram]));
+  const recommendedPrograms = recoSlugs
+    .map((s) => recoMap.get(s))
+    .filter((p): p is RecoProgram => !!p);
+  const hasCoach = Boolean(coachLink);
+
+  const weeksSinceScan = latestScan?.scan_date
+    ? Math.floor(
+        (Date.now() - new Date(String(latestScan.scan_date)).getTime()) / (7 * 86_400_000)
+      )
+    : null;
+
+  // Weekly rate of weight change over the last ~8 weeks, for the goal projection.
+  const weightPts = (metrics ?? [])
+    .filter((m) => m.weight_kg != null)
+    .map((m) => ({ t: new Date(String(m.recorded_on)).getTime(), w: Number(m.weight_kg) }));
+  const currentWeight = weightPts.length ? weightPts[weightPts.length - 1].w : null;
+  let weeklyRate: number | null = null;
+  const windowStart = Date.now() - 56 * 86_400_000;
+  const recentPts = weightPts.filter((p) => p.t >= windowStart);
+  const rateBase = recentPts.length >= 2 ? recentPts : weightPts.length >= 2 ? weightPts : [];
+  if (rateBase.length >= 2) {
+    const a = rateBase[0];
+    const b = rateBase[rateBase.length - 1];
+    const weeks = (b.t - a.t) / (7 * 86_400_000);
+    if (weeks >= 0.5) weeklyRate = (b.w - a.w) / weeks;
+  }
+  const goalWeight = (prof?.goal_weight_kg as number | null) ?? null;
 
   // Strength progress: set logs + exercise names, last 120 days.
   const sinceDate = new Date(Date.now() - 120 * 86_400_000).toISOString();
@@ -291,22 +345,37 @@ export default async function ProgressPage() {
       {/* Body Composition Scan — Pro only */}
       <div className="mt-6">
         <h2 className="text-lg font-bold">Body Composition Scan</h2>
+
+        {/* Re-scan nudge */}
+        {weeksSinceScan != null && weeksSinceScan >= 10 && (
+          <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border-active)] bg-[var(--accent-muted)] px-4 py-3 text-sm">
+            It&apos;s been <span className="font-semibold">{weeksSinceScan} weeks</span> since
+            your last scan — a fresh one keeps your comparisons and plan on track.
+          </div>
+        )}
+
         {latestScan && (
           <div className="mt-4 space-y-4">
             <BodyCompCard
               scan={latestScan as Record<string, unknown>}
               prev={(scans[1] as Record<string, unknown>) ?? null}
             />
+            <GoalProjection
+              currentWeight={currentWeight}
+              goalWeight={goalWeight}
+              weeklyRate={weeklyRate}
+            />
+            <SegmentBalance scan={latestScan as Record<string, unknown>} />
             <ScanPlanCard
               scanId={(latestScan as { id: string }).id}
-              initialPlan={
-                ((latestScan as { ai_plan?: import("@/lib/actions/body-composition").ScanPlan | null }).ai_plan) ??
-                null
-              }
+              initialPlan={latestPlan}
               generatedAt={
                 ((latestScan as { ai_plan_generated_at?: string | null }).ai_plan_generated_at) ?? null
               }
               isPro={isPro}
+              recommendedPrograms={recommendedPrograms}
+              hasCoach={hasCoach}
+              printHref={`/scan-report/${(latestScan as { id: string }).id}`}
             />
           </div>
         )}
