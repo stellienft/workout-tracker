@@ -205,23 +205,25 @@ export function WalkingPadClient() {
     });
   }
 
-  if (!supported) {
-    return (
-      <div className="mt-6 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-6 text-center">
-        <Bluetooth className="mx-auto h-8 w-8 text-[var(--text-muted)]" />
-        <p className="mt-2 font-bold">Bluetooth isn&apos;t available here</p>
-        <p className="mx-auto mt-1 max-w-sm text-sm text-[var(--text-secondary)]">
-          Walking-pad connection uses Web Bluetooth, which works in Chrome or Edge on
-          Android, Windows, macOS and ChromeOS. It isn&apos;t supported on iPhone/iPad
-          browsers.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="mt-6 space-y-4">
-      {/* Live step counter */}
+      {!supported && (
+        <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4">
+          <p className="flex items-center gap-2 font-semibold">
+            <Bluetooth className="h-4 w-4 text-[var(--text-muted)]" /> Live Bluetooth
+            connect isn&apos;t available here
+          </p>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            iPhones and iPads don&apos;t allow Web Bluetooth, so live pairing only works in
+            Chrome or Edge on Android/desktop. You can still log your walk below — just read
+            the totals off your pad&apos;s display when you&apos;re done.
+          </p>
+        </div>
+      )}
+
+      {supported && (
+        <>
+          {/* Live step counter */}
       <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-6 text-center">
         <p className="flex items-center justify-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
           <Footprints className="h-3.5 w-3.5" /> Steps
@@ -304,6 +306,95 @@ export function WalkingPadClient() {
         Works with Bluetooth walking pads &amp; treadmills that support the standard
         fitness-machine profile (FTMS). Keep this screen open while you walk.
       </p>
+        </>
+      )}
+
+      <ManualLog />
+    </div>
+  );
+}
+
+/** Universal fallback: type in a walk from the pad's display. Works everywhere. */
+function ManualLog() {
+  const router = useRouter();
+  const toast = useToast();
+  const [saving, setSaving] = useState(false);
+  const [steps, setSteps] = useState("");
+  const [km, setKm] = useState("");
+  const [mins, setMins] = useState("");
+  const [kcal, setKcal] = useState("");
+
+  function save() {
+    const s = Number(steps) || 0;
+    const distanceM = Math.round((Number(km) || 0) * 1000);
+    if (s <= 0 && distanceM <= 0) {
+      toast("Enter your steps or distance.", "error");
+      return;
+    }
+    setSaving(true);
+    saveWalkingPadSession({
+      steps: s,
+      distanceM,
+      movingSeconds: Math.round((Number(mins) || 0) * 60),
+      calories: Math.round(Number(kcal) || 0),
+    }).then((res) => {
+      setSaving(false);
+      if (res.ok) {
+        toast("Walk saved to your activities.", "success");
+        setSteps("");
+        setKm("");
+        setMins("");
+        setKcal("");
+        router.refresh();
+      } else {
+        toast(res.error ?? "Couldn't save", "error");
+      }
+    });
+  }
+
+  const fields: [string, string, string, (v: string) => void, string][] = [
+    ["Steps", steps, "e.g. 3200", setSteps, ""],
+    ["Distance", km, "e.g. 2.4", setKm, "km"],
+    ["Time", mins, "e.g. 30", setMins, "min"],
+    ["Calories", kcal, "e.g. 120", setKcal, "kcal"],
+  ];
+
+  return (
+    <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
+      <h2 className="text-lg font-bold">Log a walk</h2>
+      <p className="mt-0.5 text-sm text-[var(--text-secondary)]">
+        Read the totals off your pad&apos;s display and enter them here.
+      </p>
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {fields.map(([label, val, ph, setter, unit]) => (
+          <label key={label} className="flex flex-col gap-1 text-xs text-[var(--text-muted)]">
+            {label}
+            {unit ? <span className="sr-only">{unit}</span> : null}
+            <span className="relative">
+              <input
+                type="number"
+                inputMode="decimal"
+                value={val}
+                onChange={(e) => setter(e.target.value)}
+                placeholder={ph}
+                className="h-11 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 text-sm text-[var(--text-primary)] focus:border-[var(--border-active)] focus:outline-none"
+              />
+              {unit ? (
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted)]">
+                  {unit}
+                </span>
+              ) : null}
+            </span>
+          </label>
+        ))}
+      </div>
+      <button
+        onClick={save}
+        disabled={saving}
+        className="mt-4 inline-flex items-center gap-1.5 rounded-2xl bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-semibold text-[var(--accent-ink)] disabled:opacity-60"
+      >
+        <Save className="h-4 w-4" /> {saving ? "Saving…" : "Save walk"}
+      </button>
     </div>
   );
 }
