@@ -136,15 +136,17 @@ export function ScanPlanCard({
       </div>
 
       {plan.summary && (
-        <p className="mt-2 text-sm text-[var(--text-secondary)]">{plan.summary}</p>
+        <p className="mt-2 max-w-[65ch] text-[15px] leading-relaxed text-[var(--text-secondary)]">
+          {plan.summary}
+        </p>
       )}
 
       {plan.flags.length > 0 && (
-        <div className="mt-3 flex flex-col gap-1.5">
+        <div className="mt-3 flex max-w-[65ch] flex-col gap-1.5">
           {plan.flags.map((f, i) => (
             <p
               key={i}
-              className="flex items-start gap-2 rounded-lg bg-[var(--warning)]/10 px-3 py-2 text-xs text-[var(--warning)]"
+              className="flex items-start gap-2 rounded-lg bg-[var(--warning)]/10 px-3 py-2 text-[13px] text-[var(--warning)]"
             >
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>{f}</span>
@@ -154,30 +156,41 @@ export function ScanPlanCard({
       )}
 
       {plan.priorities.length > 0 && (
-        <ol className="mt-4 space-y-2.5">
-          {plan.priorities.map((p, i) => (
-            <li key={i} className="flex gap-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent-muted)] text-xs font-bold text-[var(--accent-primary)]">
-                {i + 1}
-              </span>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold">{p.title}</p>
-                {p.detail && <p className="text-xs text-[var(--text-muted)]">{p.detail}</p>}
-              </div>
-            </li>
-          ))}
-        </ol>
+        <div className="mt-5 max-w-[65ch]">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+            Priorities
+          </p>
+          <ol className="space-y-3">
+            {plan.priorities.map((p, i) => (
+              <li key={i} className="flex gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent-muted)] text-xs font-bold text-[var(--accent-primary)]">
+                  {i + 1}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[15px] font-semibold leading-snug">{p.title}</p>
+                  {p.detail && (
+                    <p className="mt-0.5 text-[13px] leading-relaxed text-[var(--text-secondary)]">
+                      {p.detail}
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
       )}
 
-      <div className="mt-4 grid gap-2.5 sm:grid-cols-3">
-        {plan.split && <PlanBox icon={<Dumbbell className="h-4 w-4" />} label="Training" text={plan.split} />}
-        {plan.cardio && <PlanBox icon={<HeartPulse className="h-4 w-4" />} label="Cardio" text={plan.cardio} />}
-        {plan.nutrition && <PlanBox icon={<Utensils className="h-4 w-4" />} label="Nutrition" text={plan.nutrition} />}
-      </div>
+      {(plan.split || plan.cardio || plan.nutrition) && (
+        <div className="mt-5 max-w-[65ch] overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)]">
+          {plan.split && <PlanRow icon={<Dumbbell className="h-4 w-4" />} label="Training" text={plan.split} />}
+          {plan.cardio && <PlanRow icon={<HeartPulse className="h-4 w-4" />} label="Cardio" text={plan.cardio} />}
+          {plan.nutrition && <PlanRow icon={<Utensils className="h-4 w-4" />} label="Nutrition" text={plan.nutrition} />}
+        </div>
+      )}
 
       {/* Suggested macros → one tap to nutrition targets */}
       {plan.macros && (
-        <div className="mt-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3">
+        <div className="mt-5 max-w-[65ch] rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3">
           <div className="flex items-center justify-between gap-3">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
               Suggested daily targets
@@ -209,7 +222,7 @@ export function ScanPlanCard({
 
       {/* Recommended programs → one tap to start */}
       {recommendedPrograms.length > 0 && (
-        <div className="mt-4">
+        <div className="mt-5 max-w-[65ch]">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
             Programs that fit this focus
           </p>
@@ -265,7 +278,7 @@ export function ScanPlanCard({
   );
 }
 
-function PlanBox({
+function PlanRow({
   icon,
   label,
   text,
@@ -275,11 +288,11 @@ function PlanBox({
   text: string;
 }) {
   return (
-    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3">
-      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+    <div className="flex flex-col gap-1 border-b border-[var(--border-subtle)] p-4 last:border-0 sm:flex-row sm:gap-4">
+      <p className="flex shrink-0 items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)] sm:w-24 sm:pt-0.5">
         {icon} {label}
       </p>
-      <p className="mt-1 text-xs text-[var(--text-secondary)]">{text}</p>
+      <p className="text-sm leading-relaxed text-[var(--text-secondary)]">{text}</p>
     </div>
   );
 }
