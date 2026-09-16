@@ -38,6 +38,7 @@ export default async function NutritionPage({
     primaryGoal,
     { data: profile },
     { data: favs },
+    { data: scanRow },
   ] = await Promise.all([
     supabase.from("nutrition_targets").select("*").eq("user_id", user.id).maybeSingle(),
     supabase
@@ -59,10 +60,37 @@ export default async function NutritionPage({
       .limit(1)
       .maybeSingle(),
     getPrimaryGoal(user.id),
-    supabase.from("profiles").select("weekly_frequency").eq("id", user.id).maybeSingle(),
+    supabase.from("profiles").select("weekly_frequency, age").eq("id", user.id).maybeSingle(),
     supabase.from("recipe_favorites").select("recipe_id").eq("user_id", user.id),
+    supabase
+      .from("body_composition_scans")
+      .select("scan_date, weight_kg, lean_mass_kg, muscle_mass_kg, body_fat_pct")
+      .eq("user_id", user.id)
+      .order("scan_date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
   const favoriteIds = (favs ?? []).map((f) => f.recipe_id as string);
+
+  // Feed the guided setup: prefer a real lean-mass reading, falling back to
+  // muscle mass when a scan only reports that.
+  const setupScan = scanRow
+    ? {
+        scan_date: (scanRow.scan_date as string) ?? null,
+        weight_kg: scanRow.weight_kg != null ? Number(scanRow.weight_kg) : null,
+        lean_mass_kg:
+          scanRow.lean_mass_kg != null
+            ? Number(scanRow.lean_mass_kg)
+            : scanRow.muscle_mass_kg != null
+              ? Number(scanRow.muscle_mass_kg)
+              : null,
+        body_fat_pct: scanRow.body_fat_pct != null ? Number(scanRow.body_fat_pct) : null,
+      }
+    : null;
+  const setupProfile = {
+    age: (profile?.age as number | null) ?? null,
+    weightKg: weightRow?.weight_kg != null ? Number(weightRow.weight_kg) : null,
+  };
 
   const suggested = suggestTargets({
     weightKg: weightRow?.weight_kg ?? null,
@@ -100,6 +128,8 @@ export default async function NutritionPage({
           suggested={suggested}
           hasSavedTargets={Boolean(targetsRow)}
           favoriteIds={favoriteIds}
+          setupScan={setupScan}
+          setupProfile={setupProfile}
           entries={(entries ?? []).map((e) => ({
             id: e.id as string,
             meal: e.meal as string,
