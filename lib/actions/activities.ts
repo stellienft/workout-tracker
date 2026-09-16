@@ -32,7 +32,7 @@ export async function saveWalkingPadSession(input: z.input<typeof schema>) {
     // A unique-per-session id (no external system to dedupe against).
     external_id: `wp-${now.getTime()}`,
     activity_type: "Walk",
-    name: "Walking pad",
+    name: "Walk",
     distance_m: d.distanceM || null,
     moving_time_s: d.movingSeconds || null,
     elapsed_time_s: d.movingSeconds || null,
@@ -43,6 +43,6 @@ export async function saveWalkingPadSession(input: z.input<typeof schema>) {
   if (error) return { ok: false as const, error: error.message };
 
   revalidatePath("/activities");
-  revalidatePath("/walking-pad");
+  revalidatePath("/walking");
   return { ok: true as const };
 }
