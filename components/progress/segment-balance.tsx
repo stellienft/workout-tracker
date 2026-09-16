@@ -15,8 +15,23 @@ function fillFor(state: State): string {
   return "var(--text-muted)";
 }
 function opacityFor(state: State): number {
-  return state === "neutral" ? 0.25 : 0.55;
+  return state === "neutral" ? 0.22 : 0.9;
 }
+
+// A tapered "muscle" capsule: rounded top (width w0) tapering to a rounded
+// bottom (width w1), optionally leaning from (x0,y0) to (x1,y1).
+function limb(x0: number, y0: number, w0: number, x1: number, y1: number, w1: number) {
+  const r0 = w0 / 2;
+  const r1 = w1 / 2;
+  return `M ${x0 - r0} ${y0} A ${r0} ${r0} 0 0 1 ${x0 + r0} ${y0} L ${x1 + r1} ${y1} A ${r1} ${r1} 0 0 1 ${x1 - r1} ${y1} Z`;
+}
+
+// V-taper torso: broad shoulders → narrow waist → hips.
+const TRUNK =
+  "M 74 102 C 74 89 93 84 108 84 L 132 84 C 147 84 166 89 166 102 " +
+  "C 164 132 156 152 150 178 C 156 191 160 199 158 209 " +
+  "C 150 215 90 215 82 209 C 80 199 84 191 90 178 " +
+  "C 84 152 76 132 74 102 Z";
 
 /** Compare a left/right pair; the smaller side is "behind" if the gap ≥ 3%. */
 function pairStates(
@@ -63,24 +78,23 @@ export function SegmentBalance({ scan }: { scan: Seg | null }) {
       </p>
 
       <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-center sm:gap-8">
-        <svg viewBox="0 0 200 300" className="h-56 w-auto" role="img" aria-label="Body balance map">
-          {/* head */}
-          <circle cx="100" cy="30" r="18" fill="var(--text-muted)" fillOpacity="0.25" />
+        <svg viewBox="0 0 240 430" className="h-64 w-auto" role="img" aria-label="Body balance map">
+          {/* base body (neutral): head, neck, feet */}
+          <circle cx="120" cy="44" r="26" fill="var(--text-muted)" fillOpacity="0.22" />
+          <path d={limb(120, 62, 26, 120, 90, 32)} fill="var(--text-muted)" fillOpacity="0.22" />
+          <ellipse cx="99" cy="418" rx="14" ry="7" fill="var(--text-muted)" fillOpacity="0.22" />
+          <ellipse cx="141" cy="418" rx="14" ry="7" fill="var(--text-muted)" fillOpacity="0.22" />
+
           {/* trunk */}
-          <rect x="76" y="52" width="48" height="86" rx="16"
-            fill={fillFor(trunkState)} fillOpacity={opacityFor(trunkState)} />
-          {/* person's RIGHT arm (viewer left) */}
-          <rect x="48" y="56" width="20" height="80" rx="10"
-            fill={fillFor(arms.right)} fillOpacity={opacityFor(arms.right)} />
-          {/* person's LEFT arm (viewer right) */}
-          <rect x="132" y="56" width="20" height="80" rx="10"
-            fill={fillFor(arms.left)} fillOpacity={opacityFor(arms.left)} />
-          {/* person's RIGHT leg (viewer left) */}
-          <rect x="80" y="144" width="18" height="118" rx="9"
-            fill={fillFor(legs.right)} fillOpacity={opacityFor(legs.right)} />
-          {/* person's LEFT leg (viewer right) */}
-          <rect x="102" y="144" width="18" height="118" rx="9"
-            fill={fillFor(legs.left)} fillOpacity={opacityFor(legs.left)} />
+          <path d={TRUNK} fill={fillFor(trunkState)} fillOpacity={opacityFor(trunkState)} />
+
+          {/* arms — viewer-left is the person's RIGHT side, and vice-versa */}
+          <path d={limb(66, 104, 30, 56, 214, 16)} fill={fillFor(arms.right)} fillOpacity={opacityFor(arms.right)} />
+          <path d={limb(174, 104, 30, 184, 214, 16)} fill={fillFor(arms.left)} fillOpacity={opacityFor(arms.left)} />
+
+          {/* legs */}
+          <path d={limb(102, 210, 38, 100, 408, 21)} fill={fillFor(legs.right)} fillOpacity={opacityFor(legs.right)} />
+          <path d={limb(138, 210, 38, 140, 408, 21)} fill={fillFor(legs.left)} fillOpacity={opacityFor(legs.left)} />
         </svg>
 
         <div className="w-full max-w-[15rem] space-y-2 text-sm">
