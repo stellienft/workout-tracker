@@ -1,26 +1,57 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Sparkles, Dumbbell, HeartPulse, Utensils, AlertTriangle, Lock } from "lucide-react";
+import {
+  Sparkles,
+  Dumbbell,
+  HeartPulse,
+  Utensils,
+  AlertTriangle,
+  Lock,
+  ArrowRight,
+  Check,
+  Send,
+  Printer,
+} from "lucide-react";
 import { useToast } from "@/components/ui/toast";
-import { generateScanPlan, type ScanPlan } from "@/lib/actions/body-composition";
+import {
+  generateScanPlan,
+  applyScanMacros,
+  shareScanWithCoach,
+  type ScanPlan,
+} from "@/lib/actions/body-composition";
+
+export interface RecoProgram {
+  slug: string;
+  name: string;
+  experience_level: string;
+}
 
 export function ScanPlanCard({
   scanId,
   initialPlan,
   generatedAt,
   isPro,
+  recommendedPrograms,
+  hasCoach,
+  printHref,
 }: {
   scanId: string;
   initialPlan: ScanPlan | null;
   generatedAt: string | null;
   isPro: boolean;
+  recommendedPrograms: RecoProgram[];
+  hasCoach: boolean;
+  printHref: string;
 }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
   const [plan, setPlan] = useState<ScanPlan | null>(initialPlan);
+  const [macrosApplied, setMacrosApplied] = useState(false);
+  const [shared, setShared] = useState(false);
 
   function generate() {
     startTransition(async () => {
@@ -31,6 +62,30 @@ export function ScanPlanCard({
         router.refresh();
       } else {
         toast(res.error ?? "Couldn't generate a plan", "error");
+      }
+    });
+  }
+
+  function applyMacros() {
+    startTransition(async () => {
+      const res = await applyScanMacros(scanId);
+      if (res.ok) {
+        setMacrosApplied(true);
+        toast("Nutrition targets updated.", "success");
+      } else {
+        toast(res.error ?? "Couldn't apply macros", "error");
+      }
+    });
+  }
+
+  function share() {
+    startTransition(async () => {
+      const res = await shareScanWithCoach(scanId);
+      if (res.ok) {
+        setShared(true);
+        toast("Sent to your coach.", "success");
+      } else {
+        toast(res.error ?? "Couldn't share", "error");
       }
     });
   }
@@ -46,7 +101,7 @@ export function ScanPlanCard({
             <p className="font-bold">Turn this scan into a plan</p>
             <p className="mt-0.5 text-sm text-[var(--text-secondary)]">
               Let the AI coach read your scan — imbalances, body fat, lean mass — and
-              build a training focus around it.
+              build a training focus, macro targets and program picks around it.
             </p>
             <button
               onClick={generate}
@@ -107,9 +162,7 @@ export function ScanPlanCard({
               </span>
               <div className="min-w-0">
                 <p className="text-sm font-semibold">{p.title}</p>
-                {p.detail && (
-                  <p className="text-xs text-[var(--text-muted)]">{p.detail}</p>
-                )}
+                {p.detail && <p className="text-xs text-[var(--text-muted)]">{p.detail}</p>}
               </div>
             </li>
           ))}
@@ -117,15 +170,90 @@ export function ScanPlanCard({
       )}
 
       <div className="mt-4 grid gap-2.5 sm:grid-cols-3">
-        {plan.split && (
-          <PlanBox icon={<Dumbbell className="h-4 w-4" />} label="Training" text={plan.split} />
+        {plan.split && <PlanBox icon={<Dumbbell className="h-4 w-4" />} label="Training" text={plan.split} />}
+        {plan.cardio && <PlanBox icon={<HeartPulse className="h-4 w-4" />} label="Cardio" text={plan.cardio} />}
+        {plan.nutrition && <PlanBox icon={<Utensils className="h-4 w-4" />} label="Nutrition" text={plan.nutrition} />}
+      </div>
+
+      {/* Suggested macros → one tap to nutrition targets */}
+      {plan.macros && (
+        <div className="mt-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              Suggested daily targets
+            </p>
+            <button
+              onClick={applyMacros}
+              disabled={pending || macrosApplied}
+              className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-primary)] px-3 py-1 text-xs font-semibold text-[var(--accent-ink)] disabled:opacity-60"
+            >
+              {macrosApplied ? <Check className="h-3.5 w-3.5" /> : null}
+              {macrosApplied ? "Applied" : "Apply to nutrition"}
+            </button>
+          </div>
+          <div className="mt-2 grid grid-cols-4 gap-2 text-center">
+            {[
+              ["kcal", plan.macros.calories],
+              ["P", plan.macros.protein_g],
+              ["C", plan.macros.carbs_g],
+              ["F", plan.macros.fat_g],
+            ].map(([l, v]) => (
+              <div key={l as string}>
+                <p className="text-sm font-bold tabular-nums">{v as number}</p>
+                <p className="text-[10px] text-[var(--text-muted)]">{l as string}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recommended programs → one tap to start */}
+      {recommendedPrograms.length > 0 && (
+        <div className="mt-4">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+            Programs that fit this focus
+          </p>
+          <div className="flex flex-col gap-2">
+            {recommendedPrograms.map((p) => (
+              <Link
+                key={p.slug}
+                href={`/programs/${p.slug}`}
+                className="flex items-center gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3 transition-colors hover:border-[var(--border-active)]"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--accent-muted)] text-[var(--accent-primary)]">
+                  <Dumbbell className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{p.name}</p>
+                  <p className="text-xs capitalize text-[var(--text-muted)]">{p.experience_level}</p>
+                </div>
+                <ArrowRight className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-4">
+        {hasCoach && (
+          <button
+            onClick={share}
+            disabled={pending || shared}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-60"
+          >
+            {shared ? <Check className="h-3.5 w-3.5" /> : <Send className="h-3.5 w-3.5" />}
+            {shared ? "Sent to coach" : "Share with coach"}
+          </button>
         )}
-        {plan.cardio && (
-          <PlanBox icon={<HeartPulse className="h-4 w-4" />} label="Cardio" text={plan.cardio} />
-        )}
-        {plan.nutrition && (
-          <PlanBox icon={<Utensils className="h-4 w-4" />} label="Nutrition" text={plan.nutrition} />
-        )}
+        <a
+          href={printHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+        >
+          <Printer className="h-3.5 w-3.5" /> Print / Save PDF
+        </a>
       </div>
 
       {generatedAt && (
