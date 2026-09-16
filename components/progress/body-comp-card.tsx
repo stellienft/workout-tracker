@@ -16,12 +16,18 @@ interface ScanRow {
 const METRICS: { key: keyof ScanRow; label: string; unit?: string }[] = [
   { key: "weight_kg", label: "Weight", unit: "kg" },
   { key: "body_fat_pct", label: "Body Fat", unit: "%" },
+  { key: "fat_mass_kg", label: "Fat Mass", unit: "kg" },
+  { key: "lean_mass_kg", label: "Lean Mass", unit: "kg" },
   { key: "muscle_mass_kg", label: "Muscle Mass", unit: "kg" },
+  { key: "bone_mineral_kg", label: "Bone Mineral", unit: "kg" },
+  { key: "bone_mass_kg", label: "Bone Mass", unit: "kg" },
+  { key: "vat_mass_kg", label: "Visceral Fat", unit: "kg" },
+  { key: "visceral_fat_level", label: "Visceral Fat" },
+  { key: "android_fat_pct", label: "Android Fat", unit: "%" },
+  { key: "gynoid_fat_pct", label: "Gynoid Fat", unit: "%" },
   { key: "water_pct", label: "Water", unit: "%" },
   { key: "bmi", label: "BMI" },
   { key: "basal_metabolic_rate", label: "BMR", unit: "kcal" },
-  { key: "visceral_fat_level", label: "Visceral Fat" },
-  { key: "bone_mass_kg", label: "Bone Mass", unit: "kg" },
   { key: "protein_kg", label: "Protein", unit: "kg" },
 ];
 

@@ -109,6 +109,12 @@ export function BodyScanUpload({ isPro = false }: { isPro?: boolean } = {}) {
         trunkMass: data.trunkMass as number | undefined,
         leftLegMass: data.leftLegMass as number | undefined,
         rightLegMass: data.rightLegMass as number | undefined,
+        fatMassKg: data.fatMassKg as number | undefined,
+        leanMassKg: data.leanMassKg as number | undefined,
+        boneMineralKg: data.boneMineralKg as number | undefined,
+        vatMassKg: data.vatMassKg as number | undefined,
+        androidFatPct: data.androidFatPct as number | undefined,
+        gynoidFatPct: data.gynoidFatPct as number | undefined,
         rawText: scanText,
         scanImagePath: imagePath ?? undefined,
       });

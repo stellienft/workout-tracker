@@ -12,12 +12,6 @@ import {
 } from "@/components/progress/progress-photos";
 import { DEFAULT_TZ, startOfWeekInTz, zonedParts } from "@/lib/timezone";
 import { MuscleSuggestions } from "@/components/progress/muscle-suggestions";
-import { BodyScanUpload } from "@/components/progress/body-scan-upload";
-import { BodyCompCard } from "@/components/progress/body-comp-card";
-import { BodyCompTrends } from "@/components/progress/body-comp-trends";
-import { ScanPlanCard, type RecoProgram } from "@/components/progress/scan-plan-card";
-import { SegmentBalance } from "@/components/progress/segment-balance";
-import { GoalProjection } from "@/components/progress/goal-projection";
 import {
   MusclePreservation,
   type PreservationInsight,
@@ -27,7 +21,7 @@ import {
   type WellnessSummary,
 } from "@/components/progress/wellness-progress";
 import { getUserPlan } from "@/lib/entitlements";
-import { Download } from "lucide-react";
+import { Download, Activity, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 export const metadata = { title: "Progress" };
@@ -84,58 +78,6 @@ export default async function ProgressPage() {
   ]);
   const scans = (scanRows ?? []) as Record<string, unknown>[];
   const latestScan = scans[0] ?? null;
-
-  // Resolve the plan's recommended program slugs to real programs, check for a
-  // coach (to enable sharing), and note weeks since the last scan (re-scan nudge).
-  const latestPlan =
-    (latestScan as { ai_plan?: import("@/lib/actions/body-composition").ScanPlan | null })
-      ?.ai_plan ?? null;
-  const recoSlugs = latestPlan?.recommendedPrograms ?? [];
-  const [{ data: recoRows }, { data: coachLink }] = await Promise.all([
-    recoSlugs.length
-      ? supabase
-          .from("programs")
-          .select("slug, name, experience_level")
-          .in("slug", recoSlugs)
-          .eq("status", "published")
-      : Promise.resolve({ data: [] as RecoProgram[] }),
-    supabase
-      .from("trainer_clients")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("status", "active")
-      .limit(1)
-      .maybeSingle(),
-  ]);
-  // Preserve the AI's recommended order.
-  const recoMap = new Map((recoRows ?? []).map((p) => [p.slug as string, p as RecoProgram]));
-  const recommendedPrograms = recoSlugs
-    .map((s) => recoMap.get(s))
-    .filter((p): p is RecoProgram => !!p);
-  const hasCoach = Boolean(coachLink);
-
-  const weeksSinceScan = latestScan?.scan_date
-    ? Math.floor(
-        (Date.now() - new Date(String(latestScan.scan_date)).getTime()) / (7 * 86_400_000)
-      )
-    : null;
-
-  // Weekly rate of weight change over the last ~8 weeks, for the goal projection.
-  const weightPts = (metrics ?? [])
-    .filter((m) => m.weight_kg != null)
-    .map((m) => ({ t: new Date(String(m.recorded_on)).getTime(), w: Number(m.weight_kg) }));
-  const currentWeight = weightPts.length ? weightPts[weightPts.length - 1].w : null;
-  let weeklyRate: number | null = null;
-  const windowStart = Date.now() - 56 * 86_400_000;
-  const recentPts = weightPts.filter((p) => p.t >= windowStart);
-  const rateBase = recentPts.length >= 2 ? recentPts : weightPts.length >= 2 ? weightPts : [];
-  if (rateBase.length >= 2) {
-    const a = rateBase[0];
-    const b = rateBase[rateBase.length - 1];
-    const weeks = (b.t - a.t) / (7 * 86_400_000);
-    if (weeks >= 0.5) weeklyRate = (b.w - a.w) / weeks;
-  }
-  const goalWeight = (prof?.goal_weight_kg as number | null) ?? null;
 
   // Strength progress: set logs + exercise names, last 120 days.
   const sinceDate = new Date(Date.now() - 120 * 86_400_000).toISOString();
@@ -342,47 +284,50 @@ export default async function ProgressPage() {
         />
       </div>
 
-      {/* Body Composition Scan — Pro only */}
+      {/* Body Composition — full experience lives on its own page */}
       <div className="mt-6">
-        <h2 className="text-lg font-bold">Body Composition Scan</h2>
-
-        {/* Re-scan nudge */}
-        {weeksSinceScan != null && weeksSinceScan >= 10 && (
-          <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border-active)] bg-[var(--accent-muted)] px-4 py-3 text-sm">
-            It&apos;s been <span className="font-semibold">{weeksSinceScan} weeks</span> since
-            your last scan — a fresh one keeps your comparisons and plan on track.
-          </div>
-        )}
-
-        {latestScan && (
-          <div className="mt-4 space-y-4">
-            <BodyCompCard
-              scan={latestScan as Record<string, unknown>}
-              prev={(scans[1] as Record<string, unknown>) ?? null}
-            />
-            <GoalProjection
-              currentWeight={currentWeight}
-              goalWeight={goalWeight}
-              weeklyRate={weeklyRate}
-            />
-            <SegmentBalance scan={latestScan as Record<string, unknown>} />
-            <ScanPlanCard
-              scanId={(latestScan as { id: string }).id}
-              initialPlan={latestPlan}
-              generatedAt={
-                ((latestScan as { ai_plan_generated_at?: string | null }).ai_plan_generated_at) ?? null
-              }
-              isPro={isPro}
-              recommendedPrograms={recommendedPrograms}
-              hasCoach={hasCoach}
-              printHref={`/scan-report/${(latestScan as { id: string }).id}`}
-            />
-          </div>
-        )}
-        {scans.length >= 2 && <BodyCompTrends scans={scans} />}
-        <div className="mt-4">
-          <BodyScanUpload isPro={isPro} />
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold">Body Composition</h2>
+          <Link href="/body-composition" className="text-sm font-medium text-[var(--accent-primary)]">
+            Open →
+          </Link>
         </div>
+        <Link
+          href="/body-composition"
+          className="mt-3 flex items-center gap-4 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5 transition-colors hover:border-[var(--border-active)]"
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--accent-muted)] text-[var(--accent-primary)]">
+            <Activity className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            {latestScan ? (
+              <>
+                <p className="font-semibold">
+                  {latestScan.source ? String(latestScan.source).toUpperCase() : "Latest scan"}
+                  {latestScan.scan_date
+                    ? ` · ${new Date(String(latestScan.scan_date)).toLocaleDateString("en-AU")}`
+                    : ""}
+                </p>
+                <p className="text-sm text-[var(--text-muted)]">
+                  {[
+                    latestScan.weight_kg != null ? `${Number(latestScan.weight_kg).toFixed(1)} kg` : null,
+                    latestScan.body_fat_pct != null ? `${Number(latestScan.body_fat_pct).toFixed(1)}% body fat` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || "Scans, trends & AI training focus"}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold">Add a DEXA or InBody scan</p>
+                <p className="text-sm text-[var(--text-muted)]">
+                  Full metrics, trends, segmental balance and an AI training focus.
+                </p>
+              </>
+            )}
+          </div>
+          <ChevronRight className="h-5 w-5 shrink-0 text-[var(--text-muted)]" />
+        </Link>
       </div>
 
       <div className="mt-4">
