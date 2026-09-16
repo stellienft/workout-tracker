@@ -15,6 +15,7 @@ import { MuscleSuggestions } from "@/components/progress/muscle-suggestions";
 import { BodyScanUpload } from "@/components/progress/body-scan-upload";
 import { BodyCompCard } from "@/components/progress/body-comp-card";
 import { BodyCompTrends } from "@/components/progress/body-comp-trends";
+import { ScanPlanCard } from "@/components/progress/scan-plan-card";
 import {
   MusclePreservation,
   type PreservationInsight,
@@ -291,8 +292,22 @@ export default async function ProgressPage() {
       <div className="mt-6">
         <h2 className="text-lg font-bold">Body Composition Scan</h2>
         {latestScan && (
-          <div className="mt-4">
-            <BodyCompCard scan={latestScan as Record<string, unknown>} />
+          <div className="mt-4 space-y-4">
+            <BodyCompCard
+              scan={latestScan as Record<string, unknown>}
+              prev={(scans[1] as Record<string, unknown>) ?? null}
+            />
+            <ScanPlanCard
+              scanId={(latestScan as { id: string }).id}
+              initialPlan={
+                ((latestScan as { ai_plan?: import("@/lib/actions/body-composition").ScanPlan | null }).ai_plan) ??
+                null
+              }
+              generatedAt={
+                ((latestScan as { ai_plan_generated_at?: string | null }).ai_plan_generated_at) ?? null
+              }
+              isPro={isPro}
+            />
           </div>
         )}
         {scans.length >= 2 && <BodyCompTrends scans={scans} />}
