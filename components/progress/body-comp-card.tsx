@@ -25,8 +25,21 @@ const METRICS: { key: keyof ScanRow; label: string; unit?: string }[] = [
   { key: "protein_kg", label: "Protein", unit: "kg" },
 ];
 
-/** Renders the latest body-composition scan as a grid of metric tiles. */
-export function BodyCompCard({ scan }: { scan: ScanRow | null }) {
+// For which metrics is a decrease the "good" direction? (lower body fat,
+// visceral fat and BMI are improvements; muscle/protein up is the win; the
+// rest are shown neutral.)
+const LOWER_BETTER = new Set(["body_fat_pct", "visceral_fat_level", "bmi"]);
+const HIGHER_BETTER = new Set(["muscle_mass_kg", "protein_kg"]);
+
+/** Renders the latest body-composition scan as a grid of metric tiles, with the
+ *  change since the previous scan when one exists. */
+export function BodyCompCard({
+  scan,
+  prev,
+}: {
+  scan: ScanRow | null;
+  prev?: ScanRow | null;
+}) {
   if (!scan) return null;
   const shown = METRICS.filter((m) => scan[m.key] != null);
   if (shown.length === 0) return null;
@@ -42,19 +55,50 @@ export function BodyCompCard({ scan }: { scan: ScanRow | null }) {
           </span>
         )}
       </div>
+      {prev?.scan_date && (
+        <p className="mt-1 text-xs text-[var(--text-muted)]">
+          Change vs {new Date(prev.scan_date).toLocaleDateString()}
+        </p>
+      )}
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {shown.map((m) => (
-          <div
-            key={String(m.key)}
-            className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3 text-center"
-          >
-            <p className="text-lg font-bold">
-              {Number(scan[m.key]).toFixed(m.unit === "kcal" ? 0 : 1)}
-              {m.unit ? <span className="ml-0.5 text-xs font-medium text-[var(--text-muted)]">{m.unit}</span> : null}
-            </p>
-            <p className="text-[10px] text-[var(--text-muted)]">{m.label}</p>
-          </div>
-        ))}
+        {shown.map((m) => {
+          const cur = Number(scan[m.key]);
+          const before = prev && prev[m.key] != null ? Number(prev[m.key]) : null;
+          const diff = before != null ? cur - before : null;
+          const dp = m.unit === "kcal" ? 0 : 1;
+          let tone = "text-[var(--text-muted)]";
+          if (diff != null && Math.abs(diff) >= (m.unit === "kcal" ? 1 : 0.05)) {
+            const good =
+              (LOWER_BETTER.has(String(m.key)) && diff < 0) ||
+              (HIGHER_BETTER.has(String(m.key)) && diff > 0);
+            const bad =
+              (LOWER_BETTER.has(String(m.key)) && diff > 0) ||
+              (HIGHER_BETTER.has(String(m.key)) && diff < 0);
+            tone = good
+              ? "text-[var(--accent-primary)]"
+              : bad
+                ? "text-[var(--danger)]"
+                : "text-[var(--text-secondary)]";
+          }
+          return (
+            <div
+              key={String(m.key)}
+              className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3 text-center"
+            >
+              <p className="text-lg font-bold tabular-nums">
+                {cur.toFixed(dp)}
+                {m.unit ? <span className="ml-0.5 text-xs font-medium text-[var(--text-muted)]">{m.unit}</span> : null}
+              </p>
+              <p className="text-[10px] text-[var(--text-muted)]">{m.label}</p>
+              {diff != null && Math.abs(diff) >= (m.unit === "kcal" ? 1 : 0.05) && (
+                <p className={`mt-0.5 text-[10px] font-semibold tabular-nums ${tone}`}>
+                  {diff > 0 ? "▲" : "▼"} {Math.abs(diff).toFixed(dp)}
+                  {m.unit ?? ""}
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
