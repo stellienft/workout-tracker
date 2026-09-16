@@ -6,6 +6,7 @@ import { getUserPlan } from "@/lib/entitlements";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { BodyScanUpload } from "@/components/progress/body-scan-upload";
 import { BodyCompCard } from "@/components/progress/body-comp-card";
+import { BodyCompositionChart } from "@/components/progress/body-composition-chart";
 import { BodyCompTrends } from "@/components/progress/body-comp-trends";
 import { ScanPlanCard, type RecoProgram } from "@/components/progress/scan-plan-card";
 import { SegmentBalance } from "@/components/progress/segment-balance";
@@ -118,6 +119,7 @@ export default async function BodyCompositionPage() {
             scan={latestScan as Record<string, unknown>}
             prev={(scans[1] as Record<string, unknown>) ?? null}
           />
+          <BodyCompositionChart scans={scans} />
           <GoalProjection currentWeight={currentWeight} goalWeight={goalWeight} weeklyRate={weeklyRate} />
           <SegmentBalance scan={latestScan as Record<string, unknown>} />
           <ScanPlanCard
