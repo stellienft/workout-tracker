@@ -120,7 +120,10 @@ export function WalkingPadClient() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const bt = (navigator as any).bluetooth;
       const device = await bt.requestDevice({
-        filters: [{ services: [FTMS] }],
+        // List every nearby Bluetooth device — most walking pads advertise only
+        // their name (not the FTMS service UUID), so a service filter hides them.
+        // The member picks their pad by name; we then read FTMS after connecting.
+        acceptAllDevices: true,
         optionalServices: [FTMS],
       });
       deviceRef.current = device;
@@ -139,10 +142,10 @@ export function WalkingPadClient() {
       const name = (err as { name?: string })?.name;
       setError(
         name === "NotFoundError"
-          ? "No walking pad selected."
+          ? "No device picked. Turn the pad on and wake its display, check your computer's Bluetooth is on, then choose your pad from the list."
           : name === "NotSupportedError"
-            ? "This device doesn't broadcast treadmill data (FTMS)."
-            : "Couldn't connect. Make sure the pad is on, nearby and not linked to another app."
+            ? "That device doesn't broadcast treadmill data (FTMS), so steps can't be read live — use the manual log below."
+            : "Couldn't connect. Make sure the pad is on, nearby and not already linked to its own app."
       );
     }
   }
