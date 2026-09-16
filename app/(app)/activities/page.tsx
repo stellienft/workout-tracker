@@ -19,7 +19,7 @@ export default async function ActivitiesPage() {
     supabase
       .from("external_activities")
       .select(
-        "id, activity_type, name, distance_m, moving_time_s, elevation_m, average_hr, average_speed, start_at"
+        "id, activity_type, name, distance_m, moving_time_s, elevation_m, average_hr, average_speed, steps, start_at"
       )
       .eq("user_id", user.id)
       .order("start_at", { ascending: false })

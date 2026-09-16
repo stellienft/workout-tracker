@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Activity, RefreshCw, Timer, Route, Mountain, HeartPulse } from "lucide-react";
+import { Activity, RefreshCw, Timer, Route, Mountain, HeartPulse, Footprints } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { syncStravaActivities } from "@/lib/actions/strava";
 
@@ -15,6 +15,7 @@ export interface ActivityRow {
   elevation_m: number | null;
   average_hr: number | null;
   average_speed: number | null;
+  steps: number | null;
   start_at: string;
 }
 
@@ -175,6 +176,11 @@ export function ActivitiesClient({
                       </span>
                     )}
                     {pace && <span className="tabular-nums">{pace}</span>}
+                    {a.steps ? (
+                      <span className="inline-flex items-center gap-1 tabular-nums">
+                        <Footprints className="h-3.5 w-3.5" /> {a.steps.toLocaleString()} steps
+                      </span>
+                    ) : null}
                     {a.average_hr ? (
                       <span className="inline-flex items-center gap-1 tabular-nums">
                         <HeartPulse className="h-3.5 w-3.5" /> {Math.round(a.average_hr)} bpm

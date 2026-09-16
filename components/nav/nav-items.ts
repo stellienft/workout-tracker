@@ -28,6 +28,7 @@ import {
   FlaskConical,
   Activity,
   Ruler,
+  Footprints,
   type LucideIcon,
 } from "lucide-react";
 
@@ -74,6 +75,7 @@ export const navSections: NavSection[] = [
       { label: "Progress", href: "/progress", icon: TrendingUp },
       { label: "Body Composition", href: "/body-composition", icon: Ruler, pro: true },
       { label: "Activities", href: "/activities", icon: Activity },
+      { label: "Walking Pad", href: "/walking-pad", icon: Footprints },
       { label: "Achievements", href: "/achievements", icon: Medal },
       { label: "Check-ins", href: "/check-ins", icon: ClipboardCheck },
       { label: "Friends", href: "/friends", icon: UserPlus },
