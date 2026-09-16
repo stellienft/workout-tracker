@@ -15,11 +15,17 @@ import {
   Link2,
   ChefHat,
   Camera,
+  Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { MEAL_SLOTS, RECIPE_CATEGORIES, type MacroTargets } from "@/lib/nutrition";
+import {
+  NutritionSetup,
+  type SetupScan,
+  type SetupProfile,
+} from "@/components/nutrition/nutrition-setup";
 import {
   addRecipeToMeal,
   addCustomFood,
@@ -78,6 +84,8 @@ export function NutritionDashboard({
   entries,
   recipes,
   favoriteIds,
+  setupScan,
+  setupProfile,
 }: {
   date: string;
   targets: MacroTargets;
@@ -86,12 +94,15 @@ export function NutritionDashboard({
   entries: Entry[];
   recipes: Recipe[];
   favoriteIds: string[];
+  setupScan: SetupScan | null;
+  setupProfile: SetupProfile;
 }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
   const [addFor, setAddFor] = useState<string | null>(null);
   const [editingTargets, setEditingTargets] = useState(false);
+  const [setupOpen, setSetupOpen] = useState(false);
 
   const totals = useMemo(() => {
     return entries.reduce(
@@ -148,16 +159,45 @@ export function NutritionDashboard({
         </button>
       </div>
 
+      {/* Setup banner — shown until the member has calculated their targets */}
+      {!hasSavedTargets && (
+        <button
+          onClick={() => setSetupOpen(true)}
+          className="flex w-full items-center gap-3 rounded-[var(--radius-card)] border border-[var(--border-active)] bg-[var(--accent-muted)] p-4 text-left transition hover:brightness-105"
+        >
+          <span className="rounded-xl bg-[var(--accent-primary)]/15 p-2.5 text-[var(--accent-primary)]">
+            <Wand2 className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">Set up your daily goals</span>
+            <span className="mt-0.5 block text-xs text-[var(--text-secondary)]">
+              {setupScan?.lean_mass_kg
+                ? "Work out your calories & protein — straight from your body-composition scan."
+                : "Work out your calories & protein from your details in under a minute."}
+            </span>
+          </span>
+          <ChevronRight className="h-5 w-5 shrink-0 text-[var(--accent-primary)]" />
+        </button>
+      )}
+
       {/* Macro summary */}
       <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold">Daily macros</p>
-          <button
-            onClick={() => setEditingTargets((v) => !v)}
-            className="inline-flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" /> Targets
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSetupOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs text-[var(--accent-primary)] hover:brightness-110"
+            >
+              <Wand2 className="h-3.5 w-3.5" /> Set up
+            </button>
+            <button
+              onClick={() => setEditingTargets((v) => !v)}
+              className="inline-flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" /> Adjust
+            </button>
+          </div>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <MacroBar label="Calories" unit="kcal" value={totals.calories} target={targets.calories} />
@@ -233,6 +273,14 @@ export function NutritionDashboard({
             setAddFor(null);
             router.refresh();
           }}
+        />
+      )}
+
+      {setupOpen && (
+        <NutritionSetup
+          scan={setupScan}
+          profile={setupProfile}
+          onClose={() => setSetupOpen(false)}
         />
       )}
     </div>
