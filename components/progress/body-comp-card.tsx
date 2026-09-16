@@ -50,6 +50,35 @@ export function BodyCompCard({
   const shown = METRICS.filter((m) => scan[m.key] != null);
   if (shown.length === 0) return null;
 
+  // Derived reference figures computed from whatever the scan captured — handy
+  // quick numbers even when the machine didn't print them directly.
+  const n = (k: string) => (scan[k] == null ? null : Number(scan[k]));
+  const w = n("weight_kg");
+  const bf = n("body_fat_pct");
+  const bmi = n("bmi");
+  const arms = n("left_arm_mass_kg") != null && n("right_arm_mass_kg") != null
+    ? n("left_arm_mass_kg")! + n("right_arm_mass_kg")!
+    : null;
+  const legs = n("left_leg_mass_kg") != null && n("right_leg_mass_kg") != null
+    ? n("left_leg_mass_kg")! + n("right_leg_mass_kg")!
+    : null;
+  const fatMass = w != null && bf != null ? (w * bf) / 100 : null;
+  const fatFree = fatMass != null && w != null ? w - fatMass : null;
+  const heightM = w != null && bmi != null && bmi > 0 ? Math.sqrt(w / bmi) : null;
+  const ffmi = fatFree != null && heightM ? fatFree / (heightM * heightM) : null;
+  const limbLean = arms != null && legs != null ? arms + legs : null;
+
+  const derived: { label: string; value: number; unit?: string; dp: number }[] = [];
+  const addD = (label: string, value: number | null, unit: string | undefined, dp: number) => {
+    if (value != null && Number.isFinite(value)) derived.push({ label, value, unit, dp });
+  };
+  addD("Fat Mass", fatMass, "kg", 1);
+  addD("Fat-Free Mass", fatFree, "kg", 1);
+  addD("Lean", bf != null ? 100 - bf : null, "%", 1);
+  addD("Height", heightM != null ? heightM * 100 : null, "cm", 0);
+  addD("FFMI", ffmi, undefined, 1);
+  addD("Limb Lean", limbLean, "kg", 1);
+
   return (
     <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
       <div className="flex items-center justify-between">
@@ -106,6 +135,33 @@ export function BodyCompCard({
           );
         })}
       </div>
+
+      {derived.length > 0 && (
+        <>
+          <p className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+            Calculated
+          </p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {derived.map((d) => (
+              <div
+                key={d.label}
+                className="rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3 text-center"
+              >
+                <p className="text-lg font-bold tabular-nums">
+                  {d.value.toFixed(d.dp)}
+                  {d.unit ? (
+                    <span className="ml-0.5 text-xs font-medium text-[var(--text-muted)]">{d.unit}</span>
+                  ) : null}
+                </p>
+                <p className="text-[10px] text-[var(--text-muted)]">{d.label}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-[10px] text-[var(--text-muted)]">
+            Estimated from your measured values.
+          </p>
+        </>
+      )}
     </div>
   );
 }
