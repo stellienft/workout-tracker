@@ -78,6 +78,7 @@ function shiftDate(date: string, days: number) {
 
 export function NutritionDashboard({
   date,
+  today,
   targets,
   suggested,
   hasSavedTargets,
@@ -88,6 +89,7 @@ export function NutritionDashboard({
   setupProfile,
 }: {
   date: string;
+  today: string;
   targets: MacroTargets;
   suggested: MacroTargets;
   hasSavedTargets: boolean;
@@ -116,7 +118,7 @@ export function NutritionDashboard({
     );
   }, [entries]);
 
-  const isToday = date === new Date().toISOString().slice(0, 10);
+  const isToday = date === today;
   const dateLabel = new Date(date + "T00:00:00").toLocaleDateString(undefined, {
     weekday: "long",
     month: "short",

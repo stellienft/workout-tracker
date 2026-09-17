@@ -12,8 +12,19 @@ import { suggestTargets } from "@/lib/nutrition";
 
 export const metadata = { title: "Nutrition" };
 
-function isoDate(d: Date) {
-  return d.toISOString().slice(0, 10);
+/** Today's date (YYYY-MM-DD) in the member's own timezone, so the food diary's
+ * day boundary matches their local midnight rather than UTC. */
+function localToday(timezone: string | null | undefined) {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone || "UTC",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
 }
 
 export default async function NutritionPage({
@@ -26,17 +37,26 @@ export default async function NutritionPage({
   if (!planAllows(plan, "nutrition")) return <UpgradeWall feature="nutrition" />;
   await getAuthContext();
   const sp = await searchParams;
-  const date =
-    sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : isoDate(new Date());
 
   const supabase = await createClient();
+
+  // Resolve the member's timezone first so "today" (and any meals they log)
+  // land on their local calendar day, not the UTC day.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("weekly_frequency, age, timezone")
+    .eq("id", user.id)
+    .maybeSingle();
+  const today = localToday(profile?.timezone as string | null | undefined);
+  const date =
+    sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : today;
+
   const [
     { data: targetsRow },
     { data: entries },
     { data: recipes },
     { data: weightRow },
     primaryGoal,
-    { data: profile },
     { data: favs },
     { data: scanRow },
   ] = await Promise.all([
@@ -60,7 +80,6 @@ export default async function NutritionPage({
       .limit(1)
       .maybeSingle(),
     getPrimaryGoal(user.id),
-    supabase.from("profiles").select("weekly_frequency, age").eq("id", user.id).maybeSingle(),
     supabase.from("recipe_favorites").select("recipe_id").eq("user_id", user.id),
     supabase
       .from("body_composition_scans")
@@ -124,6 +143,7 @@ export default async function NutritionPage({
       <div className="mt-6">
         <NutritionDashboard
           date={date}
+          today={today}
           targets={targets}
           suggested={suggested}
           hasSavedTargets={Boolean(targetsRow)}
