@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
 @theme {
-  /* Aries Fitness palette — orange accent */
+  /* Ares Fitness palette — orange accent */
   --color-bg: #0d0d0d;
   --color-bg-2: #141414;
   --color-surface: #1a1a1a;
   --color-surface-2: #222222;
   --color-elevated: #292929;
-  --color-accent: #f26a1b;
-  --color-accent-hover: #d95d14;
-  --color-accent-muted: rgba(242, 106, 27, 0.14);
+  --color-accent: #ff520e;
+  --color-accent-hover: #e0480c;
+  --color-accent-muted: rgba(255, 82, 14, 0.14);
   --color-text-2: #a9a9a9;
   --color-text-3: #737373;
   --color-border-subtle: rgba(255, 255, 255, 0.08);
-  --color-border-active: rgba(242, 106, 27, 0.55);
+  --color-border-active: rgba(255, 82, 14, 0.55);
   --color-warning: #f5b942;
   --color-danger: #ff5c5c;
   --color-success: #22c55e;
@@ -40,7 +40,7 @@
   /* Accent is user-customisable at runtime. JS sets --accent-base (the raw
      chosen colour); --accent-primary derives from it so light mode can darken
      the accent for readable contrast without JS needing to know the theme. */
-  --accent-base: #f26a1b;
+  --accent-base: #ff520e;
   --accent-primary: var(--accent-base);
   --accent-hover: color-mix(in srgb, var(--accent-primary) 88%, #000);
   --accent-muted: color-mix(in srgb, var(--accent-primary) 14%, transparent);
@@ -110,8 +110,8 @@
    focus ring all derive from --accent-primary in :root, so overriding it here
    recolours the whole app. */
 :root[data-accent="orange"] {
-  --accent-base: #f26a1b;
-  --accent-primary: #f26a1b;
+  --accent-base: #ff520e;
+  --accent-primary: #ff520e;
   --accent-ink: #ffffff;
 }
 :root[data-accent="peach"] {

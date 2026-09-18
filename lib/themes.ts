@@ -1,5 +1,5 @@
 /**
- * The curated Aries Fitness themes. Each pairs a light/dark mode with a fixed
+ * The curated Ares Fitness themes. Each pairs a light/dark mode with a fixed
  * accent — there is no free-form theme customisation. `mode` maps to the
  * profile's theme_preference, `accentHex` to accent_color, and `accentKey`
  * drives the `data-accent` attribute the CSS keys its accent palette on.
@@ -17,22 +17,23 @@ export interface ThemePreset {
 }
 
 export const THEME_PRESETS: ThemePreset[] = [
-  { id: "aries-dark", name: "Aries Dark", mode: "dark", accentKey: "orange", accentHex: "#f26a1b" },
-  { id: "aries-light", name: "Aries Light", mode: "light", accentKey: "orange", accentHex: "#f26a1b" },
+  { id: "ares-dark", name: "Ares Dark", mode: "dark", accentKey: "orange", accentHex: "#ff520e" },
+  { id: "ares-light", name: "Ares Light", mode: "light", accentKey: "orange", accentHex: "#ff520e" },
   { id: "midnight-peach", name: "Midnight Peach", mode: "dark", accentKey: "peach", accentHex: "#ffb27a" },
   { id: "daylight-blue", name: "Daylight Blue", mode: "light", accentKey: "blue", accentHex: "#3b82f6" },
 ];
 
 export const ACCENT_HEX: Record<AccentKey, string> = {
-  orange: "#f26a1b",
+  orange: "#ff520e",
   peach: "#ffb27a",
   blue: "#3b82f6",
   grey: "#64748b",
 };
 
 const HEX_TO_ACCENT: Record<string, AccentKey> = {
+  "#ff520e": "orange",
+  // Legacy accents (lime, and the interim orange) migrate to the brand orange.
   "#f26a1b": "orange",
-  // Legacy lime accent migrates to the new orange brand colour.
   "#ccff30": "orange",
   "#ffb27a": "peach",
   "#3b82f6": "blue",

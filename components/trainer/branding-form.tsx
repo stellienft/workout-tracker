@@ -29,7 +29,7 @@ export function TrainerBrandingForm({ tenant }: { tenant: Tenant }) {
   const [name, setName] = useState(tenant.name);
   const [tagline, setTagline] = useState(tenant.tagline ?? "");
   const [logoUrl, setLogoUrl] = useState(tenant.logo_url ?? "");
-  const [accentColor, setAccentColor] = useState(tenant.accent_color ?? "#F26A1B");
+  const [accentColor, setAccentColor] = useState(tenant.accent_color ?? "#FF520E");
   const [customDomain, setCustomDomain] = useState(tenant.custom_domain ?? "");
   const [paymentUrl, setPaymentUrl] = useState(tenant.payment_url ?? "");
   const [paymentInstructions, setPaymentInstructions] = useState(

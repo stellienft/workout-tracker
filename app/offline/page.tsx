@@ -10,7 +10,7 @@ export default function OfflinePage() {
       </div>
       <h1 className="mt-6 text-2xl font-bold">You&apos;re offline</h1>
       <p className="mt-2 max-w-sm text-[var(--text-secondary)]">
-        Aries Fitness needs a connection for this page. Any sets you logged during
+        Ares Fitness needs a connection for this page. Any sets you logged during
         your workout are saved on this device and will sync automatically when
         you&apos;re back online.
       </p>

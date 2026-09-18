@@ -378,7 +378,7 @@ export function OnboardingWizard({
                 Are you using a GLP-1 medication?
               </h2>
               <p className="mt-1 text-[var(--text-secondary)]">
-                Mounjaro, Ozempic, Wegovy, Zepbound and similar. Aries is built
+                Mounjaro, Ozempic, Wegovy, Zepbound and similar. Ares is built
                 to help you <span className="text-[var(--text-primary)]">keep your muscle while you lose weight</span> —
                 with tailored programs, a protein target, and dose &amp; side-effect
                 tracking. Totally optional and private.

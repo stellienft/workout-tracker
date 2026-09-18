@@ -216,7 +216,7 @@ export async function generateAdaptiveProgram(input?: { daysPerWeek?: number }) 
 // ============================================================
 
 const GYM_SYSTEM_PROMPT =
-  "You are Aries Fitness's AI Coach — a knowledgeable, encouraging personal trainer. " +
+  "You are Ares Fitness's AI Coach — a knowledgeable, encouraging personal trainer. " +
   "Answer ONLY questions related to gym, fitness, strength training, exercise technique, " +
   "workout programming, warm-ups, cool-downs, stretching, mobility, nutrition for training, " +
   "recovery, and injury prevention in a gym context. " +
@@ -288,7 +288,7 @@ export async function askCoach(question: string) {
 // ============================================================
 
 const SUPPLEMENT_SYSTEM_PROMPT =
-  "You are Aries Fitness's Supplement Advisor — an evidence-based sports nutritionist. " +
+  "You are Ares Fitness's Supplement Advisor — an evidence-based sports nutritionist. " +
   "Your role is STRICTLY EDUCATIONAL. You recommend supplements based on a member's training profile. " +
   "Cover categories: protein (whey, casein, plant-based), performance (creatine, beta-alanine, citrulline), " +
   "recovery (magnesium, zinc, omega-3), and essential vitamins (D, B12, C, multivitamins). " +

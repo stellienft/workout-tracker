@@ -1,5 +1,5 @@
 /**
- * Aries Fitness program engine.
+ * Ares Fitness program engine.
  *
  * Pure functions that resolve "what should this user do next" for any
  * program, regardless of scheduling mode. The 12-week beginner program is

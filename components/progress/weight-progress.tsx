@@ -8,7 +8,7 @@ interface Point {
   y: number; // kg
 }
 
-const LIME = "#F26A1B";
+const LIME = "#FF520E";
 const CHARCOAL_TOP = "#0D0D0D";
 const CHARCOAL_BOT = "#161616";
 const DAY = 86_400_000;
@@ -443,8 +443,8 @@ async function drawShareCard(data: Point[]): Promise<Blob | null> {
   ctx.textBaseline = "alphabetic";
   ctx.font = `800 46px ${sans}`;
   ctx.fillStyle = "#FFFFFF";
-  ctx.fillText("Aries ", pad, 130);
-  const w1 = ctx.measureText("Aries ").width;
+  ctx.fillText("Ares ", pad, 130);
+  const w1 = ctx.measureText("Ares ").width;
   ctx.fillStyle = accent;
   ctx.fillText("Fitness", pad + w1, 130);
 
