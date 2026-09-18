@@ -10,6 +10,15 @@
   "categories": ["health", "fitness", "lifestyle"],
   "shortcuts": [
     {
+      "name": "Home Hub",
+      "short_name": "Hub",
+      "description": "Voice-controlled hub: alarms, weather and music",
+      "url": "/hub",
+      "icons": [
+        { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }
+      ]
+    },
+    {
       "name": "Start a workout",
       "short_name": "Workout",
       "description": "Jump straight into today's training",

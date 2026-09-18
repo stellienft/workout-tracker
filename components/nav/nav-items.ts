@@ -29,6 +29,7 @@ import {
   Activity,
   Ruler,
   Footprints,
+  MonitorSpeaker,
   type LucideIcon,
 } from "lucide-react";
 
@@ -106,6 +107,7 @@ export const navSections: NavSection[] = [
   {
     title: "Account",
     items: [
+      { label: "Home Hub", href: "/hub", icon: MonitorSpeaker },
       { label: "Membership", href: "/billing", icon: Crown },
       { label: "Refer a friend", href: "/referrals", icon: Gift },
       { label: "Settings", href: "/settings", icon: Settings },

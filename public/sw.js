@@ -5,7 +5,7 @@
 //  - Static assets (_next/static, icons, images): cache-first.
 //  - Never cache Supabase API calls or auth — always network.
 
-const CACHE = "stellio-fit-v2";
+const CACHE = "stellio-fit-v3";
 const SHELL = ["/offline", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
@@ -35,13 +35,18 @@ self.addEventListener("push", (event) => {
     data = { title: "Stellio Fit", body: event.data ? event.data.text() : "" };
   }
   const title = data.title || "Stellio Fit";
+  // Home-hub alarms are the backup path for a device that isn't showing the
+  // hub: they must stay on screen until dismissed, unlike a passing nudge.
+  const isAlarm = String(data.tag || "").startsWith("hub-alarm");
   const options = {
     body: data.body || "",
     icon: data.icon || "/icons/icon-192.png",
     badge: "/icons/icon-192.png",
     tag: data.tag || "stellio-fit",
     data: { url: data.url || "/dashboard" },
-    vibrate: [80, 40, 80],
+    vibrate: isAlarm ? [400, 150, 400, 150, 400] : [80, 40, 80],
+    requireInteraction: isAlarm,
+    renotify: isAlarm,
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });

@@ -10,6 +10,6 @@ export const config = {
     /*
      * Run on everything except static assets.
      */
-    "/((?!_next/static|_next/image|favicon.ico|icons/|images/|sw.js|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icons/|images/|sw.js|manifest.webmanifest|hub.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

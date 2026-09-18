@@ -35,6 +35,9 @@ Built with Next.js 15 (App Router), TypeScript, Tailwind CSS v4, and Supabase
   weekly check-ins, Mounjaro medication tracking, JSON/CSV export.
 - **Admin** — server-role-gated management of users, goals, programs,
   exercises, videos, media, and featured content.
+- **Home Hub** — a voice-controlled kiosk surface at `/hub` for a wall- or
+  bench-mounted tablet: wake word, spoken replies, alarms and timers, weather,
+  Spotify playback and multi-step routines. See [Home Hub](#home-hub).
 - **PWA** — installable, offline fallback, service worker, safe-area aware.
 
 ---
@@ -198,22 +201,121 @@ app/
     settings/ profile/
   admin/             server-role-gated admin area
   onboarding/        goal-based onboarding wizard
+  hub/               Home Hub kiosk surface (no app chrome)
   api/export/        JSON/CSV data export
+  api/hub/           weather, geocode, LLM intent fallback
   auth/callback/     email-confirmation code exchange
 components/          UI, nav, dashboard, workout, tracking, admin
 lib/
   supabase/          browser + server + middleware clients
   actions/           server actions (auth, onboarding, enrolment,
                      workout, tracking, admin)
+  hub/               Home Hub: intent parsing, time parsing, alarms,
+                     weather, speech recognition, TTS (pure where possible)
   engine.ts          scheduling engine (pure functions)
   auth.ts            server-side auth context + role guards
   queries.ts, dashboard.ts, workout-loader.ts
 supabase/
   migrations/        schema + RLS
   seed.sql           goals, programs, exercises, videos, featured
-tests/               vitest: engine + utils
+tests/               vitest: engine, utils, hub voice logic
 public/              manifest, service worker, icons
 ```
+
+---
+
+## Home Hub
+
+`/hub` turns a cheap Android tablet into a voice-controlled home hub — the
+Google/Alexa speaker replacement. It is an ordinary route in this app, gated by
+the same Supabase auth, but it renders outside the `(app)` layout so there is no
+sidebar or bottom nav to tap by accident.
+
+### What it does
+
+| Say | It does |
+| --- | --- |
+| "Hey Stellio, set an alarm for 6:14am" | Saves the alarm, replies "Sure, alarm set for tomorrow at 6:14 am." |
+| "Wake me at 6 every weekday" | Recurring alarm, rolls forward after each ring |
+| "Set a timer for 10 minutes" | Countdown, rings on the device |
+| "Snooze" / "Stop" | Snoozes 9 minutes / dismisses the ring |
+| "What's the weather tomorrow?" | Open-Meteo forecast, spoken |
+| "Play Fleetwood Mac on Spotify" | Searches and plays on the tablet's Spotify app |
+| "Skip" / "Pause" / "Turn it up" | Playback control |
+| "What alarms do I have?" | Reads the list back |
+| "Good morning" | Runs the routine: greeting, time, forecast, music |
+
+Anything the local parser doesn't recognise falls through to
+`/api/hub/interpret`, which maps unusual phrasings to the same intents and
+answers general questions. That path needs `ANTHROPIC_API_KEY`; without it the
+hub is local-only and simply says it didn't catch that.
+
+### How the voice loop works
+
+Everything runs in the browser — no always-on cloud microphone.
+
+1. **Wake word** — `SpeechRecognition` (Chrome's Web Speech API) runs in a
+   self-restarting loop. Recognition ends constantly on Android, so
+   `lib/hub/speech.ts` restarts it, with exponential backoff on network errors.
+   Wake matching is fuzzy (bounded edit distance) because recognisers reliably
+   mangle invented names: "stelio", "stellium" and "stellio's" all wake it.
+2. **Command** — once woken, the next utterance is captured (7s window) and
+   parsed by `lib/hub/intents.ts`, which is pure and fully unit-tested.
+3. **Reply** — `speechSynthesis` speaks the result. The recogniser is torn down
+   while the hub talks, otherwise it hears itself and loops forever.
+
+Browsers require a user gesture before a page may use the microphone or speak,
+so the hub opens behind a "tap to start" gate that unlocks both.
+
+### Alarms fire twice over, on purpose
+
+Alarms are stored in Supabase (`hub_alarms`), not just in the tab:
+
+- **Primary** — while the hub is open, the tablet schedules and rings alarms
+  itself. Precise, works offline, and keeps ringing until dismissed.
+- **Backup** — `/api/cron/hub-alarms` runs every minute and sends a web push for
+  anything due. The hub heartbeats every 60s, and the cron skips members whose
+  hub is live, so a ringing tablet never also buzzes your phone.
+
+The every-minute cron in `vercel.json` needs a Vercel plan that allows
+sub-daily crons. On the Hobby plan, either drop that entry (the tablet still
+rings on its own) or trigger the endpoint from an external scheduler with the
+`CRON_SECRET` bearer token.
+
+### Setting up the tablet
+
+1. Sign in to the app in **Chrome** (the Web Speech API is Chromium-only —
+   Firefox won't listen). HTTPS is required for the microphone.
+2. Open `/hub`, tap **Start the hub**, and allow the microphone when asked.
+   Chrome remembers the grant for the origin.
+3. Install it: Chrome menu → *Add to Home screen*. `/hub.webmanifest` gives the
+   hub its own fullscreen, landscape icon separate from the main app.
+4. In hub settings, set your weather location, pick a voice, and choose the
+   Spotify device.
+5. On the tablet: Settings → Display → Screen timeout as long as possible, and
+   turn on *Developer options → Stay awake while charging*. The hub also holds a
+   screen wake lock while it is open.
+
+### Spotify
+
+The hub reuses the existing Spotify OAuth connection but needs wider scopes
+(`user-modify-playback-state` and friends), so **anyone connected before this
+shipped must reconnect once** — the hub detects the missing scope and says so
+rather than failing silently.
+
+Two constraints are Spotify's, not ours:
+
+- **Premium only.** The Web API refuses playback control on free accounts.
+- **It controls a device, it doesn't play audio.** Install the Spotify app on
+  the tablet, play something once so it registers as a Connect device, then pick
+  it under hub settings → Music. Voice commands then drive that app, which is
+  what comes out of the tablet's speakers.
+
+### Routines
+
+`hub_routines` maps a phrase to a list of steps (speak, read the time, read the
+forecast, play music, pause music, wait). Two ship by default — "good morning"
+and "good night" — and each can also run on a schedule.
 
 ---
 
