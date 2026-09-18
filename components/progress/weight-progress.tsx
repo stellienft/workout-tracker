@@ -441,12 +441,26 @@ async function drawShareCard(data: Point[]): Promise<Blob | null> {
     'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
   ctx.textBaseline = "alphabetic";
-  ctx.font = `800 46px ${sans}`;
-  ctx.fillStyle = "#FFFFFF";
-  ctx.fillText("Ares ", pad, 130);
-  const w1 = ctx.measureText("Ares ").width;
-  ctx.fillStyle = accent;
-  ctx.fillText("Fitness", pad + w1, 130);
+  // Brand logo (AF monogram), falling back to the text wordmark.
+  const logo = await new Promise<HTMLImageElement | null>((resolve) => {
+    const im = new Image();
+    im.crossOrigin = "anonymous";
+    im.onload = () => resolve(im);
+    im.onerror = () => resolve(null);
+    im.src = "/logo.png";
+  });
+  if (logo && logo.width > 0) {
+    const h = 72;
+    const w = (logo.width / logo.height) * h;
+    ctx.drawImage(logo, pad, 64, w, h);
+  } else {
+    ctx.font = `800 46px ${sans}`;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText("Ares ", pad, 130);
+    const w1 = ctx.measureText("Ares ").width;
+    ctx.fillStyle = accent;
+    ctx.fillText("Fitness", pad + w1, 130);
+  }
 
   ctx.fillStyle = "rgba(255,255,255,0.55)";
   ctx.font = `600 30px ${sans}`;

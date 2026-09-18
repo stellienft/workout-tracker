@@ -72,6 +72,45 @@ function loadIcon(icon: AchIcon, color: string, px: number): Promise<HTMLImageEl
   });
 }
 
+/** Load an image (e.g. the brand logo) for drawing onto the canvas. */
+function loadImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+/** Draw the AF logo centred at the top, falling back to the text wordmark. */
+async function drawBrandmark(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  accent: string
+) {
+  const logo = await loadImage("/logo.png");
+  if (logo && logo.width > 0) {
+    const h = 88;
+    const w = (logo.width / logo.height) * h;
+    ctx.drawImage(logo, W / 2 - w / 2, 74, w, h);
+    return;
+  }
+  // Fallback: text wordmark.
+  ctx.font = `800 46px ${SANS}`;
+  const s = "Ares ";
+  const f = "Fitness";
+  const sw = ctx.measureText(s).width;
+  const fw = ctx.measureText(f).width;
+  const startX = W / 2 - (sw + fw) / 2;
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillText(s, startX, 140);
+  ctx.fillStyle = accent;
+  ctx.fillText(f, startX + sw, 140);
+  ctx.textAlign = "center";
+}
+
 function wrapLines(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -127,19 +166,8 @@ export async function drawAchievementCard(card: ShareCard): Promise<Blob | null>
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
 
-  // Wordmark.
-  ctx.font = `800 46px ${SANS}`;
-  const s = "Ares ";
-  const f = "Fitness";
-  const sw = ctx.measureText(s).width;
-  const fw = ctx.measureText(f).width;
-  const startX = W / 2 - (sw + fw) / 2;
-  ctx.textAlign = "left";
-  ctx.fillStyle = "#FFFFFF";
-  ctx.fillText(s, startX, 140);
-  ctx.fillStyle = accent;
-  ctx.fillText(f, startX + sw, 140);
-  ctx.textAlign = "center";
+  // Brand logo (AF monogram).
+  await drawBrandmark(ctx, W, accent);
 
   // Kicker.
   ctx.fillStyle = "rgba(255,255,255,0.55)";
