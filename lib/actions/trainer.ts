@@ -437,7 +437,7 @@ export async function inviteClient(input: { email: string; displayName?: string 
   if (!foundId) {
     return {
       ok: false,
-      error: "No Aries Fitness account uses that email. Ask them to sign up first.",
+      error: "No Ares Fitness account uses that email. Ask them to sign up first.",
     };
   }
 

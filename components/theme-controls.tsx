@@ -13,7 +13,7 @@ function apply(preset: ThemePreset) {
 
 export function ThemeControls({
   initialTheme = "dark",
-  initialAccent = "#f26a1b",
+  initialAccent = "#ff520e",
 }: {
   initialTheme?: "system" | "light" | "dark";
   initialAccent?: string;

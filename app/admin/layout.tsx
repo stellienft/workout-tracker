@@ -26,7 +26,7 @@ export default async function AdminLayout({
         <aside className="hidden w-60 shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--background-secondary)] md:flex">
           <div className="px-5 py-5">
             <p className="text-lg font-extrabold">
-              Aries <span className="text-[var(--accent-primary)]">Admin</span>
+              Ares <span className="text-[var(--accent-primary)]">Admin</span>
             </p>
             <p className="text-xs text-[var(--text-muted)]">
               {isSuperAdmin ? "Super Administrator" : "Administrator"}
@@ -54,7 +54,7 @@ export default async function AdminLayout({
           >
             <div className="flex items-center justify-between gap-2">
               <p className="font-bold">
-                Aries <span className="text-[var(--accent-primary)]">Admin</span>
+                Ares <span className="text-[var(--accent-primary)]">Admin</span>
               </p>
               <Link
                 href="/dashboard"

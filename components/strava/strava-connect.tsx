@@ -79,7 +79,7 @@ export function StravaConnect({
             ? "Not available yet — the app owner needs to add Strava credentials."
             : isConnected
               ? `Runs, rides and more import automatically.${synced ? ` Last sync ${synced}.` : ""}`
-              : "Connect to bring your runs, rides and cardio into Aries."}
+              : "Connect to bring your runs, rides and cardio into Ares."}
         </p>
       </div>
       {configured &&

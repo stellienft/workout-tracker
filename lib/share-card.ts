@@ -1,10 +1,10 @@
 /**
  * Client-only canvas rendering for branded, shareable achievement cards
  * (1080×1350, Instagram-story friendly). Mirrors the weight-progress card so
- * everything shared from Aries Fitness looks like one brand.
+ * everything shared from Ares Fitness looks like one brand.
  */
 
-const LIME = "#F26A1B";
+const LIME = "#FF520E";
 const CHARCOAL_TOP = "#0D0D0D";
 const CHARCOAL_BOT = "#161616";
 
@@ -129,7 +129,7 @@ export async function drawAchievementCard(card: ShareCard): Promise<Blob | null>
 
   // Wordmark.
   ctx.font = `800 46px ${SANS}`;
-  const s = "Aries ";
+  const s = "Ares ";
   const f = "Fitness";
   const sw = ctx.measureText(s).width;
   const fw = ctx.measureText(f).width;

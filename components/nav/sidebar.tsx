@@ -46,8 +46,9 @@ export function Sidebar({
   return (
     <aside className="hidden md:flex md:w-[248px] lg:w-[264px] shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--background-secondary)] h-dvh sticky top-0">
       <div className="flex items-center justify-between px-6 py-6">
-        <Link href="/dashboard" className="text-xl font-extrabold tracking-tight">
-          Aries <span className="text-[var(--accent-primary)]">Fitness</span>
+        <Link href="/dashboard" aria-label="Ares Fitness" className="flex items-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Ares Fitness" className="h-7 w-auto" />
         </Link>
         <NotificationBell unread={unread} />
       </div>

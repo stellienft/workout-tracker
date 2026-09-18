@@ -83,7 +83,7 @@ export function VideoSheet({
         </a>
         {video?.creatorName && (
           <p className="mt-1 text-xs text-[var(--text-muted)]">
-            Video by {video.creatorName}. Aries Fitness is not affiliated with or
+            Video by {video.creatorName}. Ares Fitness is not affiliated with or
             endorsed by the creator.
           </p>
         )}

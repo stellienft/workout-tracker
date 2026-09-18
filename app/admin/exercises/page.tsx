@@ -50,7 +50,7 @@ export default async function AdminExercisesPage() {
           <p className="mt-1 text-[var(--text-secondary)]">
             Subscribe (free) to ExerciseDB on RapidAPI, then add an{" "}
             <code>EXERCISEDB_API_KEY</code> environment variable (Vercel → Project
-            → Settings → Environment Variables, and your Aries environment) and
+            → Settings → Environment Variables, and your Ares environment) and
             redeploy.
           </p>
         </div>

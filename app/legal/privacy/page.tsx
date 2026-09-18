@@ -4,7 +4,7 @@ import { LegalTitle, Lead, Section, List, Item } from "@/components/legal/legal-
 export const metadata = {
   title: "Privacy Policy",
   description:
-    "How Aries Fitness collects, uses, stores and protects your personal information.",
+    "How Ares Fitness collects, uses, stores and protects your personal information.",
 };
 
 const UPDATED = "25 July 2026";
@@ -15,7 +15,7 @@ export default function PrivacyPage() {
       <LegalTitle title="Privacy Policy" updated={UPDATED} />
 
       <Lead>
-        Aries Fitness (&ldquo;Aries Fitness&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;
+        Ares Fitness (&ldquo;Ares Fitness&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;
         or &ldquo;our&rdquo;) is committed to protecting your privacy. This policy
         explains what personal information we collect when you use our app and
         website, how we use and share it, and the choices and rights you have. We
@@ -25,7 +25,7 @@ export default function PrivacyPage() {
 
       <Section n={1} title="Who we are">
         <p>
-          Aries Fitness is a fitness and coaching platform operated from Australia.
+          Ares Fitness is a fitness and coaching platform operated from Australia.
           If you have any questions about this policy or how we handle your
           information, contact us at{" "}
           <a
@@ -145,7 +145,7 @@ export default function PrivacyPage() {
         </List>
         <p>
           We may also disclose information where required by law, or to protect the
-          rights, safety and security of Aries Fitness and its users.
+          rights, safety and security of Ares Fitness and its users.
         </p>
       </Section>
 
@@ -200,7 +200,7 @@ export default function PrivacyPage() {
 
       <Section n={9} title="Children">
         <p>
-          Aries Fitness is not intended for children under 16. We do not knowingly
+          Ares Fitness is not intended for children under 16. We do not knowingly
           collect information from children under 16. If you believe a child has
           provided us information, contact us and we will delete it.
         </p>
@@ -208,7 +208,7 @@ export default function PrivacyPage() {
 
       <Section n={10} title="Not medical advice">
         <p>
-          Aries Fitness provides fitness and wellness tools for general information
+          Ares Fitness provides fitness and wellness tools for general information
           only. It is not a medical device and does not provide medical advice,
           diagnosis or treatment. Always consult a qualified professional before
           starting any exercise, nutrition or medication program.

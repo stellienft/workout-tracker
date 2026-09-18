@@ -23,8 +23,8 @@ export function ReferralShare({ link }: { link: string }) {
     if (nav.share) {
       try {
         await nav.share({
-          title: "Aries Fitness",
-          text: "Join me on Aries Fitness — here's a free month of Pro:",
+          title: "Ares Fitness",
+          text: "Join me on Ares Fitness — here's a free month of Pro:",
           url: link,
         });
       } catch {

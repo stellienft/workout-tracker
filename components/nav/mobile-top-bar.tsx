@@ -86,8 +86,9 @@ export function MobileTopBar({
             <Menu className="h-6 w-6" />
           </button>
         </div>
-        <Link href="/dashboard" className="text-lg font-extrabold tracking-tight">
-          Aries <span className="text-[var(--accent-primary)]">Fitness</span>
+        <Link href="/dashboard" aria-label="Ares Fitness" className="flex items-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Ares Fitness" className="h-6 w-auto" />
         </Link>
         <NotificationBell unread={unread} className="h-10 w-10" />
       </div>
@@ -100,9 +101,8 @@ export function MobileTopBar({
           />
           <div className="pt-safe absolute inset-y-0 left-0 flex w-[82%] max-w-xs flex-col bg-[var(--background-secondary)]">
             <div className="flex items-center justify-between px-5 py-4">
-              <span className="text-lg font-extrabold tracking-tight">
-                Aries <span className="text-[var(--accent-primary)]">Fitness</span>
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="Ares Fitness" className="h-6 w-auto" />
               <button
                 onClick={() => setOpen(false)}
                 aria-label="Close menu"

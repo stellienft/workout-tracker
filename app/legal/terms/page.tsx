@@ -4,7 +4,7 @@ import { LegalTitle, Lead, Section, List, Item } from "@/components/legal/legal-
 export const metadata = {
   title: "Terms of Service",
   description:
-    "The terms that govern your use of Aries Fitness, including memberships, billing and coaching.",
+    "The terms that govern your use of Ares Fitness, including memberships, billing and coaching.",
 };
 
 const UPDATED = "25 July 2026";
@@ -16,14 +16,14 @@ export default function TermsPage() {
 
       <Lead>
         These Terms of Service (&ldquo;Terms&rdquo;) govern your access to and use
-        of Aries Fitness (the &ldquo;Service&rdquo;). By creating an account or using
+        of Ares Fitness (the &ldquo;Service&rdquo;). By creating an account or using
         the Service, you agree to these Terms. If you do not agree, please do not
         use the Service.
       </Lead>
 
       <Section n={1} title="Eligibility and your account">
         <p>
-          You must be at least 16 years old to use Aries Fitness. You are
+          You must be at least 16 years old to use Ares Fitness. You are
           responsible for the accuracy of your account information, for keeping
           your login credentials secure, and for all activity under your account.
           Notify us promptly of any unauthorised use.
@@ -32,7 +32,7 @@ export default function TermsPage() {
 
       <Section n={2} title="The Service">
         <p>
-          Aries Fitness provides workout programs, exercise guidance, progress and
+          Ares Fitness provides workout programs, exercise guidance, progress and
           health tracking, nutrition tools, social features and optional coaching.
           We may add, change or remove features over time to improve the Service.
         </p>
@@ -77,7 +77,7 @@ export default function TermsPage() {
           If you engage a trainer through the Service, your coaching arrangement
           (including any fees, schedules and refunds) is between you and that
           trainer. Trainers may collect payment through their own payment methods
-          shown to you, such as a payment link or bank transfer. Aries Fitness is not
+          shown to you, such as a payment link or bank transfer. Ares Fitness is not
           a party to those payments, does not process them, and is not responsible
           for the coaching services a trainer provides. Trainers are responsible
           for their own conduct, tax and legal obligations.
@@ -106,7 +106,7 @@ export default function TermsPage() {
 
       <Section n={8} title="Health disclaimer and assumption of risk">
         <p>
-          Aries Fitness provides general fitness and wellness information and is not
+          Ares Fitness provides general fitness and wellness information and is not
           a substitute for professional medical advice. Exercise carries inherent
           risks. You should consult a qualified healthcare professional before
           beginning any exercise, nutrition or medication program, and you
@@ -118,7 +118,7 @@ export default function TermsPage() {
       <Section n={9} title="Intellectual property">
         <p>
           The Service, including its software, design, branding and content
-          (excluding your content and third-party content), is owned by Aries
+          (excluding your content and third-party content), is owned by Ares
           Fit and protected by intellectual property laws. We grant you a limited,
           non-exclusive, non-transferable licence to use the Service for personal
           use in accordance with these Terms.

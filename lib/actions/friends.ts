@@ -39,7 +39,7 @@ export async function sendFriendRequest(email: string) {
     p_email: parsed.data,
   });
   if (!foundId) {
-    return { ok: false as const, error: "No Aries Fitness user with that email." };
+    return { ok: false as const, error: "No Ares Fitness user with that email." };
   }
   if (foundId === user.id) {
     return { ok: false as const, error: "That's you!" };
@@ -64,7 +64,7 @@ export async function sendFriendRequest(email: string) {
         userId: foundId as string,
         type: "friend_accepted",
         title: `${name} accepted your friend request`,
-        body: "You're now friends on Aries Fitness.",
+        body: "You're now friends on Ares Fitness.",
         link: "/friends",
       });
       revalidatePath("/friends");
@@ -119,7 +119,7 @@ export async function respondFriendRequest(friendshipId: string, accept: boolean
       userId: fr.requester_id as string,
       type: "friend_accepted",
       title: `${name} accepted your friend request`,
-      body: "You're now friends on Aries Fitness.",
+      body: "You're now friends on Ares Fitness.",
       link: "/friends",
     });
   }

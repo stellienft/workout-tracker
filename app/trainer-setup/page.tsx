@@ -31,7 +31,7 @@ export default async function TrainerSetupPage() {
         initial={{
           businessName: suggestedName,
           tagline: tenant?.tagline ?? "",
-          accentColor: tenant?.accent_color ?? "#f26a1b",
+          accentColor: tenant?.accent_color ?? "#ff520e",
           logoUrl: tenant?.logo_url ?? "",
         }}
       />
