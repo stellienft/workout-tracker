@@ -70,7 +70,6 @@ export default async function WorkoutPreviewPage({
               className="flex gap-3 overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-3"
             >
               <VideoThumb
-                thumbnailUrl={ex.video?.thumbnailUrl ?? null}
                 coverPath={ex.exercise.cover_image_path}
                 alt={ex.exercise.name}
               />
