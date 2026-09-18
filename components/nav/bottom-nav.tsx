@@ -19,7 +19,7 @@ export function BottomNav() {
     // to content on either side of the floating bar.
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center md:hidden">
       <nav
-        className="pointer-events-auto relative mx-4 mb-[calc(env(safe-area-inset-bottom,0px)+12px)] flex w-full max-w-md items-stretch rounded-full border border-[var(--border-subtle)] bg-[var(--background-secondary)]/85 p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.45)] backdrop-blur-xl"
+        className="pointer-events-auto relative mx-4 mb-[calc(env(safe-area-inset-bottom,0px)+5px)] flex w-full max-w-md items-stretch rounded-full border border-[var(--border-subtle)] bg-[var(--background-secondary)]/85 p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.45)] backdrop-blur-xl"
         aria-label="Primary"
       >
         {/* Sliding active indicator */}

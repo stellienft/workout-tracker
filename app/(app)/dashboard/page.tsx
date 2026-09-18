@@ -6,6 +6,7 @@ import { getPrimaryGoal, getRecentSessions } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { PageShell } from "@/components/ui/page-header";
 import { TodayHeroCard } from "@/components/dashboard/today-hero";
+import { WeekStrip } from "@/components/dashboard/week-strip";
 import { WeeklyCompletionCard } from "@/components/dashboard/weekly-completion";
 import { StreakCard } from "@/components/dashboard/streak-card";
 import { WeeklyRecapCard } from "@/components/dashboard/weekly-recap-card";
@@ -15,7 +16,7 @@ import { getCachedRecap } from "@/lib/actions/recap";
 import { quoteForDate } from "@/lib/quotes";
 import { StatCard } from "@/components/ui/card";
 import { CoverImage } from "@/components/ui/cover-image";
-import { formatDuration } from "@/lib/utils";
+import { formatDuration, startOfWeek, isoDate } from "@/lib/utils";
 
 export const metadata = { title: "Dashboard" };
 
@@ -91,6 +92,16 @@ export default async function DashboardPage() {
   const streak = computeStreak(
     (streakSessions ?? []).map((s) => s.completed_at as string),
     profile?.timezone || "Australia/Brisbane"
+  );
+
+  // Days trained this week (for the dashboard attendance strip).
+  const weekStartIso = isoDate(startOfWeek(new Date()));
+  const trainedDates = Array.from(
+    new Set(
+      (streakSessions ?? [])
+        .map((s) => isoDate(new Date(s.completed_at as string)))
+        .filter((d) => d >= weekStartIso)
+    )
   );
 
   // Splits aren't part of the program engine, so surface them separately: any
@@ -199,8 +210,13 @@ export default async function DashboardPage() {
         />
       )}
 
+      {/* Weekly attendance — track the days you train, above your program */}
+      <div className="mt-5">
+        <WeekStrip trainedDates={trainedDates} />
+      </div>
+
       {/* Hero + weekly */}
-      <div className="mt-5 grid gap-4 lg:grid-cols-3">
+      <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {dash.enrolment && dash.next ? (
             <TodayHeroCard
