@@ -1,11 +1,12 @@
 /**
- * The four curated Stellio Fit themes. Each pairs a light/dark mode with a
- * fixed accent — there is no free-form theme customisation. `mode` maps to the
+ * The curated Aries Fitness themes. Each pairs a light/dark mode with a fixed
+ * accent — there is no free-form theme customisation. `mode` maps to the
  * profile's theme_preference, `accentHex` to accent_color, and `accentKey`
  * drives the `data-accent` attribute the CSS keys its accent palette on.
+ * Orange is the flagship brand accent and the default in both modes.
  */
 export type ThemeMode = "light" | "dark";
-export type AccentKey = "lime" | "peach" | "blue" | "grey";
+export type AccentKey = "orange" | "peach" | "blue" | "grey";
 
 export interface ThemePreset {
   id: string;
@@ -16,31 +17,33 @@ export interface ThemePreset {
 }
 
 export const THEME_PRESETS: ThemePreset[] = [
-  { id: "midnight-lime", name: "Midnight Lime", mode: "dark", accentKey: "lime", accentHex: "#ccff30" },
+  { id: "aries-dark", name: "Aries Dark", mode: "dark", accentKey: "orange", accentHex: "#f26a1b" },
+  { id: "aries-light", name: "Aries Light", mode: "light", accentKey: "orange", accentHex: "#f26a1b" },
   { id: "midnight-peach", name: "Midnight Peach", mode: "dark", accentKey: "peach", accentHex: "#ffb27a" },
   { id: "daylight-blue", name: "Daylight Blue", mode: "light", accentKey: "blue", accentHex: "#3b82f6" },
-  { id: "daylight-grey", name: "Daylight Grey", mode: "light", accentKey: "grey", accentHex: "#64748b" },
 ];
 
 export const ACCENT_HEX: Record<AccentKey, string> = {
-  lime: "#ccff30",
+  orange: "#f26a1b",
   peach: "#ffb27a",
   blue: "#3b82f6",
   grey: "#64748b",
 };
 
 const HEX_TO_ACCENT: Record<string, AccentKey> = {
-  "#ccff30": "lime",
+  "#f26a1b": "orange",
+  // Legacy lime accent migrates to the new orange brand colour.
+  "#ccff30": "orange",
   "#ffb27a": "peach",
   "#3b82f6": "blue",
   "#64748b": "grey",
 };
 
-/** Map a stored accent hex to one of the four keys (default by mode). */
-export function accentKeyFromHex(hex: string | null | undefined, mode: ThemeMode): AccentKey {
+/** Map a stored accent hex to one of the keys (default: orange brand accent). */
+export function accentKeyFromHex(hex: string | null | undefined, _mode: ThemeMode): AccentKey {
   const key = hex ? HEX_TO_ACCENT[hex.toLowerCase()] : undefined;
   if (key) return key;
-  return mode === "light" ? "blue" : "lime";
+  return "orange";
 }
 
 /** Resolve a stored (theme_preference, accent_color) pair to a preset. */

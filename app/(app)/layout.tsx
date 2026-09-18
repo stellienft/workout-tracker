@@ -91,7 +91,7 @@ export default async function AppLayout({
     <ToastProvider>
       <ThemeSync
         theme={profile?.theme_preference ?? "dark"}
-        accent={profile?.accent_color ?? "#ccff30"}
+        accent={profile?.accent_color ?? "#f26a1b"}
       />
       <div className="flex min-h-dvh">
         <Sidebar

@@ -125,7 +125,7 @@ export default async function ExerciseDetailPage({
             </div>
             <p className="mt-1 text-sm text-[var(--text-secondary)]">
               See your PR, estimated 1RM and progression chart for every exercise
-              with Stellio Fit Pro.
+              with Aries Fitness Pro.
             </p>
             <div className="mt-3">
               <UpgradeButton label="Unlock with Pro" />

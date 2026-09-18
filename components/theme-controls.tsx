@@ -13,7 +13,7 @@ function apply(preset: ThemePreset) {
 
 export function ThemeControls({
   initialTheme = "dark",
-  initialAccent = "#ccff30",
+  initialAccent = "#f26a1b",
 }: {
   initialTheme?: "system" | "light" | "dark";
   initialAccent?: string;
@@ -67,9 +67,10 @@ const PREVIEW = {
   light: { bg: "#eceef1", surface: "#ffffff", line: "rgba(0,0,0,0.14)" },
 } as const;
 
-// Bright accents take dark ink; deeper accents take white — mirrors --accent-ink.
+// Ink over each accent fill — mirrors --accent-ink. Orange and the deeper
+// accents take white; the light peach takes dark ink.
 const INK: Record<string, string> = {
-  lime: "#0d0d0d",
+  orange: "#ffffff",
   peach: "#0d0d0d",
   blue: "#ffffff",
   grey: "#ffffff",

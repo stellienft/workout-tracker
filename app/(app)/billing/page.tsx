@@ -37,7 +37,7 @@ export default async function BillingPage({
         title={welcome ? "You're all set up" : "Membership"}
         subtitle={
           welcome
-            ? "One last thing — unlock the full Stellio Fit experience."
+            ? "One last thing — unlock the full Aries Fitness experience."
             : "Your plan and billing."
         }
       />
@@ -63,7 +63,7 @@ export default async function BillingPage({
                       ? "Pro — free month"
                       : isTrainer
                         ? "Trainer plan"
-                        : "Stellio Fit Pro"}
+                        : "Aries Fitness Pro"}
               </p>
             </div>
             <p className="mt-1 text-sm text-[var(--text-secondary)]">
@@ -73,7 +73,7 @@ export default async function BillingPage({
                   ? "Your coaching package includes full Pro access. Manage it with your coach."
                   : source === "trial"
                     ? "You've got Pro free from a referral. Invite more friends to extend it, or subscribe to keep it after."
-                    : "You have every feature unlocked. Thanks for supporting Stellio Fit."}
+                    : "You have every feature unlocked. Thanks for supporting Aries Fitness."}
               {currentPeriodEnd
                 ? ` Renews ${new Date(currentPeriodEnd).toLocaleDateString()}.`
                 : ""}

@@ -11,7 +11,7 @@ export default function LegalLayout({
       <header className="border-b border-[var(--border-subtle)]">
         <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
           <Link href="/dashboard" className="text-lg font-extrabold tracking-tight">
-            Stellio<span className="text-[var(--accent-primary)]">Fit</span>
+            Aries<span className="text-[var(--accent-primary)]">Fitness</span>
           </Link>
           <BackButton />
         </div>
@@ -21,7 +21,7 @@ export default function LegalLayout({
       </main>
       <footer className="border-t border-[var(--border-subtle)]">
         <div className="mx-auto flex w-full max-w-3xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-sm text-[var(--text-muted)] sm:px-6">
-          <span>© {new Date().getFullYear()} Stellio Fit</span>
+          <span>© {new Date().getFullYear()} Aries Fitness</span>
           <nav className="flex gap-4">
             <Link href="/legal/privacy" className="hover:text-[var(--text-primary)]">
               Privacy

@@ -1,46 +1,61 @@
 import type { Metadata, Viewport } from "next";
+import { Plus_Jakarta_Sans, Sora } from "next/font/google";
 import "./globals.css";
 import { SwRegister } from "@/components/sw-register";
+
+// Body copy: a friendly, rounded grotesk. Headings: Sora for a distinct,
+// modern display voice. Exposed as CSS variables the theme references.
+const fontBody = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--f-body",
+});
+const fontDisplay = Sora({
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["500", "600", "700", "800"],
+  variable: "--f-display",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://stellio.fit"),
   title: {
-    default: "Stellio Fit | Personalised Workout Plans, Strength Training & Fitness Tracking",
-    template: "%s · Stellio Fit",
+    default: "Aries Fitness | Personalised Workout Plans, Strength Training & Fitness Tracking",
+    template: "%s · Aries Fitness",
   },
   description:
-    "Stellio Fit helps you build strength, lose weight and stay consistent with personalised workout programs, YouTube exercise guides, progress tracking and goal-based training plans.",
-  applicationName: "Stellio Fit",
+    "Aries Fitness helps you build strength, lose weight and stay consistent with personalised workout programs, YouTube exercise guides, progress tracking and goal-based training plans.",
+  applicationName: "Aries Fitness",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Stellio Fit",
+    title: "Aries Fitness",
   },
   icons: {
     icon: "/icons/icon-192.png",
     apple: "/icons/apple-touch-icon.png",
   },
   openGraph: {
-    title: "Stellio Fit | Personalised Workout Plans, Strength Training & Fitness Tracking",
+    title: "Aries Fitness | Personalised Workout Plans, Strength Training & Fitness Tracking",
     description:
-      "Stellio Fit helps you build strength, lose weight and stay consistent with personalised workout programs, YouTube exercise guides, progress tracking and goal-based training plans.",
-    siteName: "Stellio Fit",
+      "Aries Fitness helps you build strength, lose weight and stay consistent with personalised workout programs, YouTube exercise guides, progress tracking and goal-based training plans.",
+    siteName: "Aries Fitness",
     type: "website",
     images: [
       {
         url: "/OG-Share-StellioFit.png",
         width: 1200,
         height: 630,
-        alt: "Stellio Fit — Personalised Workout Plans, Strength Training & Fitness Tracking",
+        alt: "Aries Fitness — Personalised Workout Plans, Strength Training & Fitness Tracking",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Stellio Fit | Personalised Workout Plans, Strength Training & Fitness Tracking",
+    title: "Aries Fitness | Personalised Workout Plans, Strength Training & Fitness Tracking",
     description:
-      "Stellio Fit helps you build strength, lose weight and stay consistent with personalised workout programs, YouTube exercise guides, progress tracking and goal-based training plans.",
+      "Aries Fitness helps you build strength, lose weight and stay consistent with personalised workout programs, YouTube exercise guides, progress tracking and goal-based training plans.",
     images: ["/OG-Share-StellioFit.png"],
   },
 };
@@ -57,13 +72,18 @@ export const viewport: Viewport = {
 };
 
 // Applies the saved theme + accent before first paint to avoid a flash.
-const themeInit = `(function(){try{var r=document.documentElement;var t=localStorage.getItem('stellio-theme')||'dark';var d=(t==='light')?'light':(t==='dark')?'dark':(window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');r.dataset.theme=d;var a=(localStorage.getItem('stellio-accent')||'').toLowerCase();var m={'#ccff30':'lime','#ffb27a':'peach','#3b82f6':'blue','#64748b':'grey'};var k=m[a]||(['lime','peach','blue','grey'].indexOf(a)>=0?a:'');if(!k)k=(d==='light'?'blue':'lime');r.dataset.accent=k;}catch(e){}})();`;
+const themeInit = `(function(){try{var r=document.documentElement;var t=localStorage.getItem('stellio-theme')||'dark';var d=(t==='light')?'light':(t==='dark')?'dark':(window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');r.dataset.theme=d;var a=(localStorage.getItem('stellio-accent')||'').toLowerCase();var m={'#f26a1b':'orange','#ccff30':'orange','#ffb27a':'peach','#3b82f6':'blue','#64748b':'grey'};var k=m[a]||(['orange','peach','blue','grey'].indexOf(a)>=0?a:'');if(!k)k='orange';r.dataset.accent=k;}catch(e){}})();`;
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" data-theme="dark" suppressHydrationWarning>
+    <html
+      lang="en"
+      data-theme="dark"
+      className={`${fontBody.variable} ${fontDisplay.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
       </head>

@@ -35,7 +35,7 @@ export function Confetti({
     resize();
     window.addEventListener("resize", resize);
 
-    const colors = ["#CCFF30", "#7CE7C6", "#FF8A8A", "#FFD84D", "#8EA2FF", "#FFFFFF"];
+    const colors = ["#F26A1B", "#7CE7C6", "#FF8A8A", "#FFD84D", "#8EA2FF", "#FFFFFF"];
     type Piece = {
       x: number;
       y: number;

@@ -8,14 +8,14 @@ import "server-only";
  * instead of throwing, so a missing key can never break a user-facing flow.
  *
  *   RESEND_API_KEY   required to actually send
- *   EMAIL_FROM       sender, default "Stellio Fit <onboarding@resend.dev>"
+ *   EMAIL_FROM       sender, default "Aries Fitness <onboarding@resend.dev>"
  *                    (works to the Resend account owner immediately; switch to
  *                    an address on your verified domain, e.g. noreply@stellio.fit)
  *   ADMIN_EMAIL      admin recipient, default hello@stellio.com.au
  */
 
 export const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "hello@stellio.com.au";
-const EMAIL_FROM = process.env.EMAIL_FROM ?? "Stellio Fit <onboarding@resend.dev>";
+const EMAIL_FROM = process.env.EMAIL_FROM ?? "Aries Fitness <onboarding@resend.dev>";
 
 export async function sendEmail(input: {
   to: string | string[];
@@ -85,10 +85,10 @@ export async function notifyAdminNewMember(member: {
   const html = `<!doctype html><html><body style="margin:0;background:#0D0D0D;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#fff;padding:24px">
   <div style="max-width:520px;margin:0 auto;background:#1A1A1A;border:1px solid rgba(255,255,255,.08);border-radius:20px;overflow:hidden">
     <div style="padding:20px 24px;border-bottom:1px solid rgba(255,255,255,.08)">
-      <span style="font-size:18px;font-weight:800">Stellio <span style="color:#CCFF30">Fit</span></span>
+      <span style="font-size:18px;font-weight:800">Aries <span style="color:#F26A1B">Fitness</span></span>
     </div>
     <div style="padding:24px">
-      <p style="margin:0 0 4px;color:#CCFF30;font-size:12px;letter-spacing:.06em;text-transform:uppercase">New member</p>
+      <p style="margin:0 0 4px;color:#F26A1B;font-size:12px;letter-spacing:.06em;text-transform:uppercase">New member</p>
       <h1 style="margin:0 0 16px;font-size:22px">${escapeHtml(name)} just joined 🎉</h1>
       <table style="width:100%;border-collapse:collapse;font-size:14px">
         ${rows
@@ -102,16 +102,16 @@ export async function notifyAdminNewMember(member: {
       </table>
     </div>
   </div>
-  <p style="max-width:520px;margin:12px auto 0;color:#737373;font-size:12px;text-align:center">Automated notification from Stellio Fit.</p>
+  <p style="max-width:520px;margin:12px auto 0;color:#737373;font-size:12px;text-align:center">Automated notification from Aries Fitness.</p>
   </body></html>`;
 
-  const text = `New member joined Stellio Fit\n\n${rows
+  const text = `New member joined Aries Fitness\n\n${rows
     .map(([k, v]) => `${k}: ${v}`)
     .join("\n")}`;
 
   return sendEmail({
     to: ADMIN_EMAIL,
-    subject: `New Stellio Fit member: ${name}`,
+    subject: `New Aries Fitness member: ${name}`,
     html,
     text,
     replyTo: member.email,
@@ -142,10 +142,10 @@ export async function notifyAdminNewFeedback(input: {
   const html = `<!doctype html><html><body style="margin:0;background:#0D0D0D;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#fff;padding:24px">
   <div style="max-width:520px;margin:0 auto;background:#1A1A1A;border:1px solid rgba(255,255,255,.08);border-radius:20px;overflow:hidden">
     <div style="padding:20px 24px;border-bottom:1px solid rgba(255,255,255,.08)">
-      <span style="font-size:18px;font-weight:800">Stellio <span style="color:#CCFF30">Fit</span></span>
+      <span style="font-size:18px;font-weight:800">Aries <span style="color:#F26A1B">Fitness</span></span>
     </div>
     <div style="padding:24px">
-      <p style="margin:0 0 4px;color:#CCFF30;font-size:12px;letter-spacing:.06em;text-transform:uppercase">${escapeHtml(label)}</p>
+      <p style="margin:0 0 4px;color:#F26A1B;font-size:12px;letter-spacing:.06em;text-transform:uppercase">${escapeHtml(label)}</p>
       <h1 style="margin:0 0 16px;font-size:20px">New ${escapeHtml(label.toLowerCase())}</h1>
       <p style="margin:0 0 16px;font-size:15px;line-height:1.5;white-space:pre-wrap;background:#222;border-radius:12px;padding:14px">${escapeHtml(
         input.message
@@ -167,7 +167,7 @@ export async function notifyAdminNewFeedback(input: {
       </table>
     </div>
   </div>
-  <p style="max-width:520px;margin:12px auto 0;color:#737373;font-size:12px;text-align:center">Automated notification from Stellio Fit. Reply to respond to the member.</p>
+  <p style="max-width:520px;margin:12px auto 0;color:#737373;font-size:12px;text-align:center">Automated notification from Aries Fitness. Reply to respond to the member.</p>
   </body></html>`;
 
   const text = `${label}\n\n${input.message}\n\nFrom: ${who}${
@@ -176,7 +176,7 @@ export async function notifyAdminNewFeedback(input: {
 
   return sendEmail({
     to: ADMIN_EMAIL,
-    subject: `Stellio Fit ${label.toLowerCase()} from ${who}`,
+    subject: `Aries Fitness ${label.toLowerCase()} from ${who}`,
     html,
     text,
     replyTo: input.fromEmail || undefined,

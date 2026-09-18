@@ -369,7 +369,7 @@ export function ClientList({
       {showForm ? (
         <div className="space-y-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4">
           <p className="text-sm text-[var(--text-secondary)]">
-            Add a client by their email. They must already have a Stellio Fit account.
+            Add a client by their email. They must already have a Aries Fitness account.
           </p>
           <input
             value={email}
