@@ -36,7 +36,7 @@ export default async function AdminOverviewPage() {
     <div>
       <h1 className="text-2xl font-bold">Overview</h1>
       <p className="mt-1 text-sm text-[var(--text-secondary)]">
-        Manage content, media and roles for Stellio Fit.
+        Manage content, media and roles for Aries Fitness.
       </p>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">

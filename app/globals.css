@@ -1,28 +1,33 @@
 @import "tailwindcss";
 
 @theme {
-  /* Stellio Fit palette */
+  /* Aries Fitness palette — orange accent */
   --color-bg: #0d0d0d;
   --color-bg-2: #141414;
   --color-surface: #1a1a1a;
   --color-surface-2: #222222;
   --color-elevated: #292929;
-  --color-accent: #ccff30;
-  --color-accent-hover: #b8eb24;
-  --color-accent-muted: rgba(204, 255, 48, 0.14);
+  --color-accent: #f26a1b;
+  --color-accent-hover: #d95d14;
+  --color-accent-muted: rgba(242, 106, 27, 0.14);
   --color-text-2: #a9a9a9;
   --color-text-3: #737373;
   --color-border-subtle: rgba(255, 255, 255, 0.08);
-  --color-border-active: rgba(204, 255, 48, 0.55);
+  --color-border-active: rgba(242, 106, 27, 0.55);
   --color-warning: #f5b942;
   --color-danger: #ff5c5c;
-  --color-success: #ccff30;
+  --color-success: #22c55e;
 
-  --radius-card: 20px;
-  --radius-card-sm: 16px;
+  /* Soft, rounded corners across the app */
+  --radius-card: 24px;
+  --radius-card-sm: 18px;
 
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  /* Body text and a distinctive display face for headings. The next/font
+     variables (--f-body / --f-display) are attached to <html> in layout.tsx. */
+  --font-sans: var(--f-body), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--f-display), var(--f-body), ui-sans-serif, system-ui,
+    sans-serif;
 }
 
 :root {
@@ -35,14 +40,14 @@
   /* Accent is user-customisable at runtime. JS sets --accent-base (the raw
      chosen colour); --accent-primary derives from it so light mode can darken
      the accent for readable contrast without JS needing to know the theme. */
-  --accent-base: #ccff30;
+  --accent-base: #f26a1b;
   --accent-primary: var(--accent-base);
   --accent-hover: color-mix(in srgb, var(--accent-primary) 88%, #000);
   --accent-muted: color-mix(in srgb, var(--accent-primary) 14%, transparent);
-  /* Text/icon colour that sits ON an accent fill (buttons, chips). Bright
-     accents (lime/peach) take near-black ink; deeper accents (blue/grey) take
-     white. Set per accent below. */
-  --accent-ink: #0d0d0d;
+  /* Text/icon colour that sits ON an accent fill (buttons, chips). The orange
+     brand fill takes white ink; lighter accents (peach) take near-black, deeper
+     ones (blue/grey) take white. Set per accent below. */
+  --accent-ink: #ffffff;
   --text-primary: #ffffff;
   --text-secondary: #a9a9a9;
   --text-muted: #737373;
@@ -50,7 +55,9 @@
   --border-active: color-mix(in srgb, var(--accent-primary) 55%, transparent);
   --warning: #f5b942;
   --danger: #ff5c5c;
-  --success: var(--accent-primary);
+  /* Success keeps a distinct green so it never reads as the orange accent or
+     the amber warning. */
+  --success: #22c55e;
 
   /* Categorical chart series (dark steps) — validated for CVD + contrast on the
      dark chart surface. Fixed order; assign by entity, never cycle a 9th. */
@@ -77,10 +84,11 @@
   --text-secondary: #52525b;
   --text-muted: #8a8a93;
   --border-subtle: rgba(0, 0, 0, 0.1);
-  /* The bright dark-mode amber/red are unreadable on light surfaces — darken
-     them so warning/danger text and icons keep contrast in light themes. */
+  /* The bright dark-mode amber/red/green are unreadable on light surfaces —
+     darken them so semantic text and icons keep contrast in light themes. */
   --warning: #b45309;
   --danger: #dc2626;
+  --success: #16a34a;
 
   /* Categorical chart series (light steps) — same eight hues, re-stepped and
      validated for the white chart surface. */
@@ -101,10 +109,10 @@
    per-mode darkening is needed. --accent-hover/-muted/-border-active and the
    focus ring all derive from --accent-primary in :root, so overriding it here
    recolours the whole app. */
-:root[data-accent="lime"] {
-  --accent-base: #ccff30;
-  --accent-primary: #ccff30;
-  --accent-ink: #0d0d0d;
+:root[data-accent="orange"] {
+  --accent-base: #f26a1b;
+  --accent-primary: #f26a1b;
+  --accent-ink: #ffffff;
 }
 :root[data-accent="peach"] {
   --accent-base: #ffb27a;
@@ -159,6 +167,24 @@ body {
   min-height: 100%;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
+}
+
+/* Headings use the display face for a distinct brand voice; a slight negative
+   tracking keeps the bold weights tight. Applies everywhere without touching
+   individual components. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+}
+
+/* Opt-in display face for non-heading brand elements (e.g. stat numerals). */
+.font-display {
+  font-family: var(--font-display);
 }
 
 /* Safe-area helpers for installed PWA / notched devices */

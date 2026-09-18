@@ -45,7 +45,7 @@ export default async function SettingsPage() {
           ? "Pro — free month"
           : isTrainer
             ? "Trainer plan"
-            : "Stellio Fit Pro";
+            : "Aries Fitness Pro";
 
   const planNote = !isPro
     ? isTrainer
@@ -124,7 +124,7 @@ export default async function SettingsPage() {
         <h2 className="mb-3 text-lg font-bold">Appearance</h2>
         <ThemeControls
           initialTheme={profile?.theme_preference ?? "dark"}
-          initialAccent={profile?.accent_color ?? "#ccff30"}
+          initialAccent={profile?.accent_color ?? "#f26a1b"}
         />
       </div>
 

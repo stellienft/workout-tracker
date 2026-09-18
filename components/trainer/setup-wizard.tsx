@@ -8,7 +8,7 @@ import { completeTrainerSetup } from "@/lib/actions/trainer";
 import { Dumbbell, Palette, ImageIcon } from "lucide-react";
 
 const ACCENTS = [
-  "#ccff30",
+  "#f26a1b",
   "#22c55e",
   "#06b6d4",
   "#3b82f6",

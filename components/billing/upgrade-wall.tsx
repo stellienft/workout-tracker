@@ -13,7 +13,7 @@ export function UpgradeWall({ feature }: { feature: Feature }) {
         </div>
         <h1 className="mt-5 text-2xl font-bold">{FEATURE_LABEL[feature]} is a Pro feature</h1>
         <p className="mt-2 text-[var(--text-secondary)]">
-          Upgrade to Stellio Fit Pro for {PRO_PRICE_LABEL} to unlock it — cancel
+          Upgrade to Aries Fitness Pro for {PRO_PRICE_LABEL} to unlock it — cancel
           anytime.
         </p>
 

@@ -45,7 +45,7 @@ export default async function MyCoachPage() {
     );
   }
 
-  const accent = (tenant.accent_color as string) || "#ccff30";
+  const accent = (tenant.accent_color as string) || "#f26a1b";
   const tenantId = first.tenant_id as string;
 
   // Pending invite — the member accepts/declines before anything else shows.

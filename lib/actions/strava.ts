@@ -60,7 +60,7 @@ function mapActivity(userId: string, a: StravaActivity) {
 }
 
 /**
- * Pull the member's recent Strava activities into Stellio. Only fetches
+ * Pull the member's recent Strava activities into Aries. Only fetches
  * activities newer than the latest one already imported (falling back to the
  * last ~90 days on a first sync), and upserts so re-running never duplicates.
  */

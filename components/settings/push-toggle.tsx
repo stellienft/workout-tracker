@@ -101,7 +101,7 @@ export function PushToggle() {
     return (
       <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4 text-sm text-[var(--text-secondary)]">
         Push notifications aren&apos;t supported in this browser. On iPhone, add
-        Stellio Fit to your Home Screen first, then enable them here.
+        Aries Fitness to your Home Screen first, then enable them here.
       </div>
     );
   }
