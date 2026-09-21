@@ -4,9 +4,11 @@ import {
   nextWorkout,
   weeklyProgress,
   completedThisWeek,
+  sequentialCycleProgress,
   type EngineTemplate,
   type EngineSession,
   type SchedulingMode,
+  type CycleProgress,
 } from "@/lib/engine";
 import { DEFAULT_TZ } from "@/lib/timezone";
 import type { Program, ProgramEnrolment, WorkoutTemplate } from "@/lib/types";
@@ -22,6 +24,9 @@ export interface DashboardData {
   } | null;
   weekly: ReturnType<typeof weeklyProgress>;
   completedTemplateIdsThisWeek: string[];
+  /** For self-paced (sequential) programs: progress through the current
+   *  rotation cycle, independent of the calendar week. Null otherwise. */
+  cycle: CycleProgress | null;
 }
 
 function toEngineTemplate(t: WorkoutTemplate): EngineTemplate {
@@ -54,6 +59,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       inProgressSession: null,
       weekly: { target: 0, completed: 0, remaining: 0, percent: 0 },
       completedTemplateIdsThisWeek: [],
+      cycle: null,
     };
   }
 
@@ -113,6 +119,14 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     .map((s) => s.workout_template_id)
     .filter(Boolean) as string[];
 
+  const cycle =
+    mode === "sequential"
+      ? sequentialCycleProgress(
+          templates.map(toEngineTemplate),
+          enrolment.next_workout_sequence
+        )
+      : null;
+
   return {
     enrolment,
     templates,
@@ -126,5 +140,6 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       : null,
     weekly,
     completedTemplateIdsThisWeek,
+    cycle,
   };
 }

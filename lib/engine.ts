@@ -81,6 +81,35 @@ export function nextSequentialWorkout(
   return rotation[((idx % rotation.length) + rotation.length) % rotation.length];
 }
 
+export interface CycleProgress {
+  completedIds: string[];
+  completed: number;
+  total: number;
+  percent: number;
+}
+
+/**
+ * Progress through the current pass of a sequential rotation, derived purely
+ * from `next_workout_sequence` (1-based, +1 per completed rotation workout).
+ * Self-paced: unaffected by calendar weeks. When a full cycle finishes the
+ * count wraps back to 0 for the next round.
+ */
+export function sequentialCycleProgress(
+  templates: EngineTemplate[],
+  nextWorkoutSequence: number
+): CycleProgress {
+  const rotation = sequentialRotation(templates);
+  const total = rotation.length;
+  if (total === 0) return { completedIds: [], completed: 0, total: 0, percent: 0 };
+  const done = (((nextWorkoutSequence - 1) % total) + total) % total; // 0..total-1
+  return {
+    completedIds: rotation.slice(0, done).map((t) => t.id),
+    completed: done,
+    total,
+    percent: Math.round((done / total) * 100),
+  };
+}
+
 /** Sessions completed within the week containing `now` (Monday-start, in tz). */
 export function completedThisWeek(
   sessions: EngineSession[],

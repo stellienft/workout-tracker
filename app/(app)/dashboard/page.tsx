@@ -232,12 +232,26 @@ export default async function DashboardPage() {
         </div>
         <div>
           {dash.enrolment ? (
-            <WeeklyCompletionCard
-              week={dash.enrolment.current_week}
-              weekly={dash.weekly}
-              templates={dash.templates}
-              completedIds={dash.completedTemplateIdsThisWeek}
-            />
+            dash.cycle ? (
+              <WeeklyCompletionCard
+                label="Your rotation"
+                progress={{
+                  percent: dash.cycle.percent,
+                  completed: dash.cycle.completed,
+                  target: dash.cycle.total,
+                  remaining: dash.cycle.total - dash.cycle.completed,
+                }}
+                templates={dash.templates}
+                completedIds={dash.cycle.completedIds}
+              />
+            ) : (
+              <WeeklyCompletionCard
+                label={`This week · Week ${dash.enrolment.current_week}`}
+                progress={dash.weekly}
+                templates={dash.templates}
+                completedIds={dash.completedTemplateIdsThisWeek}
+              />
+            )
           ) : null}
         </div>
       </div>
