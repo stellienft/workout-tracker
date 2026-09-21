@@ -16,7 +16,8 @@ import { getCachedRecap } from "@/lib/actions/recap";
 import { quoteForDate } from "@/lib/quotes";
 import { StatCard } from "@/components/ui/card";
 import { CoverImage } from "@/components/ui/cover-image";
-import { formatDuration, startOfWeek, isoDate } from "@/lib/utils";
+import { formatDuration } from "@/lib/utils";
+import { todayInTz, DEFAULT_TZ } from "@/lib/timezone";
 
 export const metadata = { title: "Dashboard" };
 
@@ -94,13 +95,14 @@ export default async function DashboardPage() {
     profile?.timezone || "Australia/Brisbane"
   );
 
-  // Days trained this week (for the dashboard attendance strip).
-  const weekStartIso = isoDate(startOfWeek(new Date()));
+  // Days trained (for the dashboard attendance strip). Formatted in the
+  // member's timezone so each session lands on their local calendar day.
+  const stripTz = profile?.timezone || DEFAULT_TZ;
   const trainedDates = Array.from(
     new Set(
-      (streakSessions ?? [])
-        .map((s) => isoDate(new Date(s.completed_at as string)))
-        .filter((d) => d >= weekStartIso)
+      (streakSessions ?? []).map((s) =>
+        todayInTz(stripTz, new Date(s.completed_at as string))
+      )
     )
   );
 
@@ -212,7 +214,7 @@ export default async function DashboardPage() {
 
       {/* Weekly attendance — track the days you train, above your program */}
       <div className="mt-5">
-        <WeekStrip trainedDates={trainedDates} />
+        <WeekStrip trainedDates={trainedDates} tz={stripTz} />
       </div>
 
       {/* Hero + weekly */}
