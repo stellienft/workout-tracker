@@ -201,19 +201,20 @@ export async function drawAchievementCard(card: ShareCard): Promise<Blob | null>
   const kickerBaseline = 194;
   ctx.fillText(card.kicker.toUpperCase(), W / 2, kickerBaseline);
 
-  // Icon medallion.
+  // Icon medallion — lowered so the medallion + title + subtitle read as a
+  // vertically-centred group, with the quote pinned up near the kicker.
   const cx = W / 2;
-  const cy = 490;
+  const cy = 560;
   const R = 170;
 
-  // God-voice quote (italic, accent) — the mythic motivational line, sitting
-  // just under the kicker and centred in the band above the medallion.
+  // God-voice quote (italic, accent) — the mythic motivational line, pinned
+  // just under the kicker in a fixed band near the top.
   if (card.quote) {
     const QUOTE_LH = 46;
     ctx.font = `italic 500 34px ${SANS}`;
     const qLines = wrapLines(ctx, `“${card.quote}”`, W - 200).slice(0, 2);
     const bandTop = kickerBaseline + 16;
-    const bandBottom = cy - R - 16;
+    const bandBottom = 330;
     const qy = (bandTop + bandBottom) / 2 - ((qLines.length - 1) * QUOTE_LH) / 2 + 12;
     ctx.fillStyle = argba(0.95);
     qLines.forEach((line, i) => ctx.fillText(line, W / 2, qy + i * QUOTE_LH));
@@ -236,7 +237,7 @@ export async function drawAchievementCard(card: ShareCard): Promise<Blob | null>
   ctx.font = `800 82px ${SANS}`;
   const titleLines = wrapLines(ctx, card.title, W - 160).slice(0, 3);
   const titleLH = 88;
-  let y = 768;
+  let y = 838;
   for (const line of titleLines) {
     ctx.fillText(line, W / 2, y);
     y += titleLH;
