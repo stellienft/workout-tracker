@@ -226,6 +226,24 @@ svg.lucide {
   background-repeat: no-repeat, repeat;
 }
 
+/* Brand texture overlay for chrome surfaces (sidebar, nav bars). Layers a soft
+   accent glow + subtle halftone ON TOP of the element's own background colour,
+   so navigation matches the app backdrop. */
+.brand-texture {
+  background-image:
+    radial-gradient(
+      140% 100% at 50% 0%,
+      color-mix(in srgb, var(--accent-primary) 8%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      color-mix(in srgb, var(--accent-primary) 5%, transparent) 1px,
+      transparent 1.5px
+    );
+  background-size: 100% 100%, 16px 16px;
+  background-repeat: no-repeat, repeat;
+}
+
 /* Safe-area helpers for installed PWA / notched devices */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);

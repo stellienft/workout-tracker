@@ -67,7 +67,7 @@ export function MobileTopBar({
 
   return (
     <>
-      <div className="pt-safe sticky top-0 z-40 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--background-secondary)] px-4 py-2.5 md:hidden">
+      <div className="brand-texture pt-safe sticky top-0 z-40 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--background-secondary)] px-4 py-2.5 md:hidden">
         <div className="flex items-center gap-1">
           {showBack && (
             <button
@@ -99,7 +99,7 @@ export function MobileTopBar({
             className="absolute inset-0 bg-black/60"
             onClick={() => setOpen(false)}
           />
-          <div className="pt-safe absolute inset-y-0 left-0 flex w-[82%] max-w-xs flex-col bg-[var(--background-secondary)]">
+          <div className="brand-texture pt-safe absolute inset-y-0 left-0 flex w-[82%] max-w-xs flex-col bg-[var(--background-secondary)]">
             <div className="flex items-center justify-between px-5 py-4">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.png" alt="Ares Fitness" className="h-6 w-auto" />
