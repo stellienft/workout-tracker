@@ -83,17 +83,17 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
   });
 }
 
-/** Draw the AF logo centred at the top, falling back to the text wordmark. */
+/** Draw the Ares mascot centred at the top, falling back to the wordmark. */
 async function drawBrandmark(
   ctx: CanvasRenderingContext2D,
   W: number,
   accent: string
 ) {
-  const logo = await loadImage("/logo.png");
-  if (logo && logo.width > 0) {
-    const h = 88;
-    const w = (logo.width / logo.height) * h;
-    ctx.drawImage(logo, W / 2 - w / 2, 74, w, h);
+  const mascot = await loadImage("/mascot.png");
+  if (mascot && mascot.width > 0) {
+    const h = 150;
+    const w = (mascot.width / mascot.height) * h;
+    ctx.drawImage(mascot, W / 2 - w / 2, 40, w, h);
     return;
   }
   // Fallback: text wordmark.
@@ -220,8 +220,8 @@ export async function drawAchievementCard(card: ShareCard): Promise<Blob | null>
   ctx.font = `800 40px ${SANS}`;
   ctx.fillText("Train Smarter. Build Stronger.", W / 2, H - 120);
   ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.font = `600 32px ${SANS}`;
-  ctx.fillText("stellio.fit", W / 2, H - 70);
+  ctx.font = `700 30px ${SANS}`;
+  ctx.fillText("ARES FITNESS", W / 2, H - 70);
 
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png", 0.95));
 }
