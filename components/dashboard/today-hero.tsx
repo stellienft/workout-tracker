@@ -27,6 +27,7 @@ export function TodayHeroCard({
         priority
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
+      <div className="halftone pointer-events-none absolute inset-0" />
       <div className="on-media relative flex min-h-[18rem] flex-col justify-between gap-4 p-5 sm:min-h-[20rem] sm:p-6">
         <div className="flex items-start justify-between">
           <span className="rounded-full bg-black/50 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--accent-primary)] backdrop-blur">
