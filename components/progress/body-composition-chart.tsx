@@ -69,7 +69,7 @@ export function BodyCompositionChart({ scans }: { scans: ScanRow[] }) {
             <span className="h-2.5 w-2.5 rounded-sm bg-[var(--accent-primary)]" /> Lean
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm bg-[var(--danger)]" /> Fat
+            <span className="h-2.5 w-2.5 rounded-sm bg-[var(--fat)]" /> Fat
           </span>
         </div>
       </div>
@@ -119,7 +119,7 @@ export function BodyCompositionChart({ scans }: { scans: ScanRow[] }) {
             return (
               <g key={i}>
                 {/* fat (top) */}
-                <rect x={x} y={fatY} width={barW} height={fatH} rx="2" fill="var(--danger)" />
+                <rect x={x} y={fatY} width={barW} height={fatH} rx="2" fill="var(--fat)" />
                 {/* lean (bottom) */}
                 <rect
                   x={x}
@@ -170,7 +170,7 @@ export function BodyCompositionChart({ scans }: { scans: ScanRow[] }) {
       <div className="mt-4 grid grid-cols-3 gap-3 text-center">
         <Cell label="Total" value={`${latest.weight.toFixed(1)} kg`} />
         <Cell label="Lean" value={`${latest.lean.toFixed(1)} kg`} tone="accent" />
-        <Cell label="Fat" value={`${latest.fat.toFixed(1)} kg`} tone="danger" />
+        <Cell label="Fat" value={`${latest.fat.toFixed(1)} kg`} tone="fat" />
       </div>
     </div>
   );
@@ -183,13 +183,13 @@ function Cell({
 }: {
   label: string;
   value: string;
-  tone?: "accent" | "danger";
+  tone?: "accent" | "fat";
 }) {
   const color =
     tone === "accent"
       ? "text-[var(--accent-primary)]"
-      : tone === "danger"
-        ? "text-[var(--danger)]"
+      : tone === "fat"
+        ? "text-[var(--fat)]"
         : "text-[var(--text-primary)]";
   return (
     <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3">

@@ -58,6 +58,9 @@
   /* Success keeps a distinct green so it never reads as the orange accent or
      the amber warning. */
   --success: #22c55e;
+  /* Body-composition "fat" — a cool blue that contrasts the (warm) lean/accent
+     bar and doesn't read as a danger/error colour. */
+  --fat: #4d9de0;
 
   /* Categorical chart series (dark steps) — validated for CVD + contrast on the
      dark chart surface. Fixed order; assign by entity, never cycle a 9th. */
@@ -89,6 +92,7 @@
   --warning: #b45309;
   --danger: #dc2626;
   --success: #16a34a;
+  --fat: #2f7fc4;
 
   /* Categorical chart series (light steps) — same eight hues, re-stepped and
      validated for the white chart surface. */
