@@ -44,7 +44,7 @@ export function ThemeControls({
     <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
       <p className="text-sm font-medium">Theme</p>
       <p className="text-xs text-[var(--text-muted)]">
-        Pick one of our four looks — two dark, two light.
+        Pick your look — dark or light, in your favourite accent.
       </p>
       <div className="mt-4 grid grid-cols-2 gap-3">
         {THEME_PRESETS.map((preset) => (
@@ -71,6 +71,7 @@ const PREVIEW = {
 // accents take white; the light peach takes dark ink.
 const INK: Record<string, string> = {
   orange: "#ffffff",
+  lime: "#0d0d0d",
   peach: "#0d0d0d",
   blue: "#ffffff",
   grey: "#ffffff",
