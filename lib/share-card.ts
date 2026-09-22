@@ -209,13 +209,6 @@ export async function drawAchievementCard(card: ShareCard): Promise<Blob | null>
   ctx.lineWidth = 6;
   ctx.strokeStyle = argba(0.55);
   ctx.stroke();
-  // Halftone texture inside the medallion, echoing the brand mark.
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx, cy, 168, 0, Math.PI * 2);
-  ctx.clip();
-  drawHalftone(ctx, W, H, argba(0.16));
-  ctx.restore();
   // Centred Lucide icon (bolder stroke) in place of an emoji.
   const iconPx = 150;
   const icon = await loadIcon(card.icon, accent, iconPx);
