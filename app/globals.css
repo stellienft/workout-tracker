@@ -187,6 +187,22 @@ h6 {
   font-family: var(--font-display);
 }
 
+/* Slightly bolder icon strokes across the app to suit the bold brand. Lucide
+   sets stroke-width as an SVG attribute, which this CSS overrides. Individual
+   icons can still opt out with an inline strokeWidth style. */
+svg.lucide {
+  stroke-width: 2.25px;
+}
+
+/* Halftone dot texture — echoes the brand mark's comic halftone. Drop it in as
+   an absolutely-positioned overlay layer over a dark surface. */
+.halftone {
+  background-image: radial-gradient(var(--accent-primary) 1px, transparent 1.6px);
+  background-size: 14px 14px;
+  background-position: 0 0;
+  opacity: 0.1;
+}
+
 /* Safe-area helpers for installed PWA / notched devices */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);

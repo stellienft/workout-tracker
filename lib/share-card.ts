@@ -62,7 +62,7 @@ function toRgb(c: string): [number, number, number] {
 function loadIcon(icon: AchIcon, color: string, px: number): Promise<HTMLImageElement | null> {
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="0 0 24 24" ` +
-    `fill="none" stroke="${color}" stroke-width="1.75" stroke-linecap="round" ` +
+    `fill="none" stroke="${color}" stroke-width="2.1" stroke-linecap="round" ` +
     `stroke-linejoin="round">${ICON_SVG[icon]}</svg>`;
   return new Promise((resolve) => {
     const img = new Image();
@@ -209,8 +209,15 @@ export async function drawAchievementCard(card: ShareCard): Promise<Blob | null>
   ctx.lineWidth = 6;
   ctx.strokeStyle = argba(0.55);
   ctx.stroke();
-  // Centred Lucide icon in place of an emoji.
-  const iconPx = 168;
+  // Halftone texture inside the medallion, echoing the brand mark.
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 168, 0, Math.PI * 2);
+  ctx.clip();
+  drawHalftone(ctx, W, H, argba(0.16));
+  ctx.restore();
+  // Centred Lucide icon (bolder stroke) in place of an emoji.
+  const iconPx = 150;
   const icon = await loadIcon(card.icon, accent, iconPx);
   if (icon) ctx.drawImage(icon, cx - iconPx / 2, cy - iconPx / 2, iconPx, iconPx);
 
