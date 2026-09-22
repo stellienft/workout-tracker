@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { formatDuration } from "@/lib/utils";
+import { formatDuration, sessionSeconds } from "@/lib/utils";
 import { Confetti } from "@/components/ui/confetti";
 import { ShareAchievement } from "@/components/achievements/share-achievement";
 import { ShareWorkoutButton } from "@/components/feed/share-workout-button";
@@ -90,7 +90,8 @@ export default async function WorkoutSummaryPage({
     0
   );
   const setCount = (logs ?? []).length;
-  const duration = formatDuration(session.total_seconds ?? 0);
+  // Total time includes the warm-up, which is logged separately from the timer.
+  const duration = formatDuration(sessionSeconds(session));
 
   // Previous completed session for the same user — used to compute the
   // volume delta vs this session so we can celebrate improvement.

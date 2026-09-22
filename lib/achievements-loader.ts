@@ -18,7 +18,7 @@ export async function loadAchievements(
   const [{ data: sessions }, { data: logs }, { data: metrics }] = await Promise.all([
     supabase
       .from("workout_sessions")
-      .select("started_at, completed_at, total_seconds")
+      .select("started_at, completed_at, total_seconds, warmup_seconds")
       .eq("user_id", userId)
       .eq("status", "completed")
       .limit(1000),
@@ -37,11 +37,16 @@ export async function loadAchievements(
       .limit(2000),
   ]);
 
-  const achSessions: AchSession[] = (sessions ?? []).map((s) => ({
-    startedAt: s.started_at as string,
-    completedAt: (s.completed_at as string | null) ?? null,
-    durationSeconds: (s.total_seconds as number | null) ?? null,
-  }));
+  const achSessions: AchSession[] = (sessions ?? []).map((s) => {
+    const total = (s.total_seconds as number | null) ?? null;
+    const warmup = (s.warmup_seconds as number | null) ?? 0;
+    return {
+      startedAt: s.started_at as string,
+      completedAt: (s.completed_at as string | null) ?? null,
+      // Include the warm-up, which is tracked separately from the lifting timer.
+      durationSeconds: total === null ? null : total + warmup,
+    };
+  });
 
   const achSets: AchSet[] = (logs ?? []).map((l) => ({
     exerciseId: l.exercise_id as string,

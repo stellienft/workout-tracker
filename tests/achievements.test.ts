@@ -92,15 +92,19 @@ describe("computeAchievements", () => {
     expect(pr?.value).toBe(30);
   });
 
-  it("awards a body-composition change", () => {
+  it("shows the actual body change, keyed to the milestone tier reached", () => {
+    // 139 → 131 is an 8 kg loss: clears the 5 kg tier but shows the real 8 kg.
     const body: BodyPoint[] = [
-      { date: iso(60), weightKg: 80 },
-      { date: iso(1), weightKg: 85.5 },
+      { date: iso(60), weightKg: 139 },
+      { date: iso(1), weightKg: 131 },
     ];
     const res = computeAchievements([], [], meta, body, NOW);
-    const keys = res.map((a) => a.key);
-    expect(keys).toContain("body_gain_5");
-    expect(keys).not.toContain("body_gain_10");
+    const badge = res.find((a) => a.key === "body_loss_5");
+    expect(badge).toBeTruthy();
+    expect(badge?.title).toBe("Lost 8 kg");
+    expect(res.find((a) => a.key === "body_loss_10")).toBeFalsy();
+    // Only the top tier shows — not a stack of lower ones.
+    expect(res.find((a) => a.key === "body_loss_2.5")).toBeFalsy();
   });
 
   it("awards a cardio distance best", () => {
@@ -122,6 +126,13 @@ describe("computeAchievements", () => {
     expect(longest?.value).toBe(4800); // 80 minutes
     expect(longest?.description).toContain("80 minutes");
     expect(res.find((a) => a.key === "cardio_duration")).toBeFalsy();
+  });
+
+  it("ignores a forgotten-timer session (over 3 hours) for longest session", () => {
+    const sessions: AchSession[] = [session(3, 4800), session(1, 4 * 60 * 60)];
+    const res = computeAchievements(sessions, [], meta, [], NOW);
+    // The 4-hour session is treated as a forgotten timer and skipped.
+    expect(res.find((a) => a.key === "session_duration")?.value).toBe(4800);
   });
 
   it("falls back to wall-clock time when a session has no tracked duration", () => {

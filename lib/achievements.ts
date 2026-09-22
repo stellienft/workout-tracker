@@ -76,6 +76,9 @@ const WORKOUT_MILESTONES = [1, 5, 10, 25, 50, 100, 200, 365];
 const STREAK_MILESTONES = [2, 4, 8, 12, 26, 52];
 const VOLUME_MILESTONES = [10_000, 25_000, 50_000, 100_000, 250_000, 500_000, 1_000_000];
 const BODY_MILESTONES = [2.5, 5, 10, 15, 20];
+// Sessions longer than this are treated as a forgotten timer and ignored for
+// the "Longest session" badge.
+const MAX_SESSION_SECONDS = 3 * 60 * 60;
 
 /** Longest run of consecutive weeks with at least one session. */
 export function longestWeeklyStreak(sessionDates: string[]): number {
@@ -186,6 +189,7 @@ export function computeAchievements(
         (new Date(s.completedAt).getTime() - new Date(s.startedAt).getTime()) / 1000
       );
     }
+    if (secs > MAX_SESSION_SECONDS) continue; // forgotten timer — skip
     if (secs > 0 && (!bestSession || secs > bestSession.s))
       bestSession = { s: secs, at: s.completedAt };
   }
@@ -248,21 +252,26 @@ export function computeAchievements(
     const start = sorted[0];
     const latest = sorted[sorted.length - 1];
     const change = latest.weightKg - start.weightKg;
+    const absChange = Math.abs(change);
     const gained = change >= 0;
-    for (const m of BODY_MILESTONES) {
-      if (Math.abs(change) >= m) {
-        out.push({
-          key: `body_${gained ? "gain" : "loss"}_${m}`,
-          group: "Body",
-          icon: "scale",
-          title: gained ? `Gained ${m} kg` : `Lost ${m} kg`,
-          description: gained
-            ? `You've put on ${m} kg since you started tracking.`
-            : `You've dropped ${m} kg since you started tracking.`,
-          value: m,
-          achievedAt: latest.date,
-        });
-      }
+    // Highest milestone tier reached gates the badge and paces "level up"
+    // celebrations, but the badge shows the ACTUAL change so it matches the
+    // progress chart (an 8 kg loss reads "Lost 8 kg", not "Lost 5 kg").
+    let tier = 0;
+    for (const m of BODY_MILESTONES) if (absChange >= m) tier = m;
+    if (tier > 0) {
+      const shown = Math.round(absChange * 10) / 10;
+      out.push({
+        key: `body_${gained ? "gain" : "loss"}_${tier}`,
+        group: "Body",
+        icon: "scale",
+        title: gained ? `Gained ${shown} kg` : `Lost ${shown} kg`,
+        description: gained
+          ? `You've put on ${shown} kg since you started tracking.`
+          : `You've dropped ${shown} kg since you started tracking.`,
+        value: tier,
+        achievedAt: latest.date,
+      });
     }
   }
 

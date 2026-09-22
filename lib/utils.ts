@@ -10,6 +10,18 @@ export function formatDuration(totalSeconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+/**
+ * Total elapsed time for a session, including any pre-workout warm-up (which is
+ * logged separately from the lifting timer). Use this wherever a session's
+ * "total time" is shown so the warm-up always counts.
+ */
+export function sessionSeconds(session: {
+  total_seconds?: number | null;
+  warmup_seconds?: number | null;
+}): number {
+  return (session.total_seconds ?? 0) + (session.warmup_seconds ?? 0);
+}
+
 export function repDisplay(ex: {
   rep_min: number | null;
   rep_max: number | null;
