@@ -6,7 +6,7 @@
  * Orange is the flagship brand accent and the default in both modes.
  */
 export type ThemeMode = "light" | "dark";
-export type AccentKey = "orange" | "peach" | "blue" | "grey";
+export type AccentKey = "orange" | "lime" | "peach" | "blue" | "grey";
 
 export interface ThemePreset {
   id: string;
@@ -19,12 +19,14 @@ export interface ThemePreset {
 export const THEME_PRESETS: ThemePreset[] = [
   { id: "ares-dark", name: "Ares Dark", mode: "dark", accentKey: "orange", accentHex: "#ff520e" },
   { id: "ares-light", name: "Ares Light", mode: "light", accentKey: "orange", accentHex: "#ff520e" },
+  { id: "midnight-lime", name: "Midnight Lime", mode: "dark", accentKey: "lime", accentHex: "#ccff30" },
   { id: "midnight-peach", name: "Midnight Peach", mode: "dark", accentKey: "peach", accentHex: "#ffb27a" },
   { id: "daylight-blue", name: "Daylight Blue", mode: "light", accentKey: "blue", accentHex: "#3b82f6" },
 ];
 
 export const ACCENT_HEX: Record<AccentKey, string> = {
   orange: "#ff520e",
+  lime: "#ccff30",
   peach: "#ffb27a",
   blue: "#3b82f6",
   grey: "#64748b",
@@ -32,9 +34,9 @@ export const ACCENT_HEX: Record<AccentKey, string> = {
 
 const HEX_TO_ACCENT: Record<string, AccentKey> = {
   "#ff520e": "orange",
-  // Legacy accents (lime, and the interim orange) migrate to the brand orange.
+  // Interim rebrand orange still migrates to the current brand orange.
   "#f26a1b": "orange",
-  "#ccff30": "orange",
+  "#ccff30": "lime",
   "#ffb27a": "peach",
   "#3b82f6": "blue",
   "#64748b": "grey",

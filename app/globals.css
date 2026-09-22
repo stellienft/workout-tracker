@@ -114,6 +114,11 @@
   --accent-primary: #ff520e;
   --accent-ink: #ffffff;
 }
+:root[data-accent="lime"] {
+  --accent-base: #ccff30;
+  --accent-primary: #ccff30;
+  --accent-ink: #0d0d0d;
+}
 :root[data-accent="peach"] {
   --accent-base: #ffb27a;
   --accent-primary: #ffb27a;
