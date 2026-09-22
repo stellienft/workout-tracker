@@ -582,13 +582,15 @@ async function drawShareCard(data: Point[]): Promise<Blob | null> {
     im.src = "/logo.png";
   });
   if (mark && mark.width > 0) {
-    const lh = 36;
+    const lh = 34;
     const lw = (mark.width / mark.height) * lh;
     ctx.drawImage(mark, pad, H - 158, lw, lh);
   }
-  ctx.fillStyle = accent;
-  ctx.font = `800 38px ${sans}`;
-  ctx.fillText("Train Smarter. Build Stronger.", pad, H - 88);
+  ctx.fillStyle = "rgba(255,255,255,0.45)";
+  ctx.font = `600 26px ${sans}`;
+  if ("letterSpacing" in ctx) (ctx as unknown as { letterSpacing: string }).letterSpacing = "1.5px";
+  ctx.fillText("TRAIN SMARTER · BUILD STRONGER", pad, H - 88);
+  if ("letterSpacing" in ctx) (ctx as unknown as { letterSpacing: string }).letterSpacing = "0px";
 
   return new Promise((resolve) =>
     canvas.toBlob((b) => resolve(b), "image/png", 0.95)

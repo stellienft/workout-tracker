@@ -215,54 +215,75 @@ export async function drawAchievementCard(card: ShareCard): Promise<Blob | null>
   const icon = await loadIcon(card.icon, accent, iconPx);
   if (icon) ctx.drawImage(icon, cx - iconPx / 2, cy - iconPx / 2, iconPx, iconPx);
 
-  // Title (wrapped).
+  // Title (wrapped) — the hero line stays bold.
   ctx.fillStyle = "#FFFFFF";
-  ctx.font = `800 84px ${SANS}`;
+  ctx.font = `800 82px ${SANS}`;
   const titleLines = wrapLines(ctx, card.title, W - 160).slice(0, 3);
-  let y = 760;
+  const titleLH = 88;
+  let y = 748;
   for (const line of titleLines) {
     ctx.fillText(line, W / 2, y);
-    y += 96;
+    y += titleLH;
+  }
+  const titleBottom = y - titleLH + 22; // visual bottom of the last title line
+
+  // ---- Supporting block: subtitle · quote · date, as one tight cluster,
+  // vertically centred in the space between the title and the footer so it
+  // doesn't sprawl. Lighter, smaller type than the title.
+  const SUB_LH = 46;
+  const QUOTE_LH = 46;
+  const GAP_SUB_QUOTE = 52;
+  const GAP_QUOTE_DATE = 44;
+
+  ctx.font = `400 33px ${SANS}`;
+  const subLines = wrapLines(ctx, card.subtitle, W - 260).slice(0, 3);
+
+  let qLines: string[] = [];
+  if (card.quote) {
+    ctx.font = `italic 500 32px ${SANS}`;
+    qLines = wrapLines(ctx, `“${card.quote}”`, W - 260).slice(0, 3);
   }
 
-  // Subtitle (wrapped).
-  ctx.fillStyle = "rgba(255,255,255,0.7)";
-  ctx.font = `500 40px ${SANS}`;
-  const subLines = wrapLines(ctx, card.subtitle, W - 200).slice(0, 3);
-  y += 20;
-  for (const line of subLines) {
-    ctx.fillText(line, W / 2, y);
-    y += 54;
-  }
+  // Anchor the supporting cluster just under the title (top-weighted, like an
+  // IG story) rather than floating it in the middle, so it reads as one unit
+  // with clean whitespace above the pinned footer.
+  let by = titleBottom + 92;
+
+  // Subtitle — muted, light.
+  ctx.fillStyle = "rgba(255,255,255,0.60)";
+  ctx.font = `400 33px ${SANS}`;
+  subLines.forEach((line, i) => ctx.fillText(line, W / 2, by + i * SUB_LH));
+  by += (subLines.length - 1) * SUB_LH;
 
   // God-voice quote (italic, accent) — the mythic motivational line.
-  if (card.quote) {
-    ctx.fillStyle = accent;
-    ctx.font = `italic 600 38px ${SANS}`;
-    const qLines = wrapLines(ctx, `“${card.quote}”`, W - 200).slice(0, 3);
-    y += 46;
-    for (const line of qLines) {
-      ctx.fillText(line, W / 2, y);
-      y += 50;
-    }
+  if (qLines.length) {
+    by += GAP_SUB_QUOTE;
+    ctx.fillStyle = argba(0.95);
+    ctx.font = `italic 500 32px ${SANS}`;
+    qLines.forEach((line, i) => ctx.fillText(line, W / 2, by + i * QUOTE_LH));
+    by += (qLines.length - 1) * QUOTE_LH;
   }
 
+  // Date — small and quiet.
   if (card.footnote) {
-    ctx.fillStyle = "rgba(255,255,255,0.4)";
-    ctx.font = `600 32px ${SANS}`;
-    ctx.fillText(card.footnote, W / 2, H - 230);
+    by += GAP_QUOTE_DATE;
+    ctx.fillStyle = "rgba(255,255,255,0.35)";
+    ctx.font = `500 26px ${SANS}`;
+    ctx.fillText(card.footnote, W / 2, by);
   }
 
-  // Footer: AF logo above the tagline.
+  // Footer: AF logo above a smaller, quieter tagline.
   const mark = await loadImage("/logo.png");
   if (mark && mark.width > 0) {
-    const lh = 40;
+    const lh = 34;
     const lw = (mark.width / mark.height) * lh;
-    ctx.drawImage(mark, W / 2 - lw / 2, H - 176, lw, lh);
+    ctx.drawImage(mark, W / 2 - lw / 2, H - 158, lw, lh);
   }
-  ctx.fillStyle = accent;
-  ctx.font = `800 38px ${SANS}`;
-  ctx.fillText("Train Smarter. Build Stronger.", W / 2, H - 88);
+  ctx.fillStyle = "rgba(255,255,255,0.45)";
+  ctx.font = `600 26px ${SANS}`;
+  if ("letterSpacing" in ctx) (ctx as unknown as { letterSpacing: string }).letterSpacing = "1.5px";
+  ctx.fillText("TRAIN SMARTER · BUILD STRONGER", W / 2, H - 84);
+  if ("letterSpacing" in ctx) (ctx as unknown as { letterSpacing: string }).letterSpacing = "0px";
 
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png", 0.95));
 }
