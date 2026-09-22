@@ -203,6 +203,29 @@ svg.lucide {
   opacity: 0.1;
 }
 
+/* App-wide backdrop: base colour + a soft accent glow from the top and a very
+   subtle halftone, sitting behind all content to add depth. Shows through the
+   transparent page background between cards. */
+.app-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  background-color: var(--background-primary);
+  background-image:
+    radial-gradient(
+      120% 55% at 50% -8%,
+      color-mix(in srgb, var(--accent-primary) 9%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      color-mix(in srgb, var(--accent-primary) 6%, transparent) 1px,
+      transparent 1.5px
+    );
+  background-size: 100% 100%, 16px 16px;
+  background-repeat: no-repeat, repeat;
+}
+
 /* Safe-area helpers for installed PWA / notched devices */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);

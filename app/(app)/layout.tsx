@@ -93,6 +93,7 @@ export default async function AppLayout({
         theme={profile?.theme_preference ?? "dark"}
         accent={profile?.accent_color ?? "#ff520e"}
       />
+      <div className="app-backdrop" aria-hidden />
       <div className="flex min-h-dvh">
         <Sidebar
           isAdmin={isAdmin}
