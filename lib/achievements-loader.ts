@@ -18,7 +18,7 @@ export async function loadAchievements(
   const [{ data: sessions }, { data: logs }, { data: metrics }] = await Promise.all([
     supabase
       .from("workout_sessions")
-      .select("started_at, completed_at")
+      .select("started_at, completed_at, total_seconds")
       .eq("user_id", userId)
       .eq("status", "completed")
       .limit(1000),
@@ -40,6 +40,7 @@ export async function loadAchievements(
   const achSessions: AchSession[] = (sessions ?? []).map((s) => ({
     startedAt: s.started_at as string,
     completedAt: (s.completed_at as string | null) ?? null,
+    durationSeconds: (s.total_seconds as number | null) ?? null,
   }));
 
   const achSets: AchSet[] = (logs ?? []).map((l) => ({

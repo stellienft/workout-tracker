@@ -43,6 +43,7 @@ export interface Achievement {
 export interface AchSession {
   startedAt: string;
   completedAt: string | null;
+  durationSeconds: number | null; // tracked training time for the session
 }
 
 export interface AchSet {
@@ -146,7 +147,6 @@ export function computeAchievements(
   const sessionsByExercise = new Map<string, Set<number>>();
   let totalVolume = 0;
   let bestDistance: { m: number; at: string } | null = null;
-  let bestDuration: { s: number; at: string } | null = null;
 
   for (const s of sets) {
     if (!s.completed) continue;
@@ -160,7 +160,10 @@ export function computeAchievements(
 
     if (w > 0 && r > 0) {
       const cur = bestWeight.get(s.exerciseId);
-      if (!cur || w > cur.w) bestWeight.set(s.exerciseId, { w, reps: r, at: s.at });
+      // Heaviest weight wins; on a tie, more reps is the better effort (a
+      // higher estimated 1RM), so it becomes the record and carries its date.
+      if (!cur || w > cur.w || (w === cur.w && r > cur.reps))
+        bestWeight.set(s.exerciseId, { w, reps: r, at: s.at });
     }
     if (r > 0 && w === 0) {
       const cur = bestReps.get(s.exerciseId);
@@ -170,10 +173,21 @@ export function computeAchievements(
       if (!bestDistance || (s.distanceM as number) > bestDistance.m)
         bestDistance = { m: s.distanceM as number, at: s.at };
     }
-    if ((s.durationSeconds ?? 0) > 0) {
-      if (!bestDuration || (s.durationSeconds as number) > bestDuration.s)
-        bestDuration = { s: s.durationSeconds as number, at: s.at };
+  }
+
+  // ---- Longest session (from the session's tracked training time) ----
+  let bestSession: { s: number; at: string } | null = null;
+  for (const s of sessions) {
+    if (!s.completedAt) continue;
+    let secs = s.durationSeconds ?? 0;
+    if (secs <= 0 && s.startedAt) {
+      // Fall back to wall-clock time between start and finish.
+      secs = Math.round(
+        (new Date(s.completedAt).getTime() - new Date(s.startedAt).getTime()) / 1000
+      );
     }
+    if (secs > 0 && (!bestSession || secs > bestSession.s))
+      bestSession = { s: secs, at: s.completedAt };
   }
 
   const hasEnough = (exId: string) => (sessionsByExercise.get(exId)?.size ?? 0) >= 2;
@@ -189,7 +203,9 @@ export function computeAchievements(
       icon: "dumbbell",
       title: `Heaviest ${meta.name}`,
       description: `Lifted ${roundLoad(best.w)} kg × ${best.reps} (est. 1RM ${e1rm} kg).`,
-      value: best.w,
+      // Track estimated 1RM (not raw weight) so beating the record with more
+      // reps at the same top weight registers as a new PR and refreshes the date.
+      value: e1rm,
       achievedAt: best.at,
     });
   }
@@ -262,16 +278,16 @@ export function computeAchievements(
       achievedAt: bestDistance.at,
     });
   }
-  if (bestDuration) {
-    const mins = Math.round(bestDuration.s / 60);
+  if (bestSession) {
+    const mins = Math.round(bestSession.s / 60);
     out.push({
-      key: "cardio_duration",
-      group: "Cardio",
+      key: "session_duration",
+      group: "Milestones",
       icon: "timer",
       title: "Longest session",
-      description: `You kept going for ${mins} minute${mins === 1 ? "" : "s"} straight.`,
-      value: bestDuration.s,
-      achievedAt: bestDuration.at,
+      description: `You trained for ${mins} minute${mins === 1 ? "" : "s"} in a single session.`,
+      value: bestSession.s,
+      achievedAt: bestSession.at,
     });
   }
 
