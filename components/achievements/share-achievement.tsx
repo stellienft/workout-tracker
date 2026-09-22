@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Share2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { drawAchievementCard, shareOrDownload } from "@/lib/share-card";
+import { mythicQuoteFor } from "@/lib/mythic-quotes";
 import type { AchGroup, AchIcon } from "@/lib/achievements";
 
 // Fallback icon per group, used when a specific achievement icon isn't passed
@@ -52,10 +53,11 @@ export function ShareAchievement({
         kicker: KICKER[group],
         title,
         subtitle: description,
+        quote: mythicQuoteFor(title),
         footnote: dateLabel,
       });
       if (!blob) throw new Error("render failed");
-      const result = await shareOrDownload(blob, "stellio-fit-achievement.png");
+      const result = await shareOrDownload(blob, "ares-fitness-achievement.png");
       if (result === "downloaded") toast("Image saved — share it anywhere.", "success");
     } catch (e) {
       if ((e as Error).name !== "AbortError") toast("Couldn't share — try again.", "error");

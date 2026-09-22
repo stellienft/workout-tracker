@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Confetti } from "@/components/ui/confetti";
 import { useToast } from "@/components/ui/toast";
 import { syncAchievements } from "@/lib/actions/achievements";
+import { randomMythicQuote } from "@/lib/mythic-quotes";
 
 /**
  * On mount, reconcile earned achievements and celebrate any newly-unlocked
@@ -25,7 +26,10 @@ export function AchievementsSync() {
         if (res.ok && res.newlyEarned.length > 0) {
           setCelebrate(true);
           const n = res.newlyEarned.length;
-          toast(`${n} new achievement${n === 1 ? "" : "s"} unlocked! 🎉`, "success");
+          toast(
+            `${n} new achievement${n === 1 ? "" : "s"} unlocked — ${randomMythicQuote()}`,
+            "success"
+          );
           router.refresh();
           window.setTimeout(() => setCelebrate(false), 5000);
         }
