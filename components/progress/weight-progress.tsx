@@ -407,6 +407,28 @@ function downloadBlob(blob: Blob, name: string) {
 }
 
 /** Draw a branded, shareable 1080×1350 progress card. */
+/** Subtle halftone dot texture that echoes the mascot's comic-halftone style. */
+function drawHalftone(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  color: string
+) {
+  const gap = 30;
+  const r = 2.3;
+  ctx.save();
+  ctx.fillStyle = color;
+  for (let row = 0, y = 0; y <= H; y += gap, row++) {
+    const xOff = (row % 2) * (gap / 2);
+    for (let x = -gap; x <= W + gap; x += gap) {
+      ctx.beginPath();
+      ctx.arc(x + xOff, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
 async function drawShareCard(data: Point[]): Promise<Blob | null> {
   const W = 1080;
   const H = 1350;
@@ -436,6 +458,9 @@ async function drawShareCard(data: Point[]): Promise<Blob | null> {
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
 
+  // Halftone dot texture tying into the mascot's comic style.
+  drawHalftone(ctx, W, H, argba(0.05));
+
   const pad = 80;
   const sans =
     'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
@@ -450,9 +475,9 @@ async function drawShareCard(data: Point[]): Promise<Blob | null> {
     im.src = "/mascot.png";
   });
   if (logo && logo.width > 0) {
-    const h = 120;
+    const h = 84;
     const w = (logo.width / logo.height) * h;
-    ctx.drawImage(logo, pad, 40, w, h);
+    ctx.drawImage(logo, pad, 48, w, h);
   } else {
     ctx.font = `800 46px ${sans}`;
     ctx.fillStyle = "#FFFFFF";
@@ -548,12 +573,22 @@ async function drawShareCard(data: Point[]): Promise<Blob | null> {
   ctx.fillText(formatMonth(data[data.length - 1].x), cx + cw, cy + ch + 40);
   ctx.textAlign = "left";
 
+  // AF logo above the tagline.
+  const mark = await new Promise<HTMLImageElement | null>((resolve) => {
+    const im = new Image();
+    im.crossOrigin = "anonymous";
+    im.onload = () => resolve(im);
+    im.onerror = () => resolve(null);
+    im.src = "/logo.png";
+  });
+  if (mark && mark.width > 0) {
+    const lh = 36;
+    const lw = (mark.width / mark.height) * lh;
+    ctx.drawImage(mark, pad, H - 158, lw, lh);
+  }
   ctx.fillStyle = accent;
-  ctx.font = `800 40px ${sans}`;
-  ctx.fillText("Train Smarter. Build Stronger.", pad, H - 120);
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.font = `700 30px ${sans}`;
-  ctx.fillText("ARES FITNESS", pad, H - 70);
+  ctx.font = `800 38px ${sans}`;
+  ctx.fillText("Train Smarter. Build Stronger.", pad, H - 88);
 
   return new Promise((resolve) =>
     canvas.toBlob((b) => resolve(b), "image/png", 0.95)
