@@ -198,13 +198,29 @@ export async function drawAchievementCard(card: ShareCard): Promise<Blob | null>
   // Kicker.
   ctx.fillStyle = "rgba(255,255,255,0.55)";
   ctx.font = `700 30px ${SANS}`;
-  ctx.fillText(card.kicker.toUpperCase(), W / 2, 210);
+  const kickerBaseline = 194;
+  ctx.fillText(card.kicker.toUpperCase(), W / 2, kickerBaseline);
 
   // Icon medallion.
   const cx = W / 2;
-  const cy = 470;
+  const cy = 490;
+  const R = 170;
+
+  // God-voice quote (italic, accent) — the mythic motivational line, sitting
+  // just under the kicker and centred in the band above the medallion.
+  if (card.quote) {
+    const QUOTE_LH = 46;
+    ctx.font = `italic 500 34px ${SANS}`;
+    const qLines = wrapLines(ctx, `“${card.quote}”`, W - 200).slice(0, 2);
+    const bandTop = kickerBaseline + 16;
+    const bandBottom = cy - R - 16;
+    const qy = (bandTop + bandBottom) / 2 - ((qLines.length - 1) * QUOTE_LH) / 2 + 12;
+    ctx.fillStyle = argba(0.95);
+    qLines.forEach((line, i) => ctx.fillText(line, W / 2, qy + i * QUOTE_LH));
+  }
+
   ctx.beginPath();
-  ctx.arc(cx, cy, 170, 0, Math.PI * 2);
+  ctx.arc(cx, cy, R, 0, Math.PI * 2);
   ctx.fillStyle = argba(0.12);
   ctx.fill();
   ctx.lineWidth = 6;
@@ -220,53 +236,31 @@ export async function drawAchievementCard(card: ShareCard): Promise<Blob | null>
   ctx.font = `800 82px ${SANS}`;
   const titleLines = wrapLines(ctx, card.title, W - 160).slice(0, 3);
   const titleLH = 88;
-  let y = 748;
+  let y = 768;
   for (const line of titleLines) {
     ctx.fillText(line, W / 2, y);
     y += titleLH;
   }
   const titleBottom = y - titleLH + 22; // visual bottom of the last title line
 
-  // ---- Supporting block: subtitle · quote · date, as one tight cluster,
-  // vertically centred in the space between the title and the footer so it
-  // doesn't sprawl. Lighter, smaller type than the title.
+  // ---- Supporting block: subtitle · date, anchored just under the title as
+  // one tight cluster. Narrower wrap so lines don't carry too wide.
   const SUB_LH = 46;
-  const QUOTE_LH = 46;
-  const GAP_SUB_QUOTE = 52;
-  const GAP_QUOTE_DATE = 44;
+  const GAP_SUB_DATE = 48;
 
   ctx.font = `400 33px ${SANS}`;
-  const subLines = wrapLines(ctx, card.subtitle, W - 260).slice(0, 3);
+  const subLines = wrapLines(ctx, card.subtitle, W - 360).slice(0, 3);
 
-  let qLines: string[] = [];
-  if (card.quote) {
-    ctx.font = `italic 500 32px ${SANS}`;
-    qLines = wrapLines(ctx, `“${card.quote}”`, W - 260).slice(0, 3);
-  }
-
-  // Anchor the supporting cluster just under the title (top-weighted, like an
-  // IG story) rather than floating it in the middle, so it reads as one unit
-  // with clean whitespace above the pinned footer.
-  let by = titleBottom + 92;
+  let by = titleBottom + 84;
 
   // Subtitle — muted, light.
   ctx.fillStyle = "rgba(255,255,255,0.60)";
-  ctx.font = `400 33px ${SANS}`;
   subLines.forEach((line, i) => ctx.fillText(line, W / 2, by + i * SUB_LH));
   by += (subLines.length - 1) * SUB_LH;
 
-  // God-voice quote (italic, accent) — the mythic motivational line.
-  if (qLines.length) {
-    by += GAP_SUB_QUOTE;
-    ctx.fillStyle = argba(0.95);
-    ctx.font = `italic 500 32px ${SANS}`;
-    qLines.forEach((line, i) => ctx.fillText(line, W / 2, by + i * QUOTE_LH));
-    by += (qLines.length - 1) * QUOTE_LH;
-  }
-
   // Date — small and quiet.
   if (card.footnote) {
-    by += GAP_QUOTE_DATE;
+    by += GAP_SUB_DATE;
     ctx.fillStyle = "rgba(255,255,255,0.35)";
     ctx.font = `500 26px ${SANS}`;
     ctx.fillText(card.footnote, W / 2, by);
