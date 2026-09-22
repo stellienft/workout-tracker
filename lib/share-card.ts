@@ -83,6 +83,28 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
   });
 }
 
+/** Subtle halftone dot texture that echoes the mascot's comic-halftone style. */
+function drawHalftone(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  color: string
+) {
+  const gap = 30;
+  const r = 2.3;
+  ctx.save();
+  ctx.fillStyle = color;
+  for (let row = 0, y = 0; y <= H; y += gap, row++) {
+    const xOff = (row % 2) * (gap / 2);
+    for (let x = -gap; x <= W + gap; x += gap) {
+      ctx.beginPath();
+      ctx.arc(x + xOff, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
 /** Draw the Ares mascot centred at the top, falling back to the wordmark. */
 async function drawBrandmark(
   ctx: CanvasRenderingContext2D,
@@ -91,9 +113,9 @@ async function drawBrandmark(
 ) {
   const mascot = await loadImage("/mascot.png");
   if (mascot && mascot.width > 0) {
-    const h = 150;
+    const h = 108;
     const w = (mascot.width / mascot.height) * h;
-    ctx.drawImage(mascot, W / 2 - w / 2, 40, w, h);
+    ctx.drawImage(mascot, W / 2 - w / 2, 48, w, h);
     return;
   }
   // Fallback: text wordmark.
@@ -163,6 +185,9 @@ export async function drawAchievementCard(card: ShareCard): Promise<Blob | null>
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
 
+  // Halftone dot texture tying into the mascot's comic style.
+  drawHalftone(ctx, W, H, argba(0.05));
+
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
 
@@ -215,13 +240,16 @@ export async function drawAchievementCard(card: ShareCard): Promise<Blob | null>
     ctx.fillText(card.footnote, W / 2, H - 230);
   }
 
-  // Footer.
+  // Footer: AF logo above the tagline.
+  const mark = await loadImage("/logo.png");
+  if (mark && mark.width > 0) {
+    const lh = 40;
+    const lw = (mark.width / mark.height) * lh;
+    ctx.drawImage(mark, W / 2 - lw / 2, H - 176, lw, lh);
+  }
   ctx.fillStyle = accent;
-  ctx.font = `800 40px ${SANS}`;
-  ctx.fillText("Train Smarter. Build Stronger.", W / 2, H - 120);
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.font = `700 30px ${SANS}`;
-  ctx.fillText("ARES FITNESS", W / 2, H - 70);
+  ctx.font = `800 38px ${SANS}`;
+  ctx.fillText("Train Smarter. Build Stronger.", W / 2, H - 88);
 
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png", 0.95));
 }
