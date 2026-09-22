@@ -44,7 +44,7 @@ export function Sidebar({
     .filter((s) => s.items.length > 0);
 
   return (
-    <aside className="hidden md:flex md:w-[248px] lg:w-[264px] shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--background-secondary)] h-dvh sticky top-0">
+    <aside className="brand-texture hidden md:flex md:w-[248px] lg:w-[264px] shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--background-secondary)] h-dvh sticky top-0">
       <div className="flex items-center justify-between px-6 py-6">
         <Link href="/dashboard" aria-label="Ares Fitness" className="flex items-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}

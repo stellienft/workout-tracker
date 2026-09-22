@@ -16,7 +16,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="pb-safe fixed inset-x-0 bottom-0 z-50 border-t border-[var(--border-subtle)] bg-[var(--background-secondary)]/95 backdrop-blur-xl md:hidden"
+      className="brand-texture pb-safe fixed inset-x-0 bottom-0 z-50 border-t border-[var(--border-subtle)] bg-[var(--background-secondary)]/95 backdrop-blur-xl md:hidden"
       aria-label="Primary"
     >
       <div className="relative mx-auto flex max-w-md items-stretch px-2 py-1.5">
