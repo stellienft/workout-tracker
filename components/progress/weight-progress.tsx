@@ -90,20 +90,20 @@ export function WeightProgress({
     try {
       const blob = await drawShareCard(data);
       if (!blob) throw new Error("Could not render image");
-      const file = new File([blob], "stellio-fit-progress.png", {
+      const file = new File([blob], "ares-fitness-progress.png", {
         type: "image/png",
       });
       // Share ONLY the file — no title/text. Some targets (e.g. WhatsApp on
       // iOS) attach the image AND render the title as a second item, so the
-      // card ends up shared twice. The card is already branded with
-      // stellio.fit, so no caption is needed.
+      // card ends up shared twice. The card is already branded, so no caption
+      // is needed.
       const nav = navigator as Navigator & {
         canShare?: (d?: ShareData) => boolean;
       };
       if (nav.canShare?.({ files: [file] }) && nav.share) {
         await nav.share({ files: [file] });
       } else {
-        downloadBlob(blob, "stellio-fit-progress.png");
+        downloadBlob(blob, "ares-fitness-progress.png");
         setNote("Image saved — share it to your socials.");
       }
     } catch (e) {
@@ -441,18 +441,18 @@ async function drawShareCard(data: Point[]): Promise<Blob | null> {
     'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
   ctx.textBaseline = "alphabetic";
-  // Brand logo (AF monogram), falling back to the text wordmark.
+  // Brand mascot (Ares head), falling back to the text wordmark.
   const logo = await new Promise<HTMLImageElement | null>((resolve) => {
     const im = new Image();
     im.crossOrigin = "anonymous";
     im.onload = () => resolve(im);
     im.onerror = () => resolve(null);
-    im.src = "/logo.png";
+    im.src = "/mascot.png";
   });
   if (logo && logo.width > 0) {
-    const h = 72;
+    const h = 120;
     const w = (logo.width / logo.height) * h;
-    ctx.drawImage(logo, pad, 64, w, h);
+    ctx.drawImage(logo, pad, 40, w, h);
   } else {
     ctx.font = `800 46px ${sans}`;
     ctx.fillStyle = "#FFFFFF";
@@ -552,8 +552,8 @@ async function drawShareCard(data: Point[]): Promise<Blob | null> {
   ctx.font = `800 40px ${sans}`;
   ctx.fillText("Train Smarter. Build Stronger.", pad, H - 120);
   ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.font = `600 32px ${sans}`;
-  ctx.fillText("stellio.fit", pad, H - 70);
+  ctx.font = `700 30px ${sans}`;
+  ctx.fillText("ARES FITNESS", pad, H - 70);
 
   return new Promise((resolve) =>
     canvas.toBlob((b) => resolve(b), "image/png", 0.95)
