@@ -17,7 +17,7 @@ import { quoteForDate } from "@/lib/quotes";
 import { mythicGreetingForDate } from "@/lib/mythic-quotes";
 import { StatCard } from "@/components/ui/card";
 import { CoverImage } from "@/components/ui/cover-image";
-import { formatDuration } from "@/lib/utils";
+import { formatDuration, sessionSeconds } from "@/lib/utils";
 import { todayInTz, DEFAULT_TZ } from "@/lib/timezone";
 
 export const metadata = { title: "Dashboard" };
@@ -360,9 +360,9 @@ export default async function DashboardPage() {
                     })}
                   </p>
                 </div>
-                {s.total_seconds ? (
+                {sessionSeconds(s) > 0 ? (
                   <span className="text-[var(--text-secondary)]">
-                    {formatDuration(s.total_seconds)}
+                    {formatDuration(sessionSeconds(s))}
                   </span>
                 ) : null}
               </div>
