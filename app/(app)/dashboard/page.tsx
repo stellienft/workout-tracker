@@ -14,6 +14,7 @@ import { ResumeBanner } from "@/components/dashboard/resume-banner";
 import { computeStreak } from "@/lib/streak";
 import { getCachedRecap } from "@/lib/actions/recap";
 import { quoteForDate } from "@/lib/quotes";
+import { mythicGreetingForDate } from "@/lib/mythic-quotes";
 import { StatCard } from "@/components/ui/card";
 import { CoverImage } from "@/components/ui/cover-image";
 import { formatDuration } from "@/lib/utils";
@@ -150,7 +151,7 @@ export default async function DashboardPage() {
       {/* Welcome */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-[var(--text-secondary)]">Welcome back</p>
+          <p className="text-sm text-[var(--text-secondary)]">{mythicGreetingForDate()}</p>
           <h1 className="text-2xl font-bold sm:text-3xl">{firstName}</h1>
         </div>
         {primaryGoal && (

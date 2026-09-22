@@ -18,6 +18,7 @@ export interface ShareCard {
   kicker: string; // e.g. "PERSONAL RECORD"
   title: string;
   subtitle: string;
+  quote?: string; // god-voice motivational line
   footnote?: string; // e.g. "24 Jul 2026"
 }
 
@@ -232,6 +233,18 @@ export async function drawAchievementCard(card: ShareCard): Promise<Blob | null>
   for (const line of subLines) {
     ctx.fillText(line, W / 2, y);
     y += 54;
+  }
+
+  // God-voice quote (italic, accent) — the mythic motivational line.
+  if (card.quote) {
+    ctx.fillStyle = accent;
+    ctx.font = `italic 600 38px ${SANS}`;
+    const qLines = wrapLines(ctx, `“${card.quote}”`, W - 200).slice(0, 3);
+    y += 46;
+    for (const line of qLines) {
+      ctx.fillText(line, W / 2, y);
+      y += 50;
+    }
   }
 
   if (card.footnote) {
