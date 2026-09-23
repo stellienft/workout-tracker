@@ -6,7 +6,16 @@ import type { MealSlot } from "@/lib/nutrition";
  * one tap. Original, generic suggestions — swap foods to taste.
  */
 
-export type PlanTag = "Bulk" | "Gain" | "Maintain" | "Cut" | "Vegetarian" | "Athlete";
+export type PlanTag =
+  | "Bulk"
+  | "Gain"
+  | "Maintain"
+  | "Cut"
+  | "Vegetarian"
+  | "Athlete"
+  | "Dairy-free"
+  | "Budget"
+  | "Quick";
 
 export interface MealPlanMeal {
   slot: MealSlot; // where it lands in the diary
@@ -128,6 +137,58 @@ export const MEAL_PLANS: FullMealPlan[] = [
       { slot: "snack", label: "Around training", title: "Shake, rice cakes & honey", calories: 400, protein_g: 30, carbs_g: 60, fat_g: 5 },
       { slot: "dinner", label: "Dinner", title: "Steak, potatoes & vegetables", calories: 850, protein_g: 55, carbs_g: 80, fat_g: 32 },
       { slot: "snack", label: "Evening", title: "Yoghurt, granola & nuts", calories: 450, protein_g: 30, carbs_g: 45, fat_g: 18 },
+    ],
+  },
+  {
+    id: "dairy-free-2000",
+    name: "Dairy-Free High-Protein",
+    tag: "Dairy-free",
+    summary: "Plenty of protein with no dairy — meat, eggs, soy and legumes carry the day.",
+    meals: [
+      { slot: "breakfast", label: "Breakfast", title: "Scrambled eggs, avocado & wholegrain toast", calories: 480, protein_g: 26, carbs_g: 35, fat_g: 26 },
+      { slot: "lunch", label: "Lunch", title: "Chicken, rice & vegetable stir-fry", calories: 600, protein_g: 50, carbs_g: 60, fat_g: 16 },
+      { slot: "snack", label: "Snack", title: "Dairy-free protein shake & an orange", calories: 260, protein_g: 28, carbs_g: 25, fat_g: 5 },
+      { slot: "dinner", label: "Dinner", title: "Salmon, sweet potato & greens", calories: 620, protein_g: 42, carbs_g: 45, fat_g: 28 },
+      { slot: "snack", label: "Evening", title: "Edamame & mixed nuts", calories: 250, protein_g: 18, carbs_g: 14, fat_g: 14 },
+    ],
+  },
+  {
+    id: "budget-high-protein-2200",
+    name: "Budget High-Protein",
+    tag: "Budget",
+    summary: "Cheap, filling and protein-dense — eggs, mince, oats, tinned fish and rice.",
+    meals: [
+      { slot: "breakfast", label: "Breakfast", title: "Oats with eggs & a banana", calories: 500, protein_g: 28, carbs_g: 65, fat_g: 14 },
+      { slot: "lunch", label: "Lunch", title: "Tinned tuna, rice & mixed veg", calories: 550, protein_g: 45, carbs_g: 60, fat_g: 12 },
+      { slot: "snack", label: "Snack", title: "Peanut butter on wholegrain toast", calories: 350, protein_g: 14, carbs_g: 35, fat_g: 18 },
+      { slot: "dinner", label: "Dinner", title: "Beef mince, pasta & tomato sauce", calories: 700, protein_g: 45, carbs_g: 70, fat_g: 24 },
+      { slot: "snack", label: "Evening", title: "Two boiled eggs & an apple", calories: 220, protein_g: 14, carbs_g: 20, fat_g: 10 },
+    ],
+  },
+  {
+    id: "grab-and-go-2000",
+    name: "Grab & Go (No-Cook)",
+    tag: "Quick",
+    summary: "A busy-day plan with almost no cooking — assemble, don't cook.",
+    meals: [
+      { slot: "breakfast", label: "Breakfast", title: "Overnight oats with yoghurt & berries", calories: 420, protein_g: 28, carbs_g: 55, fat_g: 10 },
+      { slot: "lunch", label: "Lunch", title: "Pre-cooked chicken, wrap & salad", calories: 550, protein_g: 45, carbs_g: 45, fat_g: 18 },
+      { slot: "snack", label: "Snack", title: "Protein bar & a banana", calories: 330, protein_g: 25, carbs_g: 45, fat_g: 8 },
+      { slot: "dinner", label: "Dinner", title: "Microwave rice, tinned beans & rotisserie chicken", calories: 520, protein_g: 42, carbs_g: 55, fat_g: 12 },
+      { slot: "snack", label: "Evening", title: "Greek yoghurt & a handful of nuts", calories: 250, protein_g: 20, carbs_g: 12, fat_g: 14 },
+    ],
+  },
+  {
+    id: "hard-gainer-3600",
+    name: "Hard Gainer",
+    tag: "Bulk",
+    summary: "A big, calorie-dense day for those who struggle to gain — eat often.",
+    meals: [
+      { slot: "breakfast", label: "Breakfast", title: "Oats, whole milk, whey, banana & peanut butter", calories: 800, protein_g: 45, carbs_g: 95, fat_g: 26 },
+      { slot: "lunch", label: "Lunch", title: "Chicken thighs, rice, avocado & olive oil", calories: 900, protein_g: 55, carbs_g: 90, fat_g: 34 },
+      { slot: "snack", label: "Around training", title: "Mass shake: milk, oats, whey & peanut butter", calories: 550, protein_g: 40, carbs_g: 60, fat_g: 16 },
+      { slot: "dinner", label: "Dinner", title: "Beef, potatoes, cheese & vegetables", calories: 900, protein_g: 55, carbs_g: 85, fat_g: 38 },
+      { slot: "snack", label: "Evening", title: "Yoghurt, granola, honey & nuts", calories: 450, protein_g: 25, carbs_g: 55, fat_g: 16 },
     ],
   },
 ];
