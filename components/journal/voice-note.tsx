@@ -66,17 +66,29 @@ export function VoiceNote({
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   const finalRef = useRef(initialValue); // committed transcript (finalised chunks)
   const wantListenRef = useRef(false); // user intends to keep dictating
+  const restartsRef = useRef(0); // guards against a runaway restart loop
+  const lastStartRef = useRef(0);
+
+  function teardown(rec: SpeechRecognitionLike | null) {
+    if (!rec) return;
+    // Detach handlers first so a pending onend can't trigger a restart.
+    rec.onend = null;
+    rec.onresult = null;
+    rec.onerror = null;
+    try {
+      rec.stop();
+    } catch {
+      /* ignore */
+    }
+  }
 
   useEffect(() => {
     setSupported(getRecognitionCtor() !== null);
     return () => {
       wantListenRef.current = false;
-      try {
-        recRef.current?.stop();
-      } catch {
-        /* ignore */
-      }
+      teardown(recRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function startListening() {
@@ -101,43 +113,62 @@ export function VoiceNote({
       setText((finalRef.current + interim).replace(/\s+/g, " ").trimStart());
     };
     rec.onerror = (ev) => {
-      if (ev.error === "not-allowed" || ev.error === "service-not-allowed") {
+      const fatal =
+        ev.error === "not-allowed" ||
+        ev.error === "service-not-allowed" ||
+        ev.error === "audio-capture";
+      if (fatal) {
         wantListenRef.current = false;
+        teardown(rec);
         setListening(false);
-        toast("Microphone access is blocked — enable it to dictate.", "error");
+        toast(
+          ev.error === "audio-capture"
+            ? "No microphone found."
+            : "Microphone access is blocked — enable it to dictate.",
+          "error"
+        );
       }
-      // 'no-speech' / 'aborted' are transient; onend handles restart.
+      // 'no-speech' / 'aborted' / 'network' are transient; onend handles it.
     };
     rec.onend = () => {
-      // iOS/Safari stops after a pause; restart while the user still wants to talk.
-      if (wantListenRef.current) {
-        try {
-          rec.start();
-          return;
-        } catch {
-          /* fall through to stop */
-        }
+      if (!wantListenRef.current) {
+        setListening(false);
+        return;
       }
-      setListening(false);
+      // iOS/Safari ends after a pause — restart, but guard against a runaway
+      // loop (e.g. it ends immediately again and again) which can freeze the tab.
+      const now = Date.now();
+      restartsRef.current = now - lastStartRef.current < 1200 ? restartsRef.current + 1 : 0;
+      if (restartsRef.current >= 3) {
+        wantListenRef.current = false;
+        setListening(false);
+        return;
+      }
+      lastStartRef.current = now;
+      try {
+        rec.start();
+      } catch {
+        wantListenRef.current = false;
+        setListening(false);
+      }
     };
 
     recRef.current = rec;
     wantListenRef.current = true;
+    restartsRef.current = 0;
+    lastStartRef.current = Date.now();
     try {
       rec.start();
       setListening(true);
     } catch {
+      wantListenRef.current = false;
       setListening(false);
     }
   }
 
   function stopListening() {
     wantListenRef.current = false;
-    try {
-      recRef.current?.stop();
-    } catch {
-      /* ignore */
-    }
+    teardown(recRef.current);
     setListening(false);
   }
 
