@@ -6,21 +6,9 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, Plus, Check, CalendarRange, BookOpen } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
-import { MEAL_PLANS, planTotals, type PlanTag } from "@/lib/meal-plans";
+import { MEAL_PLANS, planTotals, mealKeyword, type PlanTag } from "@/lib/meal-plans";
 import { WEEKLY_PLANS, weeklyDayTotals } from "@/lib/weekly-plans";
 import { addMealPlanToDay, addMealPlanWeek, addWeeklyPlan } from "@/lib/actions/nutrition";
-
-// A rough recipe-search keyword from a meal title (the main food), for the
-// "find recipes like this" link.
-const STOP = new Set([
-  "with","and","the","of","a","an","made","water","small","big","light","mixed",
-  "tinned","pre","cooked","microwave","overnight","protein","two","dairy-free",
-  "wholegrain","low-fat","fresh","serve","handful",
-]);
-function mealKeyword(title: string): string {
-  const words = title.toLowerCase().replace(/[^a-z\s]/g, " ").split(/\s+/).filter(Boolean);
-  return words.find((w) => w.length > 2 && !STOP.has(w)) ?? words[0] ?? "";
-}
 
 const TAGS: (PlanTag | "All")[] = [
   "All",
@@ -50,9 +38,11 @@ const TAG_TINT: Record<PlanTag, string> = {
 export function MealPlansClient({
   today,
   targetCalories,
+  recipeMatches = {},
 }: {
   today: string;
   targetCalories: number | null;
+  recipeMatches?: Record<string, string>;
 }) {
   const toast = useToast();
   const router = useRouter();
@@ -324,12 +314,21 @@ export function MealPlansClient({
                             {m.label}
                           </p>
                           <p className="text-sm">{m.title}</p>
-                          <Link
-                            href={`/nutrition/recipes?q=${encodeURIComponent(mealKeyword(m.title))}`}
-                            className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-[var(--accent-primary)] hover:underline"
-                          >
-                            <BookOpen className="h-3 w-3" /> Find recipes
-                          </Link>
+                          {recipeMatches[m.title] ? (
+                            <Link
+                              href={`/nutrition/recipes?recipe=${recipeMatches[m.title]}`}
+                              className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-[var(--accent-primary)] hover:underline"
+                            >
+                              <BookOpen className="h-3 w-3" /> View recipe
+                            </Link>
+                          ) : (
+                            <Link
+                              href={`/nutrition/recipes?q=${encodeURIComponent(mealKeyword(m.title))}`}
+                              className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-[var(--accent-primary)] hover:underline"
+                            >
+                              <BookOpen className="h-3 w-3" /> Find recipes
+                            </Link>
+                          )}
                         </div>
                         <div className="shrink-0 text-right">
                           <p className="text-sm font-semibold tabular-nums">{m.calories}</p>

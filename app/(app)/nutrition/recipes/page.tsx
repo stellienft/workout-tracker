@@ -13,13 +13,15 @@ export const metadata = { title: "Recipes" };
 export default async function RecipesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; recipe?: string }>;
 }) {
   const { user } = await requireUser();
   const { plan } = await getUserPlan();
   if (!planAllows(plan, "nutrition")) return <UpgradeWall feature="nutrition" />;
   const supabase = await createClient();
-  const initialQuery = ((await searchParams).q ?? "").slice(0, 60);
+  const sp = await searchParams;
+  const initialQuery = (sp.q ?? "").slice(0, 60);
+  const initialOpenId = (sp.recipe ?? "").slice(0, 64);
 
   const [{ data: recipes }, { data: favs }] = await Promise.all([
     supabase
@@ -43,6 +45,7 @@ export default async function RecipesPage({
       <RecipeLibrary
         favoriteIds={favoriteIds}
         initialQuery={initialQuery}
+        initialOpenId={initialOpenId}
         recipes={(recipes ?? []).map((r) => ({
           id: r.id as string,
           title: r.title as string,

@@ -31,14 +31,18 @@ export function RecipeLibrary({
   recipes,
   favoriteIds,
   initialQuery = "",
+  initialOpenId = "",
 }: {
   recipes: Recipe[];
   favoriteIds: string[];
   initialQuery?: string;
+  initialOpenId?: string;
 }) {
   const [q, setQ] = useState(initialQuery);
   const [cat, setCat] = useState<string | null>(null);
-  const [open, setOpen] = useState<Recipe | null>(null);
+  const [open, setOpen] = useState<Recipe | null>(
+    initialOpenId ? recipes.find((r) => r.id === initialOpenId) ?? null : null
+  );
   const favSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
 
   const filtered = useMemo(() => {

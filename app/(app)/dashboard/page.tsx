@@ -394,6 +394,11 @@ export default async function DashboardPage() {
           hint="Capture how today went — type it, or tap the mic to talk."
           placeholder="Energy, sleep, mood, wins, what to tackle tomorrow…"
         />
+        <div className="mt-2 text-right">
+          <Link href="/journal" className="text-xs font-medium text-[var(--accent-primary)] hover:underline">
+            View past entries →
+          </Link>
+        </div>
       </section>
 
       {/* Recovery / check-in prompt */}
