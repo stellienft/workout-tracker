@@ -33,16 +33,19 @@ export default async function MealPlansPage() {
     supabase.from("nutrition_targets").select("calories").eq("user_id", user.id).maybeSingle(),
     supabase
       .from("recipes")
-      .select("id, slug")
+      .select("id, slug, image_url")
       .in("slug", RECIPE_CATALOG.map((r) => r.slug)),
   ]);
   const today = localToday(profile?.timezone as string | null | undefined);
   const targetCalories = (targetsRow?.calories as number | null) ?? null;
 
-  // Every plan meal is a catalog recipe, so link straight to it by slug.
+  // Every plan meal is a catalog recipe: resolve its id (for a deep link) and
+  // cover image (for the in-place preview), keyed by slug.
   const recipeMatches: Record<string, string> = {};
+  const recipeImages: Record<string, string | null> = {};
   for (const r of recipes ?? []) {
     recipeMatches[r.slug as string] = r.id as string;
+    recipeImages[r.slug as string] = (r.image_url as string | null) ?? null;
   }
 
   return (
@@ -55,6 +58,7 @@ export default async function MealPlansPage() {
         today={today}
         targetCalories={targetCalories}
         recipeMatches={recipeMatches}
+        recipeImages={recipeImages}
       />
     </PageShell>
   );

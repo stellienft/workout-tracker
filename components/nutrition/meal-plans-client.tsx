@@ -2,11 +2,13 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Plus, Check, CalendarRange, BookOpen } from "lucide-react";
+import { ChevronDown, Plus, Check, CalendarRange, BookOpen, X, Clock } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
-import { MEAL_PLANS, planTotals, mealKeyword, type PlanTag } from "@/lib/meal-plans";
+import { MEAL_PLANS, planTotals, type PlanTag } from "@/lib/meal-plans";
+import { recipeBySlug } from "@/lib/recipe-catalog";
 import { WEEKLY_PLANS, weeklyDayTotals } from "@/lib/weekly-plans";
 import { addMealPlanToDay, addMealPlanWeek, addWeeklyPlan } from "@/lib/actions/nutrition";
 
@@ -39,10 +41,12 @@ export function MealPlansClient({
   today,
   targetCalories,
   recipeMatches = {},
+  recipeImages = {},
 }: {
   today: string;
   targetCalories: number | null;
   recipeMatches?: Record<string, string>;
+  recipeImages?: Record<string, string | null>;
 }) {
   const toast = useToast();
   const router = useRouter();
@@ -53,6 +57,7 @@ export function MealPlansClient({
   const [addingWeek, setAddingWeek] = useState<string | null>(null);
   const [addingFullWeek, setAddingFullWeek] = useState<string | null>(null);
   const [openWeek, setOpenWeek] = useState<string | null>(null);
+  const [openRecipe, setOpenRecipe] = useState<string | null>(null);
   const [date, setDate] = useState(today);
   const [, startTransition] = useTransition();
 
@@ -314,20 +319,13 @@ export function MealPlansClient({
                             {m.label}
                           </p>
                           <p className="text-sm">{m.title}</p>
-                          {recipeMatches[m.recipeSlug] ? (
-                            <Link
-                              href={`/nutrition/recipes?recipe=${recipeMatches[m.recipeSlug]}`}
+                          {recipeBySlug[m.recipeSlug] && (
+                            <button
+                              onClick={() => setOpenRecipe(m.recipeSlug)}
                               className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-[var(--accent-primary)] hover:underline"
                             >
                               <BookOpen className="h-3 w-3" /> View recipe
-                            </Link>
-                          ) : (
-                            <Link
-                              href={`/nutrition/recipes?q=${encodeURIComponent(mealKeyword(m.title))}`}
-                              className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-[var(--accent-primary)] hover:underline"
-                            >
-                              <BookOpen className="h-3 w-3" /> Find recipes
-                            </Link>
+                            </button>
                           )}
                         </div>
                         <div className="shrink-0 text-right">
@@ -375,6 +373,129 @@ export function MealPlansClient({
       </div>
         </>
       )}
+
+      {/* In-place recipe preview — no navigation, keeps your place on the page. */}
+      {openRecipe && recipeBySlug[openRecipe] && (
+        <RecipeModal
+          slug={openRecipe}
+          image={recipeImages[openRecipe] ?? null}
+          recipeId={recipeMatches[openRecipe]}
+          onClose={() => setOpenRecipe(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function RecipeModal({
+  slug,
+  image,
+  recipeId,
+  onClose,
+}: {
+  slug: string;
+  image: string | null;
+  recipeId?: string;
+  onClose: () => void;
+}) {
+  const r = recipeBySlug[slug];
+  if (!r) return null;
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 sm:items-center"
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-[var(--radius-card)] bg-[var(--surface-primary)] sm:rounded-[var(--radius-card)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="relative h-44 w-full shrink-0 bg-[var(--surface-secondary)]">
+          {image ? (
+            <Image src={image} alt={r.title} fill sizes="512px" className="object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-[var(--text-muted)]">
+              <BookOpen className="h-8 w-8" />
+            </div>
+          )}
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4">
+          <h3 className="text-lg font-bold leading-tight">{r.title}</h3>
+          <p className="mt-1 inline-flex items-center gap-1 text-xs text-[var(--text-muted)]">
+            <Clock className="h-3.5 w-3.5" /> {r.prep_minutes} min · {r.category}
+          </p>
+          {r.description && (
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">{r.description}</p>
+          )}
+
+          <div className="mt-3 grid grid-cols-4 gap-2 text-center">
+            <Macro label="Calories" value={r.calories} />
+            <Macro label="Protein" value={`${r.protein_g}g`} accent />
+            <Macro label="Carbs" value={`${r.carbs_g}g`} />
+            <Macro label="Fat" value={`${r.fat_g}g`} />
+          </div>
+
+          <p className="mt-4 text-sm font-semibold">Ingredients</p>
+          <ul className="mt-1.5 space-y-1">
+            {r.ingredients.map((ing, i) => (
+              <li key={i} className="flex gap-2 text-sm text-[var(--text-secondary)]">
+                <span className="text-[var(--accent-primary)]">•</span>
+                <span>{ing}</span>
+              </li>
+            ))}
+          </ul>
+
+          <p className="mt-4 text-sm font-semibold">Method</p>
+          <ol className="mt-1.5 space-y-1.5">
+            {r.steps.map((step, i) => (
+              <li key={i} className="flex gap-2 text-sm text-[var(--text-secondary)]">
+                <span className="font-semibold text-[var(--accent-primary)]">{i + 1}.</span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
+
+          {recipeId && (
+            <Link
+              href={`/nutrition/recipes?recipe=${recipeId}`}
+              className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--accent-primary)] hover:underline"
+            >
+              <BookOpen className="h-4 w-4" /> Open in recipe library
+            </Link>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Macro({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string | number;
+  accent?: boolean;
+}) {
+  return (
+    <div className="rounded-xl bg-[var(--surface-secondary)] p-2">
+      <p
+        className={cn(
+          "text-base font-bold tabular-nums",
+          accent ? "text-[var(--accent-primary)]" : "text-[var(--text-primary)]"
+        )}
+      >
+        {value}
+      </p>
+      <p className="text-[10px] text-[var(--text-muted)]">{label}</p>
     </div>
   );
 }
