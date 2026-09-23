@@ -34,6 +34,7 @@ export async function saveDailyJournal(entryDate: string, body: string) {
       .eq("user_id", user.id)
       .eq("entry_date", parsed.data.entryDate);
     revalidatePath("/dashboard");
+    revalidatePath("/journal");
     return { ok: true as const };
   }
 
@@ -48,5 +49,6 @@ export async function saveDailyJournal(entryDate: string, body: string) {
   );
   if (error) return { ok: false as const, error: error.message };
   revalidatePath("/dashboard");
+  revalidatePath("/journal");
   return { ok: true as const };
 }
