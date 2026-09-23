@@ -1,0 +1,46 @@
+import { requireUser } from "@/lib/auth";
+import { getUserPlan } from "@/lib/entitlements";
+import { planAllows } from "@/lib/plan";
+import { UpgradeWall } from "@/components/billing/upgrade-wall";
+import { createClient } from "@/lib/supabase/server";
+import { PageHeader, PageShell } from "@/components/ui/page-header";
+import { MealPlansClient } from "@/components/nutrition/meal-plans-client";
+
+export const metadata = { title: "Meal plans" };
+
+function localToday(timezone: string | null | undefined) {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone || "UTC",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
+export default async function MealPlansPage() {
+  const { user } = await requireUser();
+  const { plan } = await getUserPlan();
+  if (!planAllows(plan, "nutrition")) return <UpgradeWall feature="nutrition" />;
+
+  const supabase = await createClient();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("timezone")
+    .eq("id", user.id)
+    .maybeSingle();
+  const today = localToday(profile?.timezone as string | null | undefined);
+
+  return (
+    <PageShell>
+      <PageHeader
+        title="Meal plans"
+        subtitle="Full days of eating for every goal — add one to your diary in a tap, then tweak to taste."
+      />
+      <MealPlansClient date={today} today={today} />
+    </PageShell>
+  );
+}

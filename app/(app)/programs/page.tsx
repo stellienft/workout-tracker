@@ -101,7 +101,7 @@ export default async function ProgramsPage() {
             Built to preserve muscle while you lose weight. Because you&apos;re
             tracking a GLP-1 medication.
           </p>
-          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
             {glp1Programs.map((p) => (
               <ProgramCard
                 key={p.id}
@@ -120,7 +120,7 @@ export default async function ProgramsPage() {
           <p className="text-sm text-[var(--text-secondary)]">
             Matched to your goal, fitness level and where you train.
           </p>
-          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
             {recommended.map((p) => (
               <ProgramCard
                 key={p.id}

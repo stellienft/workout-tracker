@@ -1,0 +1,6 @@
+-- Cover images for the recently added programs (they shipped without one).
+UPDATE public.programs SET cover_image_path = 'https://images.pexels.com/photos/1431283/pexels-photo-1431283.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1200&h=800' WHERE slug = 'mass-blueprint' AND cover_image_path IS NULL;
+UPDATE public.programs SET cover_image_path = 'https://images.pexels.com/photos/841130/pexels-photo-841130.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1200&h=800' WHERE slug = 'classic-physique-split' AND cover_image_path IS NULL;
+UPDATE public.programs SET cover_image_path = 'https://images.pexels.com/photos/12890811/pexels-photo-12890811.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1200&h=800' WHERE slug = 'shred-and-define' AND cover_image_path IS NULL;
+UPDATE public.programs SET cover_image_path = 'https://images.pexels.com/photos/5327530/pexels-photo-5327530.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1200&h=800' WHERE slug = 'minimum-effective-dose' AND cover_image_path IS NULL;
+UPDATE public.programs SET cover_image_path = 'https://images.pexels.com/photos/6550837/pexels-photo-6550837.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1200&h=800' WHERE slug = 'beginner-muscle-builder' AND cover_image_path IS NULL;

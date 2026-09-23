@@ -419,6 +419,40 @@ export async function toggleRecipeFavorite(recipeId: string) {
   return { ok: true as const, favorited: !existing };
 }
 
+/** Add every meal from a ready-made full-day plan to the member's diary. */
+export async function addMealPlanToDay(input: { planId: string; date: string }) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+  const parsed = z
+    .object({
+      planId: z.string().min(1).max(80),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    })
+    .safeParse(input);
+  if (!parsed.success)
+    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Invalid" };
+
+  const { MEAL_PLANS } = await import("@/lib/meal-plans");
+  const plan = MEAL_PLANS.find((p) => p.id === parsed.data.planId);
+  if (!plan) return { ok: false as const, error: "Plan not found" };
+
+  const rows = plan.meals.map((m) => ({
+    user_id: user.id,
+    entry_date: parsed.data.date,
+    meal: m.slot,
+    title: m.title,
+    calories: m.calories,
+    protein_g: m.protein_g,
+    carbs_g: m.carbs_g,
+    fat_g: m.fat_g,
+  }));
+
+  const { error } = await supabase.from("meal_entries").insert(rows);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath("/nutrition");
+  return { ok: true as const, added: rows.length };
+}
+
 export async function deleteMealEntry(id: string) {
   const { supabase, user } = await auth();
   if (!user) return { ok: false as const, error: "Not authenticated" };
