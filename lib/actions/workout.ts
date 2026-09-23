@@ -284,6 +284,30 @@ export async function saveAndExit(sessionId: string, totalSeconds: number) {
   return { ok: true as const };
 }
 
+/**
+ * Save (or clear) a member's journal note on a session — typed, or dictated
+ * via voice-to-text on the workout summary. Idempotent and independent of
+ * completion, so a note can be added or edited after the workout is finished.
+ */
+export async function saveSessionNote(sessionId: string, note: string) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+  const parsed = z
+    .object({ sessionId: z.string().uuid(), note: z.string().max(4000) })
+    .safeParse({ sessionId, note });
+  if (!parsed.success) return { ok: false as const, error: "Invalid input" };
+
+  const trimmed = parsed.data.note.trim();
+  const { error } = await supabase
+    .from("workout_sessions")
+    .update({ notes: trimmed.length ? trimmed : null })
+    .eq("id", parsed.data.sessionId)
+    .eq("user_id", user.id);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath(`/workout/${parsed.data.sessionId}/summary`);
+  return { ok: true as const };
+}
+
 /** Cancel (discard) an in-progress workout: delete it and its logged sets. */
 export async function cancelWorkout(sessionId: string) {
   const { supabase, user } = await auth();
