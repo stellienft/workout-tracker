@@ -15,6 +15,9 @@ const TAGS: (PlanTag | "All")[] = [
   "Maintain",
   "Cut",
   "Vegetarian",
+  "Dairy-free",
+  "Budget",
+  "Quick",
   "Athlete",
 ];
 
@@ -25,18 +28,36 @@ const TAG_TINT: Record<PlanTag, string> = {
   Cut: "bg-teal-500/15 text-teal-400",
   Vegetarian: "bg-green-500/15 text-green-400",
   Athlete: "bg-purple-500/15 text-purple-400",
+  "Dairy-free": "bg-cyan-500/15 text-cyan-400",
+  Budget: "bg-amber-500/15 text-amber-400",
+  Quick: "bg-rose-500/15 text-rose-400",
 };
 
-export function MealPlansClient({ date, today }: { date: string; today: string }) {
+export function MealPlansClient({
+  today,
+  targetCalories,
+}: {
+  today: string;
+  targetCalories: number | null;
+}) {
   const toast = useToast();
   const router = useRouter();
   const [tag, setTag] = useState<(typeof TAGS)[number]>("All");
   const [open, setOpen] = useState<string | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
+  const [date, setDate] = useState(today);
   const [, startTransition] = useTransition();
 
   const isToday = date === today;
   const plans = MEAL_PLANS.filter((p) => tag === "All" || p.tag === tag);
+
+  // The plan whose day total is closest to the member's saved calorie target.
+  const bestMatchId = targetCalories
+    ? MEAL_PLANS.reduce<{ id: string; diff: number } | null>((best, p) => {
+        const diff = Math.abs(planTotals(p).calories - targetCalories);
+        return !best || diff < best.diff ? { id: p.id, diff } : best;
+      }, null)?.id ?? null
+    : null;
 
   function add(planId: string) {
     setAdding(planId);
@@ -55,7 +76,18 @@ export function MealPlansClient({ date, today }: { date: string; today: string }
 
   return (
     <div>
-      <div className="no-scrollbar -mx-1 mt-4 flex gap-2 overflow-x-auto px-1">
+      {/* Which day to add to. */}
+      <label className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-3 text-sm">
+        <span className="text-[var(--text-secondary)]">Add to</span>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value || today)}
+          className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--border-active)] focus:outline-none"
+        />
+      </label>
+
+      <div className="no-scrollbar -mx-1 mt-3 flex gap-2 overflow-x-auto px-1">
         {TAGS.map((t) => (
           <button
             key={t}
@@ -95,6 +127,11 @@ export function MealPlansClient({ date, today }: { date: string; today: string }
                   >
                     {plan.tag}
                   </span>
+                  {plan.id === bestMatchId && (
+                    <span className="rounded-full bg-[var(--accent-primary)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--accent-ink)]">
+                      Best match
+                    </span>
+                  )}
                   <h3 className="flex-1 font-semibold leading-tight">{plan.name}</h3>
                   <ChevronDown
                     className={cn(

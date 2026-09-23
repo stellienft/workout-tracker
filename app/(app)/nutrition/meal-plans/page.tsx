@@ -27,12 +27,12 @@ export default async function MealPlansPage() {
   if (!planAllows(plan, "nutrition")) return <UpgradeWall feature="nutrition" />;
 
   const supabase = await createClient();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("timezone")
-    .eq("id", user.id)
-    .maybeSingle();
+  const [{ data: profile }, { data: targetsRow }] = await Promise.all([
+    supabase.from("profiles").select("timezone").eq("id", user.id).maybeSingle(),
+    supabase.from("nutrition_targets").select("calories").eq("user_id", user.id).maybeSingle(),
+  ]);
   const today = localToday(profile?.timezone as string | null | undefined);
+  const targetCalories = (targetsRow?.calories as number | null) ?? null;
 
   return (
     <PageShell>
@@ -40,7 +40,7 @@ export default async function MealPlansPage() {
         title="Meal plans"
         subtitle="Full days of eating for every goal — add one to your diary in a tap, then tweak to taste."
       />
-      <MealPlansClient date={today} today={today} />
+      <MealPlansClient today={today} targetCalories={targetCalories} />
     </PageShell>
   );
 }
