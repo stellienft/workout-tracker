@@ -8,6 +8,7 @@ import { getPrimaryGoal } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { NutritionDashboard } from "@/components/nutrition/nutrition-dashboard";
+import { StagePlans } from "@/components/nutrition/stage-plans";
 import { suggestTargets } from "@/lib/nutrition";
 
 export const metadata = { title: "Nutrition" };
@@ -172,6 +173,8 @@ export default async function NutritionPage({
             prep_minutes: r.prep_minutes as number,
           }))}
         />
+
+        <StagePlans weightKg={setupProfile.weightKg} />
       </div>
     </PageShell>
   );
