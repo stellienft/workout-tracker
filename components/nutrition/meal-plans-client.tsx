@@ -7,7 +7,8 @@ import { ChevronDown, Plus, Check, CalendarRange, BookOpen } from "lucide-react"
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { MEAL_PLANS, planTotals, type PlanTag } from "@/lib/meal-plans";
-import { addMealPlanToDay, addMealPlanWeek } from "@/lib/actions/nutrition";
+import { WEEKLY_PLANS, weeklyDayTotals } from "@/lib/weekly-plans";
+import { addMealPlanToDay, addMealPlanWeek, addWeeklyPlan } from "@/lib/actions/nutrition";
 
 // A rough recipe-search keyword from a meal title (the main food), for the
 // "find recipes like this" link.
@@ -56,9 +57,12 @@ export function MealPlansClient({
   const toast = useToast();
   const router = useRouter();
   const [tag, setTag] = useState<(typeof TAGS)[number]>("All");
+  const [view, setView] = useState<"days" | "weeks">("days");
   const [open, setOpen] = useState<string | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
   const [addingWeek, setAddingWeek] = useState<string | null>(null);
+  const [addingFullWeek, setAddingFullWeek] = useState<string | null>(null);
+  const [openWeek, setOpenWeek] = useState<string | null>(null);
   const [date, setDate] = useState(today);
   const [, startTransition] = useTransition();
 
@@ -103,11 +107,46 @@ export function MealPlansClient({
     });
   }
 
+  function addFullWeek(weekId: string) {
+    setAddingFullWeek(weekId);
+    startTransition(async () => {
+      const res = await addWeeklyPlan({ weekId, startDate: date });
+      if (res.ok) {
+        toast(`Week added from ${isToday ? "today" : date}.`, "success");
+        router.push("/nutrition");
+        router.refresh();
+      } else {
+        toast(res.error ?? "Couldn't add — try again.", "error");
+        setAddingFullWeek(null);
+      }
+    });
+  }
+
   return (
     <div>
-      {/* Which day to add to. */}
-      <label className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-3 text-sm">
-        <span className="text-[var(--text-secondary)]">Add to</span>
+      {/* Single-day vs full-week toggle. */}
+      <div className="mt-4 grid grid-cols-2 gap-1 rounded-2xl bg-[var(--surface-secondary)] p-1">
+        {(["days", "weeks"] as const).map((v) => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            className={cn(
+              "rounded-xl py-2 text-sm font-medium transition-colors",
+              view === v
+                ? "bg-[var(--accent-primary)] text-[var(--accent-ink)]"
+                : "text-[var(--text-secondary)]"
+            )}
+          >
+            {v === "days" ? "Single days" : "Full weeks"}
+          </button>
+        ))}
+      </div>
+
+      {/* Which day to add / start from. */}
+      <label className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-3 text-sm">
+        <span className="text-[var(--text-secondary)]">
+          {view === "weeks" ? "Start the week on" : "Add to"}
+        </span>
         <input
           type="date"
           value={date}
@@ -116,6 +155,101 @@ export function MealPlansClient({
         />
       </label>
 
+      {view === "weeks" ? (
+        <div className="mt-4 space-y-3">
+          {WEEKLY_PLANS.map((wk) => {
+            const isOpen = openWeek === wk.id;
+            return (
+              <div
+                key={wk.id}
+                className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)]"
+              >
+                <button
+                  onClick={() => setOpenWeek(isOpen ? null : wk.id)}
+                  className="w-full p-4 text-left"
+                  aria-expanded={isOpen}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                        TAG_TINT[wk.tag]
+                      )}
+                    >
+                      {wk.tag}
+                    </span>
+                    <h3 className="flex-1 font-semibold leading-tight">{wk.name}</h3>
+                    <ChevronDown
+                      className={cn(
+                        "h-5 w-5 shrink-0 text-[var(--text-muted)] transition-transform",
+                        isOpen && "rotate-180"
+                      )}
+                    />
+                  </div>
+                  <p className="mt-1.5 text-xs text-[var(--text-secondary)]">{wk.summary}</p>
+                  <p className="mt-2 text-xs text-[var(--text-muted)]">
+                    7 different days · ~
+                    <span className="font-semibold text-[var(--text-primary)]">
+                      {wk.perDayKcal.toLocaleString()}
+                    </span>{" "}
+                    kcal/day
+                  </p>
+                </button>
+
+                {isOpen && (
+                  <div className="border-t border-[var(--border-subtle)] p-4">
+                    <div className="space-y-3">
+                      {wk.days.map((d) => {
+                        const t = weeklyDayTotals(d);
+                        return (
+                          <div key={d.day}>
+                            <div className="flex items-baseline justify-between">
+                              <p className="text-xs font-bold uppercase tracking-wide text-[var(--accent-primary)]">
+                                {d.day}
+                              </p>
+                              <p className="text-[11px] text-[var(--text-muted)]">
+                                {t.calories.toLocaleString()} kcal · {t.protein_g}g P
+                              </p>
+                            </div>
+                            <ul className="mt-1 space-y-0.5">
+                              {d.meals.map((m, i) => (
+                                <li key={i} className="text-xs text-[var(--text-secondary)]">
+                                  <span className="text-[var(--text-muted)]">{m.label}:</span>{" "}
+                                  {m.title}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <button
+                      onClick={() => addFullWeek(wk.id)}
+                      disabled={addingFullWeek !== null}
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] py-3 text-sm font-semibold text-[var(--accent-ink)] disabled:opacity-50"
+                    >
+                      {addingFullWeek === wk.id ? (
+                        <>
+                          <Check className="h-4 w-4" /> Adding…
+                        </>
+                      ) : (
+                        <>
+                          <CalendarRange className="h-4 w-4" /> Add this whole week
+                        </>
+                      )}
+                    </button>
+                    <p className="mt-2 text-center text-[11px] text-[var(--text-muted)]">
+                      Adds all 7 days ({wk.days.length * wk.days[0].meals.length} meals) from{" "}
+                      {isToday ? "today" : date}.
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <>
       <div className="no-scrollbar -mx-1 mt-3 flex gap-2 overflow-x-auto px-1">
         {TAGS.map((t) => (
           <button
@@ -240,6 +374,8 @@ export function MealPlansClient({
           );
         })}
       </div>
+        </>
+      )}
     </div>
   );
 }
