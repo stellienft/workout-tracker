@@ -30,6 +30,7 @@ import {
   Activity,
   Ruler,
   Footprints,
+  NotebookPen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -78,6 +79,7 @@ export const navSections: NavSection[] = [
       { label: "Activities", href: "/activities", icon: Activity },
       { label: "Walking", href: "/walking", icon: Footprints },
       { label: "Achievements", href: "/achievements", icon: Medal },
+      { label: "Journal", href: "/journal", icon: NotebookPen },
       { label: "Check-ins", href: "/check-ins", icon: ClipboardCheck },
       { label: "Friends", href: "/friends", icon: UserPlus },
     ],

@@ -35,6 +35,17 @@ export interface FullMealPlan {
   meals: MealPlanMeal[];
 }
 
+// A rough recipe-search keyword from a meal title (its main food).
+const KEYWORD_STOP = new Set([
+  "with","and","the","of","a","an","made","water","small","big","light","mixed",
+  "tinned","pre","cooked","microwave","overnight","protein","two","dairy-free",
+  "wholegrain","low-fat","fresh","serve","handful","little","few",
+]);
+export function mealKeyword(title: string): string {
+  const words = title.toLowerCase().replace(/[^a-z\s]/g, " ").split(/\s+/).filter(Boolean);
+  return words.find((w) => w.length > 2 && !KEYWORD_STOP.has(w)) ?? words[0] ?? "";
+}
+
 export function planTotals(plan: FullMealPlan) {
   return plan.meals.reduce(
     (t, m) => ({
