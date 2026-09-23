@@ -314,9 +314,9 @@ export function MealPlansClient({
                             {m.label}
                           </p>
                           <p className="text-sm">{m.title}</p>
-                          {recipeMatches[m.title] ? (
+                          {recipeMatches[m.recipeSlug] ? (
                             <Link
-                              href={`/nutrition/recipes?recipe=${recipeMatches[m.title]}`}
+                              href={`/nutrition/recipes?recipe=${recipeMatches[m.recipeSlug]}`}
                               className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-[var(--accent-primary)] hover:underline"
                             >
                               <BookOpen className="h-3 w-3" /> View recipe
