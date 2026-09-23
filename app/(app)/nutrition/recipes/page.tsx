@@ -10,11 +10,16 @@ import { RecipeLibrary } from "@/components/nutrition/recipe-library";
 
 export const metadata = { title: "Recipes" };
 
-export default async function RecipesPage() {
+export default async function RecipesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
   const { user } = await requireUser();
   const { plan } = await getUserPlan();
   if (!planAllows(plan, "nutrition")) return <UpgradeWall feature="nutrition" />;
   const supabase = await createClient();
+  const initialQuery = ((await searchParams).q ?? "").slice(0, 60);
 
   const [{ data: recipes }, { data: favs }] = await Promise.all([
     supabase
@@ -37,6 +42,7 @@ export default async function RecipesPage() {
       </Link>
       <RecipeLibrary
         favoriteIds={favoriteIds}
+        initialQuery={initialQuery}
         recipes={(recipes ?? []).map((r) => ({
           id: r.id as string,
           title: r.title as string,

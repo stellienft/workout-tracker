@@ -7,6 +7,7 @@ import { Confetti } from "@/components/ui/confetti";
 import { ShareAchievement } from "@/components/achievements/share-achievement";
 import { ShareWorkoutButton } from "@/components/feed/share-workout-button";
 import { VoiceNote } from "@/components/journal/voice-note";
+import { saveSessionNote } from "@/lib/actions/workout";
 import { Check, Trophy, PartyPopper, TrendingUp, TrendingDown, Minus, Star } from "lucide-react";
 
 export const metadata = { title: "Workout complete" };
@@ -337,7 +338,10 @@ export default async function WorkoutSummaryPage({
 
       {/* Voice-to-text session journal — type or dictate a note about today. */}
       <div className="mt-6 w-full">
-        <VoiceNote sessionId={sessionId} initialValue={(session.notes as string | null) ?? ""} />
+        <VoiceNote
+          save={saveSessionNote.bind(null, sessionId)}
+          initialValue={(session.notes as string | null) ?? ""}
+        />
       </div>
 
       <div className="mt-6 flex w-full flex-col gap-2">
