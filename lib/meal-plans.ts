@@ -1,9 +1,10 @@
 import type { MealSlot } from "@/lib/nutrition";
+import { recipeBySlug } from "@/lib/recipe-catalog";
 
 /**
- * Ready-made full-day meal plans. Each is a complete day of eating with per-meal
- * macros, so a member can browse them and add a whole day to their food diary in
- * one tap. Original, generic suggestions — swap foods to taste.
+ * Ready-made full-day meal plans. Each is a complete day of eating composed
+ * from real recipes in the catalog, so every meal matches a recipe in the
+ * library with identical macros. Add a whole day to the diary in one tap.
  */
 
 export type PlanTag =
@@ -20,7 +21,8 @@ export type PlanTag =
 export interface MealPlanMeal {
   slot: MealSlot; // where it lands in the diary
   label: string; // display heading, e.g. "Breakfast"
-  title: string; // the plate
+  title: string; // the plate (matches a real recipe title)
+  recipeSlug: string; // the catalog recipe this meal is
   calories: number;
   protein_g: number;
   carbs_g: number;
@@ -33,6 +35,29 @@ export interface FullMealPlan {
   tag: PlanTag;
   summary: string;
   meals: MealPlanMeal[];
+}
+
+const SLOT_LABEL: Record<MealSlot, string> = {
+  breakfast: "Breakfast",
+  lunch: "Lunch",
+  dinner: "Dinner",
+  snack: "Snack",
+};
+
+/** Build a plan meal from a catalog recipe (macros/title come from the recipe). */
+export function cm(slug: string, label?: string): MealPlanMeal {
+  const r = recipeBySlug[slug];
+  if (!r) throw new Error(`Unknown recipe slug: ${slug}`);
+  return {
+    slot: r.slot,
+    label: label ?? SLOT_LABEL[r.slot],
+    title: r.title,
+    recipeSlug: r.slug,
+    calories: r.calories,
+    protein_g: r.protein_g,
+    carbs_g: r.carbs_g,
+    fat_g: r.fat_g,
+  };
 }
 
 // A rough recipe-search keyword from a meal title (its main food).
@@ -60,146 +85,148 @@ export function planTotals(plan: FullMealPlan) {
 
 export const MEAL_PLANS: FullMealPlan[] = [
   {
-    id: "lean-bulk-3000",
+    id: "lean-bulk",
     name: "Lean Bulk",
     tag: "Bulk",
     summary: "A big, high-carb day to fuel serious mass without going overboard on fat.",
     meals: [
-      { slot: "breakfast", label: "Breakfast", title: "Oats with whey, banana & peanut butter", calories: 650, protein_g: 40, carbs_g: 80, fat_g: 18 },
-      { slot: "lunch", label: "Lunch", title: "Chicken, rice, avocado & veg", calories: 780, protein_g: 55, carbs_g: 85, fat_g: 22 },
-      { slot: "snack", label: "Snack", title: "Greek yoghurt, granola & honey", calories: 400, protein_g: 30, carbs_g: 50, fat_g: 8 },
-      { slot: "dinner", label: "Dinner", title: "Beef mince pasta with tomato & cheese", calories: 820, protein_g: 55, carbs_g: 80, fat_g: 30 },
-      { slot: "snack", label: "Evening", title: "Milk, whey shake & a handful of nuts", calories: 350, protein_g: 30, carbs_g: 20, fat_g: 15 },
+      cm("ares-pb-banana-protein-oats"),
+      cm("ares-chicken-rice-bowl"),
+      cm("ares-whey-shake-banana", "Around training"),
+      cm("ares-beef-noodle-stirfry"),
+      cm("ares-greek-yogurt-granola-bowl", "Evening"),
     ],
   },
   {
-    id: "muscle-gain-2600",
+    id: "muscle-gain",
     name: "Muscle Gain",
     tag: "Gain",
     summary: "A moderate surplus with balanced macros — steady lean gains.",
     meals: [
-      { slot: "breakfast", label: "Breakfast", title: "Eggs on toast with avocado", calories: 540, protein_g: 30, carbs_g: 40, fat_g: 26 },
-      { slot: "lunch", label: "Lunch", title: "Chicken wrap with salad", calories: 650, protein_g: 50, carbs_g: 55, fat_g: 22 },
-      { slot: "snack", label: "Snack", title: "Whey shake & a banana", calories: 300, protein_g: 30, carbs_g: 35, fat_g: 3 },
-      { slot: "dinner", label: "Dinner", title: "Salmon, rice & vegetables", calories: 700, protein_g: 45, carbs_g: 65, fat_g: 25 },
-      { slot: "snack", label: "Evening", title: "Cottage cheese with berries", calories: 260, protein_g: 28, carbs_g: 18, fat_g: 6 },
+      cm("ares-berry-protein-pancakes"),
+      cm("ares-beef-burrito-bowl"),
+      cm("ares-whey-shake-banana", "Around training"),
+      cm("ares-baked-salmon-potatoes"),
+      cm("ares-cottage-cheese-pineapple", "Evening"),
     ],
   },
   {
-    id: "maintenance-2200",
+    id: "maintenance",
     name: "Maintenance & Recomp",
     tag: "Maintain",
     summary: "Balanced, protein-forward eating to hold weight and slowly recomp.",
     meals: [
-      { slot: "breakfast", label: "Breakfast", title: "Greek yoghurt, berries, granola & whey", calories: 450, protein_g: 40, carbs_g: 45, fat_g: 10 },
-      { slot: "lunch", label: "Lunch", title: "Chicken, salad, rice & olive oil", calories: 600, protein_g: 50, carbs_g: 50, fat_g: 20 },
-      { slot: "snack", label: "Snack", title: "Apple with two boiled eggs", calories: 250, protein_g: 15, carbs_g: 20, fat_g: 12 },
-      { slot: "dinner", label: "Dinner", title: "Salmon, roasted veg & a small potato", calories: 650, protein_g: 45, carbs_g: 45, fat_g: 28 },
-      { slot: "snack", label: "Evening", title: "Cottage cheese with pineapple", calories: 250, protein_g: 30, carbs_g: 20, fat_g: 4 },
+      cm("ares-greek-yogurt-granola-bowl"),
+      cm("ares-chicken-salad-wrap"),
+      cm("ares-apple-boiled-eggs"),
+      cm("ares-baked-salmon-potatoes"),
+      cm("ares-cottage-cheese-pineapple", "Evening"),
     ],
   },
   {
-    id: "high-protein-cut-1800",
+    id: "high-protein-cut",
     name: "High-Protein Cut",
     tag: "Cut",
     summary: "A moderate deficit with protein kept high to hold muscle while leaning out.",
     meals: [
-      { slot: "breakfast", label: "Breakfast", title: "Egg-white & spinach scramble, 1 slice toast", calories: 300, protein_g: 30, carbs_g: 25, fat_g: 8 },
-      { slot: "lunch", label: "Lunch", title: "Chicken breast, big salad, light dressing", calories: 420, protein_g: 50, carbs_g: 20, fat_g: 14 },
-      { slot: "snack", label: "Snack", title: "Whey shake & a small handful of almonds", calories: 250, protein_g: 30, carbs_g: 12, fat_g: 10 },
-      { slot: "dinner", label: "Dinner", title: "White fish or lean steak, greens, sweet potato", calories: 500, protein_g: 45, carbs_g: 40, fat_g: 15 },
-      { slot: "snack", label: "Evening", title: "Low-fat Greek yoghurt with berries", calories: 200, protein_g: 25, carbs_g: 18, fat_g: 2 },
+      cm("ares-egg-white-spinach-scramble"),
+      cm("ares-chicken-caesar"),
+      cm("ares-skyr-berries", "Snack"),
+      cm("ares-white-fish-sweet-potato"),
+      cm("ares-protein-shake", "Evening"),
     ],
   },
   {
-    id: "aggressive-cut-1500",
+    id: "aggressive-cut",
     name: "Aggressive Cut",
     tag: "Cut",
     summary: "A tighter deficit for faster fat loss — protein stays high, fats and carbs lean.",
     meals: [
-      { slot: "breakfast", label: "Breakfast", title: "Protein oats (made with water) & berries", calories: 300, protein_g: 30, carbs_g: 35, fat_g: 5 },
-      { slot: "lunch", label: "Lunch", title: "Tuna salad, light dressing", calories: 350, protein_g: 40, carbs_g: 15, fat_g: 12 },
-      { slot: "snack", label: "Snack", title: "Protein shake", calories: 150, protein_g: 30, carbs_g: 5, fat_g: 2 },
-      { slot: "dinner", label: "Dinner", title: "Chicken breast, veg & a small serve of rice", calories: 450, protein_g: 45, carbs_g: 40, fat_g: 10 },
-      { slot: "snack", label: "Evening", title: "Skyr or low-fat yoghurt", calories: 200, protein_g: 25, carbs_g: 15, fat_g: 3 },
+      cm("ares-skyr-seed-bowl"),
+      cm("ares-tuna-salad-bowl"),
+      cm("ares-protein-shake", "Snack"),
+      cm("ares-white-fish-sweet-potato"),
+      cm("ares-skyr-berries", "Evening"),
     ],
   },
   {
-    id: "vegetarian-high-protein-2100",
+    id: "vegetarian-high-protein",
     name: "Vegetarian High-Protein",
     tag: "Vegetarian",
-    summary: "Plenty of protein without meat — legumes, dairy and soy do the heavy lifting.",
+    summary: "Plenty of protein without meat — dairy, legumes and soy do the heavy lifting.",
     meals: [
-      { slot: "breakfast", label: "Breakfast", title: "Tofu scramble on toast", calories: 420, protein_g: 28, carbs_g: 35, fat_g: 20 },
-      { slot: "lunch", label: "Lunch", title: "Lentil & chickpea bowl with feta", calories: 600, protein_g: 30, carbs_g: 70, fat_g: 22 },
-      { slot: "snack", label: "Snack", title: "Greek yoghurt, whey & berries", calories: 350, protein_g: 40, carbs_g: 35, fat_g: 6 },
-      { slot: "dinner", label: "Dinner", title: "Halloumi or paneer, quinoa & vegetables", calories: 600, protein_g: 35, carbs_g: 55, fat_g: 28 },
-      { slot: "snack", label: "Evening", title: "Edamame with a glass of milk", calories: 200, protein_g: 20, carbs_g: 15, fat_g: 8 },
+      cm("ares-greek-yogurt-granola-bowl"),
+      cm("ares-lentil-chickpea-bowl"),
+      cm("ares-yogurt-nuts", "Snack"),
+      cm("ares-halloumi-quinoa-plate"),
+      cm("ares-edamame-nuts", "Evening"),
     ],
   },
   {
-    id: "athlete-fuel-3200",
+    id: "athlete-fuel",
     name: "Athlete Fuel",
     tag: "Athlete",
     summary: "A big-training-day plan — lots of carbs around sessions for performance and recovery.",
     meals: [
-      { slot: "breakfast", label: "Breakfast", title: "Oats, whey, berries, peanut butter & milk", calories: 700, protein_g: 45, carbs_g: 90, fat_g: 20 },
-      { slot: "lunch", label: "Lunch", title: "Chicken, rice, veg & olive oil", calories: 800, protein_g: 55, carbs_g: 90, fat_g: 22 },
-      { slot: "snack", label: "Around training", title: "Shake, rice cakes & honey", calories: 400, protein_g: 30, carbs_g: 60, fat_g: 5 },
-      { slot: "dinner", label: "Dinner", title: "Steak, potatoes & vegetables", calories: 850, protein_g: 55, carbs_g: 80, fat_g: 32 },
-      { slot: "snack", label: "Evening", title: "Yoghurt, granola & nuts", calories: 450, protein_g: 30, carbs_g: 45, fat_g: 18 },
+      cm("ares-pb-banana-protein-oats"),
+      cm("ares-chicken-rice-bowl"),
+      cm("ares-whey-oat-smoothie", "Around training"),
+      cm("ares-roast-chicken-potatoes"),
+      cm("ares-greek-yogurt-granola-bowl", "Evening"),
+      cm("ares-pb-banana-toast", "Supper"),
     ],
   },
   {
-    id: "dairy-free-2000",
+    id: "dairy-free-high-protein",
     name: "Dairy-Free High-Protein",
     tag: "Dairy-free",
-    summary: "Plenty of protein with no dairy — meat, eggs, soy and legumes carry the day.",
+    summary: "Plenty of protein with no dairy — eggs, fish, meat, tofu and edamame.",
     meals: [
-      { slot: "breakfast", label: "Breakfast", title: "Scrambled eggs, avocado & wholegrain toast", calories: 480, protein_g: 26, carbs_g: 35, fat_g: 26 },
-      { slot: "lunch", label: "Lunch", title: "Chicken, rice & vegetable stir-fry", calories: 600, protein_g: 50, carbs_g: 60, fat_g: 16 },
-      { slot: "snack", label: "Snack", title: "Dairy-free protein shake & an orange", calories: 260, protein_g: 28, carbs_g: 25, fat_g: 5 },
-      { slot: "dinner", label: "Dinner", title: "Salmon, sweet potato & greens", calories: 620, protein_g: 42, carbs_g: 45, fat_g: 28 },
-      { slot: "snack", label: "Evening", title: "Edamame & mixed nuts", calories: 250, protein_g: 18, carbs_g: 14, fat_g: 14 },
+      cm("ares-avocado-eggs-toast"),
+      cm("ares-chicken-rice-bowl"),
+      cm("ares-edamame-nuts", "Snack"),
+      cm("ares-baked-salmon-potatoes"),
+      cm("ares-apple-boiled-eggs", "Evening"),
     ],
   },
   {
-    id: "budget-high-protein-2200",
+    id: "budget-high-protein",
     name: "Budget High-Protein",
     tag: "Budget",
-    summary: "Cheap, filling and protein-dense — eggs, mince, oats, tinned fish and rice.",
+    summary: "Cheap, filling and protein-dense — oats, tinned fish, mince and eggs.",
     meals: [
-      { slot: "breakfast", label: "Breakfast", title: "Oats with eggs & a banana", calories: 500, protein_g: 28, carbs_g: 65, fat_g: 14 },
-      { slot: "lunch", label: "Lunch", title: "Tinned tuna, rice & mixed veg", calories: 550, protein_g: 45, carbs_g: 60, fat_g: 12 },
-      { slot: "snack", label: "Snack", title: "Peanut butter on wholegrain toast", calories: 350, protein_g: 14, carbs_g: 35, fat_g: 18 },
-      { slot: "dinner", label: "Dinner", title: "Beef mince, pasta & tomato sauce", calories: 700, protein_g: 45, carbs_g: 70, fat_g: 24 },
-      { slot: "snack", label: "Evening", title: "Two boiled eggs & an apple", calories: 220, protein_g: 14, carbs_g: 20, fat_g: 10 },
+      cm("ares-whey-oat-smoothie"),
+      cm("ares-tuna-pasta-salad"),
+      cm("ares-pb-banana-toast", "Snack"),
+      cm("ares-beef-chilli-rice"),
+      cm("ares-apple-boiled-eggs", "Evening"),
     ],
   },
   {
-    id: "grab-and-go-2000",
+    id: "grab-and-go",
     name: "Grab & Go (No-Cook)",
     tag: "Quick",
     summary: "A busy-day plan with almost no cooking — assemble, don't cook.",
     meals: [
-      { slot: "breakfast", label: "Breakfast", title: "Overnight oats with yoghurt & berries", calories: 420, protein_g: 28, carbs_g: 55, fat_g: 10 },
-      { slot: "lunch", label: "Lunch", title: "Pre-cooked chicken, wrap & salad", calories: 550, protein_g: 45, carbs_g: 45, fat_g: 18 },
-      { slot: "snack", label: "Snack", title: "Protein bar & a banana", calories: 330, protein_g: 25, carbs_g: 45, fat_g: 8 },
-      { slot: "dinner", label: "Dinner", title: "Microwave rice, tinned beans & rotisserie chicken", calories: 520, protein_g: 42, carbs_g: 55, fat_g: 12 },
-      { slot: "snack", label: "Evening", title: "Greek yoghurt & a handful of nuts", calories: 250, protein_g: 20, carbs_g: 12, fat_g: 14 },
+      cm("ares-berry-overnight-oats"),
+      cm("ares-chicken-salad-wrap"),
+      cm("ares-whey-shake-banana", "Snack"),
+      cm("ares-tuna-salad-bowl"),
+      cm("ares-hummus-veg-crackers", "Evening"),
     ],
   },
   {
-    id: "hard-gainer-3600",
+    id: "hard-gainer",
     name: "Hard Gainer",
     tag: "Bulk",
     summary: "A big, calorie-dense day for those who struggle to gain — eat often.",
     meals: [
-      { slot: "breakfast", label: "Breakfast", title: "Oats, whole milk, whey, banana & peanut butter", calories: 800, protein_g: 45, carbs_g: 95, fat_g: 26 },
-      { slot: "lunch", label: "Lunch", title: "Chicken thighs, rice, avocado & olive oil", calories: 900, protein_g: 55, carbs_g: 90, fat_g: 34 },
-      { slot: "snack", label: "Around training", title: "Mass shake: milk, oats, whey & peanut butter", calories: 550, protein_g: 40, carbs_g: 60, fat_g: 16 },
-      { slot: "dinner", label: "Dinner", title: "Beef, potatoes, cheese & vegetables", calories: 900, protein_g: 55, carbs_g: 85, fat_g: 38 },
-      { slot: "snack", label: "Evening", title: "Yoghurt, granola, honey & nuts", calories: 450, protein_g: 25, carbs_g: 55, fat_g: 16 },
+      cm("ares-pb-banana-protein-oats"),
+      cm("ares-beef-burrito-bowl"),
+      cm("ares-whey-oat-smoothie", "Around training"),
+      cm("ares-pork-sweet-potato-mash"),
+      cm("ares-greek-yogurt-granola-bowl", "Evening"),
+      cm("ares-pb-banana-toast", "Supper"),
     ],
   },
 ];
