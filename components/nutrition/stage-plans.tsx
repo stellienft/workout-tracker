@@ -4,7 +4,13 @@ import { useState, useTransition } from "react";
 import { ChevronDown, Check, Beef, Flame, Dumbbell, Salad } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
-import { STAGE_PLANS, computeStageTargets, type StageId } from "@/lib/nutrition-plans";
+import {
+  STAGE_PLANS,
+  computeStageTargets,
+  ACTIVITY_BASES,
+  type StageId,
+  type ActivityKey,
+} from "@/lib/nutrition-plans";
 import { saveNutritionTargets } from "@/lib/actions/nutrition";
 import { useRouter } from "next/navigation";
 
@@ -24,12 +30,16 @@ export function StagePlans({ weightKg }: { weightKg: number | null }) {
   const router = useRouter();
   const [open, setOpen] = useState<StageId | null>(null);
   const [applying, setApplying] = useState<StageId | null>(null);
+  const [activity, setActivity] = useState<ActivityKey>("moderate");
   const [, startTransition] = useTransition();
+
+  const kcalPerKg =
+    ACTIVITY_BASES.find((a) => a.key === activity)?.kcalPerKg ?? 32;
 
   function apply(id: StageId) {
     const plan = STAGE_PLANS.find((p) => p.id === id);
     if (!plan || !weightKg) return;
-    const targets = computeStageTargets(weightKg, plan);
+    const targets = computeStageTargets(weightKg, plan, kcalPerKg);
     setApplying(id);
     startTransition(async () => {
       const res = await saveNutritionTargets(targets);
@@ -51,11 +61,34 @@ export function StagePlans({ weightKg }: { weightKg: number | null }) {
         your bodyweight — fine-tune anytime in “Set up macros”.
       </p>
 
+      {/* Activity level — nudges the calorie base for the presets. */}
+      <div className="mt-3">
+        <p className="mb-1.5 text-xs font-medium text-[var(--text-muted)]">
+          How active are you?
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {ACTIVITY_BASES.map((a) => (
+            <button
+              key={a.key}
+              onClick={() => setActivity(a.key)}
+              className={cn(
+                "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                activity === a.key
+                  ? "border-[var(--border-active)] bg-[var(--accent-muted)] text-[var(--accent-primary)]"
+                  : "border-[var(--border-subtle)] text-[var(--text-secondary)]"
+              )}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="mt-4 space-y-3">
         {STAGE_PLANS.map((plan) => {
           const Icon = STAGE_ICON[plan.id];
           const isOpen = open === plan.id;
-          const preview = weightKg ? computeStageTargets(weightKg, plan) : null;
+          const preview = weightKg ? computeStageTargets(weightKg, plan, kcalPerKg) : null;
           return (
             <div
               key={plan.id}
@@ -116,6 +149,24 @@ export function StagePlans({ weightKg }: { weightKg: number | null }) {
                       </li>
                     ))}
                   </ul>
+
+                  {/* Example day of eating for this stage. */}
+                  <div className="mt-4 rounded-2xl bg-[var(--surface-secondary)] p-3">
+                    <p className="text-xs font-semibold">
+                      Example day{" "}
+                      <span className="font-normal text-[var(--text-muted)]">
+                        (~{plan.sampleDayKcal.toLocaleString()} kcal — scale portions to your targets)
+                      </span>
+                    </p>
+                    <ul className="mt-2 space-y-1.5">
+                      {plan.sampleDay.map((m, i) => (
+                        <li key={i} className="text-xs">
+                          <span className="font-medium text-[var(--text-primary)]">{m.meal}:</span>{" "}
+                          <span className="text-[var(--text-secondary)]">{m.food}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
                   <p className="mt-3 text-[11px] text-[var(--text-muted)]">
                     Pairs with: {plan.pairsWith}
