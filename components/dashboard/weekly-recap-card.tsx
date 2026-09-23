@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Sparkles, Target } from "lucide-react";
+import { Sparkles, Target, Share2 } from "lucide-react";
 import { generateWeeklyRecap } from "@/lib/actions/recap";
+import { useToast } from "@/components/ui/toast";
+import { drawAchievementCard, shareOrDownload } from "@/lib/share-card";
+import { mythicQuoteFor } from "@/lib/mythic-quotes";
 
 interface Recap {
   summary: string;
@@ -15,6 +18,8 @@ export function WeeklyRecapCard({ initial }: { initial: Recap | null }) {
   const [recap, setRecap] = useState<Recap | null>(initial);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const [sharing, setSharing] = useState(false);
+  const toast = useToast();
 
   function generate() {
     setError(null);
@@ -27,11 +32,59 @@ export function WeeklyRecapCard({ initial }: { initial: Recap | null }) {
 
   const num = (k: string) => (recap?.stats?.[k] as number | null) ?? null;
 
+  const weekLabel = recap?.weekStart
+    ? `Week of ${new Date(recap.weekStart).toLocaleDateString("en-AU", {
+        day: "numeric",
+        month: "short",
+      })}`
+    : "This week";
+
+  async function share() {
+    if (!recap) return;
+    setSharing(true);
+    try {
+      const sessions = num("sessions7");
+      const volume = num("totalVolume");
+      const streak = num("streak");
+      const parts = [
+        volume != null ? `${Number(volume).toLocaleString()} kg moved` : null,
+        streak ? `${streak}-day streak` : null,
+      ].filter(Boolean) as string[];
+      const blob = await drawAchievementCard({
+        icon: "flame",
+        kicker: "This week",
+        title: sessions != null ? `${sessions} workout${sessions === 1 ? "" : "s"}` : "My week",
+        subtitle: parts.join(" · ") || recap.summary.slice(0, 80),
+        quote: mythicQuoteFor(recap.weekStart || weekLabel),
+        footnote: weekLabel,
+      });
+      if (!blob) throw new Error("render failed");
+      const result = await shareOrDownload(blob, "ares-fitness-week.png");
+      if (result === "downloaded") toast("Image saved — share it anywhere.", "success");
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") toast("Couldn't share — try again.", "error");
+    } finally {
+      setSharing(false);
+    }
+  }
+
   return (
     <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-5">
-      <p className="flex items-center gap-2 font-semibold">
-        <Sparkles className="h-4 w-4 text-[var(--accent-primary)]" /> Your weekly recap
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="flex items-center gap-2 font-semibold">
+          <Sparkles className="h-4 w-4 text-[var(--accent-primary)]" /> Your weekly recap
+        </p>
+        {recap && (
+          <button
+            onClick={share}
+            disabled={sharing}
+            aria-label="Share weekly recap"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)] disabled:opacity-50"
+          >
+            <Share2 className="h-3.5 w-3.5" /> {sharing ? "…" : "Share"}
+          </button>
+        )}
+      </div>
 
       {recap ? (
         <>
