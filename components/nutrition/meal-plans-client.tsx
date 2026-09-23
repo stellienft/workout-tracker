@@ -1,12 +1,25 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Plus, Check } from "lucide-react";
+import { ChevronDown, Plus, Check, CalendarRange, BookOpen } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { MEAL_PLANS, planTotals, type PlanTag } from "@/lib/meal-plans";
-import { addMealPlanToDay } from "@/lib/actions/nutrition";
+import { addMealPlanToDay, addMealPlanWeek } from "@/lib/actions/nutrition";
+
+// A rough recipe-search keyword from a meal title (the main food), for the
+// "find recipes like this" link.
+const STOP = new Set([
+  "with","and","the","of","a","an","made","water","small","big","light","mixed",
+  "tinned","pre","cooked","microwave","overnight","protein","two","dairy-free",
+  "wholegrain","low-fat","fresh","serve","handful",
+]);
+function mealKeyword(title: string): string {
+  const words = title.toLowerCase().replace(/[^a-z\s]/g, " ").split(/\s+/).filter(Boolean);
+  return words.find((w) => w.length > 2 && !STOP.has(w)) ?? words[0] ?? "";
+}
 
 const TAGS: (PlanTag | "All")[] = [
   "All",
@@ -45,6 +58,7 @@ export function MealPlansClient({
   const [tag, setTag] = useState<(typeof TAGS)[number]>("All");
   const [open, setOpen] = useState<string | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
+  const [addingWeek, setAddingWeek] = useState<string | null>(null);
   const [date, setDate] = useState(today);
   const [, startTransition] = useTransition();
 
@@ -70,6 +84,21 @@ export function MealPlansClient({
       } else {
         toast(res.error ?? "Couldn't add — try again.", "error");
         setAdding(null);
+      }
+    });
+  }
+
+  function addWeek(planId: string) {
+    setAddingWeek(planId);
+    startTransition(async () => {
+      const res = await addMealPlanWeek({ planId, startDate: date });
+      if (res.ok) {
+        toast(`Added to 7 days from ${isToday ? "today" : date}.`, "success");
+        router.push("/nutrition");
+        router.refresh();
+      } else {
+        toast(res.error ?? "Couldn't add — try again.", "error");
+        setAddingWeek(null);
       }
     });
   }
@@ -161,6 +190,12 @@ export function MealPlansClient({
                             {m.label}
                           </p>
                           <p className="text-sm">{m.title}</p>
+                          <Link
+                            href={`/nutrition/recipes?q=${encodeURIComponent(mealKeyword(m.title))}`}
+                            className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-[var(--accent-primary)] hover:underline"
+                          >
+                            <BookOpen className="h-3 w-3" /> Find recipes
+                          </Link>
                         </div>
                         <div className="shrink-0 text-right">
                           <p className="text-sm font-semibold tabular-nums">{m.calories}</p>
@@ -170,24 +205,34 @@ export function MealPlansClient({
                     ))}
                   </ul>
 
-                  <button
-                    onClick={() => add(plan.id)}
-                    disabled={adding !== null}
-                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] py-3 text-sm font-semibold text-[var(--accent-ink)] disabled:opacity-50"
-                  >
-                    {adding === plan.id ? (
-                      <>
-                        <Check className="h-4 w-4" /> Adding…
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="h-4 w-4" /> Add this day to my diary
-                      </>
-                    )}
-                  </button>
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={() => add(plan.id)}
+                      disabled={adding !== null || addingWeek !== null}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] py-3 text-sm font-semibold text-[var(--accent-ink)] disabled:opacity-50"
+                    >
+                      {adding === plan.id ? (
+                        <>
+                          <Check className="h-4 w-4" /> Adding…
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4" /> Add this day
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => addWeek(plan.id)}
+                      disabled={adding !== null || addingWeek !== null}
+                      className="flex shrink-0 items-center justify-center gap-2 rounded-2xl border border-[var(--border-subtle)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)] disabled:opacity-50"
+                    >
+                      <CalendarRange className="h-4 w-4" />
+                      {addingWeek === plan.id ? "Adding…" : "7 days"}
+                    </button>
+                  </div>
                   <p className="mt-2 text-center text-[11px] text-[var(--text-muted)]">
-                    Adds all {plan.meals.length} meals to {isToday ? "today" : date}. Edit or remove
-                    any of them in your diary.
+                    Adds all {plan.meals.length} meals to {isToday ? "today" : date} — or the whole
+                    week. Edit or remove any of them in your diary.
                   </p>
                 </div>
               )}

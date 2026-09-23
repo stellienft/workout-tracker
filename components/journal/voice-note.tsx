@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Mic, Square, Loader2, Check, NotebookPen } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
-import { saveSessionNote } from "@/lib/actions/workout";
 
 // Minimal typings for the Web Speech API (not in the default DOM lib).
 interface SpeechRecognitionAlternative {
@@ -45,11 +44,17 @@ function getRecognitionCtor(): SpeechRecognitionCtor | null {
  * works too). Saves the transcript to the session's notes.
  */
 export function VoiceNote({
-  sessionId,
+  save,
   initialValue = "",
+  title = "Session journal",
+  hint,
+  placeholder = "How did it feel? Energy, aches, PRs, what to change next time…",
 }: {
-  sessionId: string;
+  save: (text: string) => Promise<{ ok: boolean; error?: string }>;
   initialValue?: string;
+  title?: string;
+  hint?: string;
+  placeholder?: string;
 }) {
   const toast = useToast();
   const [text, setText] = useState(initialValue);
@@ -141,11 +146,11 @@ export function VoiceNote({
     else startListening();
   }
 
-  async function save() {
+  async function onSave() {
     if (listening) stopListening();
     setSaving(true);
     try {
-      const res = await saveSessionNote(sessionId, text);
+      const res = await save(text);
       if (res.ok) {
         setSaved(true);
         toast("Note saved.", "success");
@@ -165,12 +170,13 @@ export function VoiceNote({
     <div className="w-full rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4 text-left">
       <div className="flex items-center gap-2">
         <NotebookPen className="h-4 w-4 text-[var(--accent-primary)]" />
-        <p className="text-sm font-semibold">Session journal</p>
+        <p className="text-sm font-semibold">{title}</p>
       </div>
       <p className="mt-1 text-xs text-[var(--text-muted)]">
-        {supported
-          ? "Leave a note about today — type it, or tap the mic to dictate."
-          : "Leave a note about today. Tip: use your keyboard's mic to dictate."}
+        {hint ??
+          (supported
+            ? "Leave a note about today — type it, or tap the mic to dictate."
+            : "Leave a note about today. Tip: use your keyboard's mic to dictate.")}
       </p>
 
       <div className="relative mt-3">
@@ -182,7 +188,7 @@ export function VoiceNote({
             setSaved(false);
           }}
           rows={4}
-          placeholder="How did it feel? Energy, aches, PRs, what to change next time…"
+          placeholder={placeholder}
           className="w-full resize-y rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-secondary)] p-3 pr-12 text-sm outline-none focus:border-[var(--accent-primary)]"
         />
         {supported && (
@@ -219,7 +225,7 @@ export function VoiceNote({
         </span>
         <button
           type="button"
-          onClick={save}
+          onClick={onSave}
           disabled={saving || (!dirty && saved) || (!dirty && !text)}
           className="flex items-center justify-center gap-2 rounded-2xl bg-[var(--accent-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--accent-ink)] disabled:opacity-50"
         >
