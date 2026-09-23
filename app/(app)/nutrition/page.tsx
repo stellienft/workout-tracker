@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen } from "lucide-react";
+import { BookOpen, UtensilsCrossed } from "lucide-react";
 import { requireUser, getAuthContext } from "@/lib/auth";
 import { getUserPlan } from "@/lib/entitlements";
 import { planAllows } from "@/lib/plan";
@@ -133,12 +133,20 @@ export default async function NutritionPage({
         title="Nutrition"
         subtitle="Track your macros and plan your meals."
         action={
-          <Link
-            href="/nutrition/recipes"
-            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)]"
-          >
-            <BookOpen className="h-4 w-4" /> Recipes
-          </Link>
+          <div className="flex shrink-0 items-center gap-2">
+            <Link
+              href="/nutrition/meal-plans"
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)]"
+            >
+              <UtensilsCrossed className="h-4 w-4" /> Meal plans
+            </Link>
+            <Link
+              href="/nutrition/recipes"
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)]"
+            >
+              <BookOpen className="h-4 w-4" /> Recipes
+            </Link>
+          </div>
         }
       />
       <div className="mt-6">
