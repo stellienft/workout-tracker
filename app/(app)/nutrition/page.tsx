@@ -135,7 +135,7 @@ export default async function NutritionPage({
         action={
           <div className="flex shrink-0 items-center gap-2">
             <Link
-              href="/nutrition/meal-plans"
+              href="/meal-plans"
               className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:border-[var(--border-active)] hover:text-[var(--text-primary)]"
             >
               <UtensilsCrossed className="h-4 w-4" /> Meal plans

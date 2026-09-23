@@ -492,6 +492,45 @@ export async function addMealPlanWeek(input: { planId: string; startDate: string
   return { ok: true as const, days: 7, added: rows.length };
 }
 
+/** Add a 7-day weekly plan (a different menu each day) to the diary. */
+export async function addWeeklyPlan(input: { weekId: string; startDate: string }) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+  const parsed = z
+    .object({
+      weekId: z.string().min(1).max(80),
+      startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    })
+    .safeParse(input);
+  if (!parsed.success)
+    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Invalid" };
+
+  const { WEEKLY_PLANS } = await import("@/lib/weekly-plans");
+  const wk = WEEKLY_PLANS.find((p) => p.id === parsed.data.weekId);
+  if (!wk) return { ok: false as const, error: "Plan not found" };
+
+  const [y, m, d] = parsed.data.startDate.split("-").map(Number);
+  const base = Date.UTC(y, m - 1, d);
+  const rows = wk.days.flatMap((day, i) => {
+    const dayDate = new Date(base + i * 86_400_000).toISOString().slice(0, 10);
+    return day.meals.map((meal) => ({
+      user_id: user.id,
+      entry_date: dayDate,
+      meal: meal.slot,
+      title: meal.title,
+      calories: meal.calories,
+      protein_g: meal.protein_g,
+      carbs_g: meal.carbs_g,
+      fat_g: meal.fat_g,
+    }));
+  });
+
+  const { error } = await supabase.from("meal_entries").insert(rows);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath("/nutrition");
+  return { ok: true as const, days: 7, added: rows.length };
+}
+
 export async function deleteMealEntry(id: string) {
   const { supabase, user } = await auth();
   if (!user) return { ok: false as const, error: "Not authenticated" };

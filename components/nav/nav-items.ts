@@ -19,6 +19,7 @@ import {
   Briefcase,
   UserRound,
   Utensils,
+  UtensilsCrossed,
   Sparkles,
   Medal,
   Crown,
@@ -85,6 +86,7 @@ export const navSections: NavSection[] = [
     title: "Wellbeing",
     items: [
       { label: "Nutrition", href: "/nutrition", icon: Utensils, pro: true },
+      { label: "Meal Plans", href: "/meal-plans", icon: UtensilsCrossed, pro: true },
       { label: "Health", href: "/health", icon: HeartPulse, pro: true },
       { label: "Recovery", href: "/therapy", icon: Activity },
       { label: "Supplements", href: "/supplements", icon: FlaskConical, pro: true },
