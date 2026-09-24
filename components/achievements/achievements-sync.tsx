@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Confetti } from "@/components/ui/confetti";
+import { LightningStrike } from "@/components/ui/lightning-strike";
 import { useToast } from "@/components/ui/toast";
 import { syncAchievements } from "@/lib/actions/achievements";
 import { randomMythicQuote } from "@/lib/mythic-quotes";
@@ -37,5 +37,5 @@ export function AchievementsSync() {
       .catch(() => {});
   }, [router, toast]);
 
-  return celebrate ? <Confetti /> : null;
+  return celebrate ? <LightningStrike /> : null;
 }
