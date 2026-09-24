@@ -5,7 +5,7 @@ import { CoverImage } from "@/components/ui/cover-image";
 import { StartWorkoutButton } from "@/components/start-workout-button";
 import { VideoThumb } from "@/components/workout/video-thumb";
 import { repDisplay } from "@/lib/utils";
-import { ShieldAlert, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 
 export default async function WorkoutPreviewPage({
   params,
@@ -83,9 +83,6 @@ export default async function WorkoutPreviewPage({
                     <span className="text-xs text-[var(--text-muted)]">{i + 1}.</span>
                   )}
                   <p className="truncate font-semibold">{ex.exercise.name}</p>
-                  {!ex.exercise.shoulder_safe && (
-                    <ShieldAlert className="h-4 w-4 shrink-0 text-[var(--warning)]" />
-                  )}
                 </div>
                 <p className="text-xs capitalize text-[var(--text-muted)]">
                   {ex.exercise.primary_muscles.join(", ")}

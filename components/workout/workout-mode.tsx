@@ -803,9 +803,6 @@ export function WorkoutMode({
                     ))}
                   </ul>
                 )}
-                {a.shoulderNotes && (
-                  <p className="mt-2 text-xs text-[var(--warning)]">{a.shoulderNotes}</p>
-                )}
               </div>
             </div>
           </div>
@@ -1464,11 +1461,6 @@ function ReplaceSearch({ onPick }: { onPick: (a: AltOption) => void }) {
                 <ExerciseImage path={alt.cover_image_path} alt={alt.name} />
               </span>
               <span className="min-w-0 flex-1 truncate font-medium capitalize">{alt.name}</span>
-              {alt.shoulder_safe && (
-                <span className="shrink-0 rounded-full bg-[var(--accent-muted)] px-2 py-0.5 text-[11px] text-[var(--accent-primary)]">
-                  Shoulder-safe
-                </span>
-              )}
             </button>
           ))}
         </div>
@@ -1504,11 +1496,6 @@ function ReplaceGroup({
             <span className="min-w-0 flex-1 truncate font-medium capitalize">
               {alt.name}
             </span>
-            {alt.shoulder_safe && (
-              <span className="shrink-0 rounded-full bg-[var(--accent-muted)] px-2 py-0.5 text-[11px] text-[var(--accent-primary)]">
-                Shoulder-safe
-              </span>
-            )}
           </button>
         ))}
       </div>

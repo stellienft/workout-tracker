@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ExerciseImage } from "@/components/ui/exercise-image";
 import { ExerciseFavoriteButton } from "@/components/exercise-favorite-button";
 import { cn } from "@/lib/utils";
-import { ShieldAlert, Search, Heart } from "lucide-react";
+import { Search, Heart } from "lucide-react";
 import type { Exercise } from "@/lib/types";
 
 export function ExerciseLibrary({
@@ -94,9 +94,6 @@ export function ExerciseLibrary({
               <div className="min-w-0 pr-8">
                 <div className="flex items-center gap-1.5">
                   <p className="font-semibold">{e.name}</p>
-                  {!e.shoulder_safe && (
-                    <ShieldAlert className="h-3.5 w-3.5 text-[var(--warning)]" />
-                  )}
                 </div>
                 <p className="text-xs capitalize text-[var(--text-muted)]">
                   {e.primary_muscles.join(", ")}

@@ -26,7 +26,7 @@ export default async function ExercisesPage() {
     <PageShell>
       <PageHeader
         title="Exercise library"
-        subtitle="Every movement, with technique guidance and shoulder-safe flags."
+        subtitle="Every movement, with technique guidance and form cues."
       />
       <div className="mt-6">
         <ExerciseLibrary
