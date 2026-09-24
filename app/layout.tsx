@@ -20,11 +20,11 @@ const fontDisplay = Sora({
 export const metadata: Metadata = {
   metadataBase: new URL("https://stellio.fit"),
   title: {
-    default: "Ares Fitness | Personalised Workout Plans, Strength Training & Fitness Tracking",
+    default: "Ares Fitness - Train Like a God",
     template: "%s · Ares Fitness",
   },
   description:
-    "Ares Fitness helps you build strength, lose weight and stay consistent with personalised workout programs, YouTube exercise guides, progress tracking and goal-based training plans.",
+    "Ares Fitness is the all-in-one strength coach — adaptive programs, set-by-set logging, AI coaching, meal plans and progress that actually motivates. Train like a god.",
   applicationName: "Ares Fitness",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -41,26 +41,26 @@ export const metadata: Metadata = {
     apple: "/icons/apple-touch-icon.png",
   },
   openGraph: {
-    title: "Ares Fitness | Personalised Workout Plans, Strength Training & Fitness Tracking",
+    title: "Ares Fitness - Train Like a God",
     description:
-      "Ares Fitness helps you build strength, lose weight and stay consistent with personalised workout programs, YouTube exercise guides, progress tracking and goal-based training plans.",
+      "Ares Fitness is the all-in-one strength coach — adaptive programs, set-by-set logging, AI coaching, meal plans and progress that actually motivates. Train like a god.",
     siteName: "Ares Fitness",
     type: "website",
     images: [
       {
-        url: "/OG-Share-StellioFit.png",
+        url: "/og-ares.png",
         width: 1200,
         height: 630,
-        alt: "Ares Fitness — Personalised Workout Plans, Strength Training & Fitness Tracking",
+        alt: "Ares Fitness — Train Like a God",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Ares Fitness | Personalised Workout Plans, Strength Training & Fitness Tracking",
+    title: "Ares Fitness - Train Like a God",
     description:
-      "Ares Fitness helps you build strength, lose weight and stay consistent with personalised workout programs, YouTube exercise guides, progress tracking and goal-based training plans.",
-    images: ["/OG-Share-StellioFit.png"],
+      "Ares Fitness is the all-in-one strength coach — adaptive programs, set-by-set logging, AI coaching, meal plans and progress that actually motivates. Train like a god.",
+    images: ["/og-ares.png"],
   },
 };
 
