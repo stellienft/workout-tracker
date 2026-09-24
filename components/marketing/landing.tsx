@@ -1,8 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import {
-  Apple,
   Star,
   Check,
   Dumbbell,
@@ -35,6 +34,7 @@ import { Faq } from "./faq";
 import { Reveal } from "./reveal";
 import { AppStoreButton } from "./app-store-button";
 import { Phone, ScreenWorkout, ScreenAchievement } from "./screens";
+import { AppleLogo } from "./apple-logo";
 import { APP_STORE_URL } from "./config";
 
 /* ---------- small helpers ---------- */
@@ -105,16 +105,8 @@ export function Landing() {
             <Reveal>
               <div className="mb-5 flex flex-wrap items-center gap-3">
                 <Eyebrow>
-                  <Apple className="h-3.5 w-3.5" /> Exclusively on iOS
+                  <AppleLogo className="h-3.5 w-3.5" /> Exclusively on iOS
                 </Eyebrow>
-                <span className="flex items-center gap-1 text-sm text-text-2">
-                  <Star className="h-4 w-4 fill-accent text-accent" />
-                  <Star className="h-4 w-4 fill-accent text-accent" />
-                  <Star className="h-4 w-4 fill-accent text-accent" />
-                  <Star className="h-4 w-4 fill-accent text-accent" />
-                  <Star className="h-4 w-4 fill-accent text-accent" />
-                  <span className="ml-1 font-semibold text-white">Built for lifters</span>
-                </span>
               </div>
             </Reveal>
             <Reveal delay={60}>
@@ -295,11 +287,11 @@ export function Landing() {
           </h2>
         </Reveal>
         <div className="grid gap-6 md:grid-cols-3">
-          {[
-            { n: "01", icon: Apple, t: "Download on iOS", d: "Grab Ares from the App Store and sign in with Apple in seconds." },
+          {([
+            { n: "01", icon: AppleLogo, t: "Download on iOS", d: "Grab Ares from the App Store and sign in with Apple in seconds." },
             { n: "02", icon: Dumbbell, t: "Pick your path", d: "Choose a program and goal — or let the AI coach build one around you." },
             { n: "03", icon: Flame, t: "Train & track", d: "Log every set, watch your numbers climb, and share the milestones." },
-          ].map((s, i) => (
+          ] as { n: string; icon: ComponentType<{ className?: string }>; t: string; d: string }[]).map((s, i) => (
             <Reveal key={s.n} delay={i * 80}>
               <div className="relative h-full rounded-card border border-border-subtle bg-surface p-6">
                 <span className="font-display text-5xl font-extrabold text-white/10">{s.n}</span>
@@ -392,7 +384,7 @@ export function Landing() {
             />
             <div className="relative mx-auto max-w-2xl">
               <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-black/40">
-                <Apple className="h-8 w-8 text-white" />
+                <AppleLogo className="h-8 w-8 text-white" />
               </span>
               <h2 className="mt-6 font-display text-4xl font-extrabold tracking-tight sm:text-5xl">
                 Exclusively on iOS
@@ -566,7 +558,7 @@ export function Landing() {
                   href={APP_STORE_URL}
                   className="inline-flex items-center gap-2 rounded-2xl border border-white/20 px-5 py-3 font-semibold text-white transition-colors hover:border-white/40"
                 >
-                  <Apple className="h-4 w-4" /> iPhone &amp; Apple Watch
+                  <AppleLogo className="h-4 w-4" /> iPhone &amp; Apple Watch
                 </a>
               </div>
               <p className="mt-5 text-sm text-text-3">Free to start · Coming soon to the App Store</p>

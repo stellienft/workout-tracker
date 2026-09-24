@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Menu, X, Apple } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { APP_STORE_URL, WEB_APP_URL } from "./config";
+import { AppleLogo } from "./apple-logo";
 
 const LINKS = [
   { label: "Features", href: "#features" },
@@ -70,7 +71,7 @@ export function SiteNav() {
             href={APP_STORE_URL}
             className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-bold text-white transition-transform hover:-translate-y-0.5"
           >
-            <Apple className="h-4 w-4" /> Get the app
+            <AppleLogo className="h-4 w-4" /> Get the app
           </a>
         </div>
 
@@ -110,7 +111,7 @@ export function SiteNav() {
                 onClick={() => setMenu(false)}
                 className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-3 text-base font-bold text-white"
               >
-                <Apple className="h-5 w-5" /> Get the app
+                <AppleLogo className="h-5 w-5" /> Get the app
               </a>
             </div>
           </div>
