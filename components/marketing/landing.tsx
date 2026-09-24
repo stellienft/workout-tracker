@@ -142,7 +142,7 @@ export function Landing() {
           {/* hero phone with floating cards */}
           <Reveal delay={120} className="relative flex justify-center">
             <div className="relative">
-              <Phone>
+              <Phone tab="workouts">
                 <ScreenWorkout />
               </Phone>
               {/* floating stat cards — sit outside the phone edges (desktop only) */}
@@ -233,7 +233,7 @@ export function Landing() {
               </div>
               <div className="w-40 shrink-0 self-center">
                 <div className="scale-90">
-                  <Phone glow={false}>
+                  <Phone glow={false} nav={false}>
                     <ScreenAchievement />
                   </Phone>
                 </div>
@@ -246,18 +246,28 @@ export function Landing() {
             <BentoCard icon={Mic} title="Voice journal">
               Speak your reflections after a session — Ares saves the audio and a searchable
               transcript, so your mindset progress is tracked too.
-              <div className="mt-4 flex items-end gap-0.5">
-                {[6, 12, 20, 14, 26, 18, 30, 16, 22, 10, 28, 14, 8, 18].map((h, i) => (
-                  <span key={i} className="w-1.5 rounded-full bg-accent/70" style={{ height: h }} />
-                ))}
-              </div>
+              <Waveform />
+            </BentoCard>
+          </Reveal>
+
+          {/* Rich tile — Body composition trend */}
+          <Reveal>
+            <BentoCard icon={Ruler} title="Body composition">
+              Track lean mass vs fat and watch the trend line, not the noise.
+              <BodyCompChart />
+            </BentoCard>
+          </Reveal>
+
+          {/* Rich tile — Walking */}
+          <Reveal delay={60}>
+            <BentoCard icon={Footprints} title="Walking &amp; activities">
+              Steps, cardio and every session logged in one place.
+              <StepBars />
             </BentoCard>
           </Reveal>
 
           {[
             { icon: Library, t: "Exercise library", d: "Hundreds of movements with video guides and cues." },
-            { icon: Footprints, t: "Walking & activities", d: "Steps, cardio and every session logged in one place." },
-            { icon: Ruler, t: "Body composition", d: "Track lean mass vs fat and see the trend line, not noise." },
             { icon: UsersRound, t: "Communities & feed", d: "Share workouts, follow friends and train together." },
             { icon: ClipboardCheck, t: "Check-ins", d: "Weekly measurements and progress photos, side by side." },
             { icon: UtensilsCrossed, t: "Meal plans", d: "7-day recipe rotations with macros matched to your goal." },
@@ -575,7 +585,7 @@ export function Landing() {
               <div className="flex items-center justify-center gap-2.5 sm:justify-start">
                 <Image src="/logo.png" alt="Ares Fitness" width={30} height={30} className="h-7 w-auto" />
                 <span className="font-display text-lg font-extrabold text-white">
-                  ARES<span className="text-accent">.</span>
+                  ARES <span className="text-accent">FITNESS</span>
                 </span>
               </div>
               <p className="mt-3 max-w-xs text-sm text-text-2">
@@ -618,12 +628,89 @@ function BentoCard({
   children: ReactNode;
 }) {
   return (
-    <div className="flex h-full flex-col rounded-card border border-border-subtle bg-surface p-6 transition-colors hover:border-white/15">
+    <div className="flex h-full flex-col rounded-card border border-border-subtle bg-surface p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-accent/30 hover:shadow-[0_20px_50px_-30px_rgba(255,82,14,.6)]">
       <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-muted">
         <Icon className="h-6 w-6 text-accent" />
       </span>
       <h3 className="mt-4 font-display text-lg font-extrabold">{title}</h3>
       <div className="mt-2 text-sm leading-relaxed text-text-2">{children}</div>
+    </div>
+  );
+}
+
+/* Animated equaliser for the voice-journal tile. */
+function Waveform() {
+  const bars = [7, 13, 21, 15, 27, 18, 31, 16, 23, 11, 29, 15, 9, 19, 25, 13];
+  return (
+    <div className="mt-5 flex h-9 items-end gap-[3px]">
+      {bars.map((h, i) => (
+        <span
+          key={i}
+          className="ares-eq w-1.5 rounded-full bg-accent/70"
+          style={{ height: h + 8, animationDelay: `${i * 90}ms` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* Lean-vs-fat mini trend for the body-composition tile. */
+function BodyCompChart() {
+  const lean = [30, 34, 33, 40, 44, 52, 58];
+  const fat = [40, 38, 36, 34, 30, 27, 22];
+  const w = 240;
+  const h = 64;
+  const step = w / (lean.length - 1);
+  const max = 64;
+  const path = (arr: number[]) =>
+    arr.map((v, i) => `${i === 0 ? "M" : "L"} ${i * step} ${h - (v / max) * h}`).join(" ");
+  return (
+    <div className="mt-5">
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full">
+        <defs>
+          <linearGradient id="bc" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ff520e" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#ff520e" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={`${path(lean)} L ${w} ${h} L 0 ${h} Z`} fill="url(#bc)" />
+        <path d={path(lean)} fill="none" stroke="#ff520e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={path(fat)} fill="none" stroke="#4d9de0" strokeWidth="2.5" strokeDasharray="4 4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <div className="mt-2 flex gap-4 text-[11px]">
+        <span className="flex items-center gap-1.5 text-text-2"><span className="h-1.5 w-1.5 rounded-full bg-accent" /> Lean</span>
+        <span className="flex items-center gap-1.5 text-text-2"><span className="h-1.5 w-1.5 rounded-full bg-[#4d9de0]" /> Fat</span>
+      </div>
+    </div>
+  );
+}
+
+/* Weekly step bars for the walking tile. */
+function StepBars() {
+  const days = [58, 76, 44, 88, 66, 100, 82];
+  const labels = ["M", "T", "W", "T", "F", "S", "S"];
+  return (
+    <div className="mt-5">
+      <div className="mb-2 flex items-baseline gap-1.5">
+        <span className="font-display text-xl font-extrabold text-white">8,420</span>
+        <span className="text-[11px] text-text-2">avg steps</span>
+      </div>
+      <div className="flex h-12 items-end gap-1.5">
+        {days.map((v, i) => (
+          <span
+            key={i}
+            className="flex-1 rounded-sm"
+            style={{ height: `${v}%`, background: i === 5 ? "#ff520e" : "rgba(255,82,14,.28)" }}
+          />
+        ))}
+      </div>
+      <div className="mt-1 flex gap-1.5">
+        {labels.map((l, i) => (
+          <span key={i} className="flex-1 text-center text-[8px] text-text-3">
+            {l}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

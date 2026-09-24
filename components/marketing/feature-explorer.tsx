@@ -18,6 +18,7 @@ import {
   ScreenAchievement,
   ScreenMeals,
   ScreenCoach,
+  type Tab,
 } from "./screens";
 
 interface Feature {
@@ -27,6 +28,7 @@ interface Feature {
   blurb: string;
   points: string[];
   screen: ComponentType;
+  tab: Tab;
 }
 
 const FEATURES: Feature[] = [
@@ -38,6 +40,7 @@ const FEATURES: Feature[] = [
       "A distraction-free workout mode with weight × reps logging, auto rest timers and warm-ups counted into your total time.",
     points: ["Guided rest timers", "Warm-up time included", "One-tap set completion"],
     screen: ScreenWorkout,
+    tab: "workouts",
   },
   {
     id: "programs",
@@ -47,6 +50,7 @@ const FEATURES: Feature[] = [
       "Structured, science-backed plans — from a minimum-effective-dose split to full hypertrophy and cutting blocks — that scale with your progress.",
     points: ["Beginner to advanced", "Hypertrophy, strength & shred", "Self-paced scheduling"],
     screen: ScreenPrograms,
+    tab: "workouts",
   },
   {
     id: "progress",
@@ -56,6 +60,7 @@ const FEATURES: Feature[] = [
       "Estimated 1RM, volume, streaks and body composition charted over time so every session shows up as a line moving up and to the right.",
     points: ["Estimated 1RM trends", "Volume & streaks", "Body-composition tracking"],
     screen: ScreenProgress,
+    tab: "progress",
   },
   {
     id: "achievements",
@@ -65,6 +70,7 @@ const FEATURES: Feature[] = [
       "Hit a milestone and Ares mints a share card with a god-voice line to match — built to look good on your story.",
     points: ["Auto-generated share cards", "Mythic god-voice quotes", "PRs, streaks & volume"],
     screen: ScreenAchievement,
+    tab: "progress",
   },
   {
     id: "nutrition",
@@ -74,6 +80,7 @@ const FEATURES: Feature[] = [
       "Weekly meal plans on a 7-day rotation, built from real recipes with macros that match your goal — bulk, maintain or cut.",
     points: ["7-day meal rotation", "Real recipes & photos", "Macros matched to your goal"],
     screen: ScreenMeals,
+    tab: "home",
   },
   {
     id: "coach",
@@ -83,6 +90,7 @@ const FEATURES: Feature[] = [
       "Ask for swaps, form cues or a plan for the day. Your coach adjusts around injuries and equipment and writes it straight into your session.",
     points: ["Instant exercise swaps", "Injury-aware adjustments", "Answers, anytime"],
     screen: ScreenCoach,
+    tab: "home",
   },
 ];
 
@@ -122,7 +130,7 @@ export function FeatureExplorer() {
     <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
       {/* Phone preview */}
       <div className="order-1 flex justify-center lg:sticky lg:top-24">
-        <Phone>
+        <Phone tab={FEATURES[active].tab}>
           <div key={active} className="ares-screen-in h-full">
             <ActiveScreen />
           </div>
@@ -155,7 +163,7 @@ export function FeatureExplorer() {
                       <Icon className="h-5 w-5" />
                     </span>
                     <h3
-                      className={`font-display text-base font-bold sm:text-lg ${
+                      className={`text-base font-medium sm:text-lg ${
                         on ? "text-white" : "text-text-2 group-hover:text-white"
                       }`}
                     >

@@ -44,7 +44,7 @@ export function SiteNav() {
         <Link href="/" className="flex items-center gap-2.5">
           <Image src="/logo.png" alt="Ares Fitness" width={34} height={34} className="h-8 w-auto" />
           <span className="font-display text-lg font-extrabold tracking-tight text-white">
-            ARES<span className="text-accent">.</span>
+            ARES <span className="text-accent">FITNESS</span>
           </span>
         </Link>
 

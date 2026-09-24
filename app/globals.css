@@ -349,3 +349,17 @@ html {
 .ares-marquee {
   animation: ares-marquee 34s linear infinite;
 }
+/* Animated equaliser bars for the voice-journal bento tile. */
+@keyframes ares-eq {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+.ares-eq {
+  transform-origin: bottom;
+  animation: ares-eq 1.15s ease-in-out infinite;
+}
