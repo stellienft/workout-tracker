@@ -8,7 +8,7 @@ import { PageShell } from "@/components/ui/page-header";
 import { TodayHeroCard } from "@/components/dashboard/today-hero";
 import { WeekStrip } from "@/components/dashboard/week-strip";
 import { VoiceNote } from "@/components/journal/voice-note";
-import { saveDailyJournal } from "@/lib/actions/journal";
+import { addJournalEntry } from "@/lib/actions/journal";
 import { WeeklyCompletionCard } from "@/components/dashboard/weekly-completion";
 import { StreakCard } from "@/components/dashboard/streak-card";
 import { WeeklyRecapCard } from "@/components/dashboard/weekly-recap-card";
@@ -101,13 +101,6 @@ export default async function DashboardPage() {
   // Days trained (for the dashboard attendance strip). Formatted in the
   // member's timezone so each session lands on their local calendar day.
   const stripTz = profile?.timezone || DEFAULT_TZ;
-  const journalDay = todayInTz(stripTz);
-  const { data: journalRow } = await supabase
-    .from("journal_entries")
-    .select("body")
-    .eq("user_id", user.id)
-    .eq("entry_date", journalDay)
-    .maybeSingle();
   const trainedDates = Array.from(
     new Set(
       (streakSessions ?? []).map((s) =>
@@ -385,18 +378,20 @@ export default async function DashboardPage() {
         <WeeklyRecapCard initial={cachedRecap} />
       </div>
 
-      {/* Today's journal — type or dictate a daily note. */}
+      {/* Quick journal entry — each save adds a new entry to your journal. */}
       <section className="mt-8">
         <VoiceNote
-          save={saveDailyJournal.bind(null, journalDay)}
-          initialValue={(journalRow?.body as string | null) ?? ""}
-          title="Today's journal"
-          hint="Capture how today went — type it, or tap the mic to talk."
+          save={addJournalEntry}
+          title="Journal"
+          hint="Add a quick note — type it, or tap the mic to talk (and record)."
           placeholder="Energy, sleep, mood, wins, what to tackle tomorrow…"
+          clearOnSave
+          audio
+          saveLabel="Add entry"
         />
         <div className="mt-2 text-right">
           <Link href="/journal" className="text-xs font-medium text-[var(--accent-primary)] hover:underline">
-            View past entries →
+            View all entries →
           </Link>
         </div>
       </section>

@@ -2,8 +2,9 @@ import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { VoiceNote } from "@/components/journal/voice-note";
-import { saveDailyJournal } from "@/lib/actions/journal";
-import { todayInTz, DEFAULT_TZ } from "@/lib/timezone";
+import { JournalList, type JournalItem } from "@/components/journal/journal-list";
+import { addJournalEntry } from "@/lib/actions/journal";
+import { DEFAULT_TZ } from "@/lib/timezone";
 import { NotebookPen } from "lucide-react";
 
 export const metadata = { title: "Journal" };
@@ -17,69 +18,77 @@ export default async function JournalPage() {
     .select("timezone")
     .eq("id", user.id)
     .maybeSingle();
-  const today = todayInTz((profile?.timezone as string | null) || DEFAULT_TZ);
+  const tz = (profile?.timezone as string | null) || DEFAULT_TZ;
 
-  const { data: entries } = await supabase
+  const { data: rows } = await supabase
     .from("journal_entries")
-    .select("entry_date, body")
+    .select("id, body, audio_path, created_at")
     .eq("user_id", user.id)
-    .order("entry_date", { ascending: false })
-    .limit(365);
+    .order("created_at", { ascending: false })
+    .limit(500);
 
-  const todayEntry = (entries ?? []).find((e) => e.entry_date === today);
-  // Past entries only — today's lives in the editor above.
-  const rows = (entries ?? []).filter(
-    (e) => e.entry_date !== today && (e.body as string)?.trim()
-  );
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleString("en-AU", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: tz,
+    });
+
+  // Signed URLs for any attached audio (private bucket).
+  const entries: JournalItem[] = [];
+  for (const r of rows ?? []) {
+    let audioUrl: string | null = null;
+    const path = r.audio_path as string | null;
+    if (path) {
+      const { data } = await supabase.storage
+        .from("journal-audio")
+        .createSignedUrl(path, 60 * 60);
+      audioUrl = data?.signedUrl ?? null;
+    }
+    entries.push({
+      id: r.id as string,
+      when: fmt(r.created_at as string),
+      body: (r.body as string) ?? "",
+      audioUrl,
+    });
+  }
 
   return (
     <PageShell>
       <PageHeader
         title="Journal"
-        subtitle="Your daily notes — type them or dictate with the mic."
+        subtitle="Your notes — type or record them, and read them back anytime."
       />
 
-      {/* Add / edit today's entry right here. */}
+      {/* New entry — each save creates its own card below. */}
       <div className="mt-6">
         <VoiceNote
-          save={saveDailyJournal.bind(null, today)}
-          initialValue={(todayEntry?.body as string | null) ?? ""}
-          title="Today's entry"
-          hint="Add a note for today — type it, or tap the mic to talk."
-          placeholder="Energy, sleep, mood, wins, what to tackle tomorrow…"
+          save={addJournalEntry}
+          title="New entry"
+          hint="Write or record a note — tap Save and it's added below."
+          placeholder="How did today go? Energy, mood, wins, what to tackle next…"
+          clearOnSave
+          audio
+          saveLabel="Save entry"
         />
       </div>
 
-      {rows.length === 0 ? (
+      {entries.length === 0 ? (
         <div className="mt-8 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-8 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-secondary)]">
             <NotebookPen className="h-8 w-8 text-[var(--text-muted)]" />
           </div>
-          <p className="mt-4 font-semibold">No past entries yet</p>
+          <p className="mt-4 font-semibold">No entries yet</p>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            Save today’s note above — your past entries will collect here.
+            Save your first note above — every entry you add shows up here.
           </p>
         </div>
       ) : (
-        <div className="mt-6 space-y-3">
-          {rows.map((e) => (
-            <article
-              key={e.entry_date as string}
-              className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4"
-            >
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--accent-primary)]">
-                {new Date(`${e.entry_date}T00:00:00`).toLocaleDateString(undefined, {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              </p>
-              <p className="mt-1.5 whitespace-pre-wrap text-sm text-[var(--text-secondary)]">
-                {e.body as string}
-              </p>
-            </article>
-          ))}
+        <div className="mt-6">
+          <JournalList entries={entries} />
         </div>
       )}
     </PageShell>
