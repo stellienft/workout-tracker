@@ -33,7 +33,22 @@ import { FeatureExplorer } from "./feature-explorer";
 import { Faq } from "./faq";
 import { Reveal } from "./reveal";
 import { AppStoreButton } from "./app-store-button";
-import { Phone, ScreenWorkout, ScreenAchievement } from "./screens";
+import { Phone, ScreenWorkout } from "./screens";
+import {
+  Waveform,
+  BodyCompChart,
+  StepBars,
+  ExerciseViz,
+  CommunitiesViz,
+  CheckinsViz,
+  MealsViz,
+  SupplementsViz,
+  RecoveryViz,
+  GoalsViz,
+  ScheduleViz,
+  ReferViz,
+  ShareCard,
+} from "./bento-viz";
 import { AppleLogo } from "./apple-logo";
 import { APP_STORE_URL } from "./config";
 
@@ -220,8 +235,13 @@ export function Landing() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {/* Featured wide tile — Achievements */}
           <Reveal className="sm:col-span-2">
-            <div className="flex h-full flex-col justify-between gap-6 overflow-hidden rounded-card border border-border-subtle bg-surface p-6 sm:flex-row sm:items-center">
-              <div className="max-w-sm">
+            <div className="relative flex h-full flex-col justify-between gap-8 overflow-hidden rounded-card border border-border-subtle bg-gradient-to-br from-surface via-surface to-bg-2 p-6 sm:flex-row sm:items-center sm:p-8">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -right-10 top-1/2 h-64 w-64 -translate-y-1/2 rounded-full opacity-60 blur-3xl"
+                style={{ background: "radial-gradient(circle, rgba(255,82,14,.22), transparent 70%)" }}
+              />
+              <div className="relative max-w-sm">
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-muted">
                   <Medal className="h-6 w-6 text-accent" />
                 </span>
@@ -231,12 +251,8 @@ export function Landing() {
                   line to match — made to look good on your story.
                 </p>
               </div>
-              <div className="w-40 shrink-0 self-center">
-                <div className="scale-90">
-                  <Phone glow={false} nav={false}>
-                    <ScreenAchievement />
-                  </Phone>
-                </div>
+              <div className="relative flex shrink-0 justify-center sm:pr-2">
+                <ShareCard />
               </div>
             </div>
           </Reveal>
@@ -267,19 +283,20 @@ export function Landing() {
           </Reveal>
 
           {[
-            { icon: Library, t: "Exercise library", d: "Hundreds of movements with video guides and cues." },
-            { icon: UsersRound, t: "Communities & feed", d: "Share workouts, follow friends and train together." },
-            { icon: ClipboardCheck, t: "Check-ins", d: "Weekly measurements and progress photos, side by side." },
-            { icon: UtensilsCrossed, t: "Meal plans", d: "7-day recipe rotations with macros matched to your goal." },
-            { icon: FlaskConical, t: "Supplements", d: "Build a stack and get reminders to stay consistent." },
-            { icon: HeartPulse, t: "Recovery", d: "Mobility and therapy routines to keep you training." },
-            { icon: Target, t: "Goals", d: "Set targets and watch every session close the gap." },
-            { icon: Calendar, t: "Schedule", d: "Plan your training week and never miss a session." },
-            { icon: Gift, t: "Refer a friend", d: "Invite mates and earn Pro when they join." },
+            { icon: Library, t: "Exercise library", d: "Hundreds of movements with video guides and cues.", viz: ExerciseViz },
+            { icon: UsersRound, t: "Communities & feed", d: "Share workouts, follow friends and train together.", viz: CommunitiesViz },
+            { icon: ClipboardCheck, t: "Check-ins", d: "Weekly measurements and progress photos, side by side.", viz: CheckinsViz },
+            { icon: UtensilsCrossed, t: "Meal plans", d: "7-day recipe rotations with macros matched to your goal.", viz: MealsViz },
+            { icon: FlaskConical, t: "Supplements", d: "Build a stack and get reminders to stay consistent.", viz: SupplementsViz },
+            { icon: HeartPulse, t: "Recovery", d: "Mobility and therapy routines to keep you training.", viz: RecoveryViz },
+            { icon: Target, t: "Goals", d: "Set targets and watch every session close the gap.", viz: GoalsViz },
+            { icon: Calendar, t: "Schedule", d: "Plan your training week and never miss a session.", viz: ScheduleViz },
+            { icon: Gift, t: "Refer a friend", d: "Invite mates and earn Pro when they join.", viz: ReferViz },
           ].map((b, i) => (
             <Reveal key={b.t} delay={(i % 3) * 60}>
               <BentoCard icon={b.icon} title={b.t}>
                 {b.d}
+                <b.viz />
               </BentoCard>
             </Reveal>
           ))}
@@ -638,82 +655,6 @@ function BentoCard({
   );
 }
 
-/* Animated equaliser for the voice-journal tile. */
-function Waveform() {
-  const bars = [7, 13, 21, 15, 27, 18, 31, 16, 23, 11, 29, 15, 9, 19, 25, 13];
-  return (
-    <div className="mt-5 flex h-9 items-end gap-[3px]">
-      {bars.map((h, i) => (
-        <span
-          key={i}
-          className="ares-eq w-1.5 rounded-full bg-accent/70"
-          style={{ height: h + 8, animationDelay: `${i * 90}ms` }}
-        />
-      ))}
-    </div>
-  );
-}
-
-/* Lean-vs-fat mini trend for the body-composition tile. */
-function BodyCompChart() {
-  const lean = [30, 34, 33, 40, 44, 52, 58];
-  const fat = [40, 38, 36, 34, 30, 27, 22];
-  const w = 240;
-  const h = 64;
-  const step = w / (lean.length - 1);
-  const max = 64;
-  const path = (arr: number[]) =>
-    arr.map((v, i) => `${i === 0 ? "M" : "L"} ${i * step} ${h - (v / max) * h}`).join(" ");
-  return (
-    <div className="mt-5">
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full">
-        <defs>
-          <linearGradient id="bc" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ff520e" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#ff520e" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <path d={`${path(lean)} L ${w} ${h} L 0 ${h} Z`} fill="url(#bc)" />
-        <path d={path(lean)} fill="none" stroke="#ff520e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-        <path d={path(fat)} fill="none" stroke="#4d9de0" strokeWidth="2.5" strokeDasharray="4 4" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-      <div className="mt-2 flex gap-4 text-[11px]">
-        <span className="flex items-center gap-1.5 text-text-2"><span className="h-1.5 w-1.5 rounded-full bg-accent" /> Lean</span>
-        <span className="flex items-center gap-1.5 text-text-2"><span className="h-1.5 w-1.5 rounded-full bg-[#4d9de0]" /> Fat</span>
-      </div>
-    </div>
-  );
-}
-
-/* Weekly step bars for the walking tile. */
-function StepBars() {
-  const days = [58, 76, 44, 88, 66, 100, 82];
-  const labels = ["M", "T", "W", "T", "F", "S", "S"];
-  return (
-    <div className="mt-5">
-      <div className="mb-2 flex items-baseline gap-1.5">
-        <span className="font-display text-xl font-extrabold text-white">8,420</span>
-        <span className="text-[11px] text-text-2">avg steps</span>
-      </div>
-      <div className="flex h-12 items-end gap-1.5">
-        {days.map((v, i) => (
-          <span
-            key={i}
-            className="flex-1 rounded-sm"
-            style={{ height: `${v}%`, background: i === 5 ? "#ff520e" : "rgba(255,82,14,.28)" }}
-          />
-        ))}
-      </div>
-      <div className="mt-1 flex gap-1.5">
-        {labels.map((l, i) => (
-          <span key={i} className="flex-1 text-center text-[8px] text-text-3">
-            {l}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function PriceCard({
   name,
