@@ -8,7 +8,7 @@ import { Reveal } from "./reveal";
 import { Faq } from "./faq";
 import { AppStoreButton } from "./app-store-button";
 import { AppleLogo } from "./apple-logo";
-import { Phone, ScreenWorkout, ScreenProgress, ScreenCoach, type Tab } from "./screens";
+import { Phone, ScreenDashboard, ScreenWorkout, ScreenProgress, ScreenCoach, type Tab } from "./screens";
 import { APP_STORE_URL } from "./config";
 
 function Section({ id, children, className = "" }: { id?: string; children: ReactNode; className?: string }) {
@@ -67,15 +67,22 @@ export function Landing() {
           </div>
 
           <Reveal delay={120} className="relative order-first flex justify-center lg:order-none lg:justify-end">
-            <Image
-              src="/mascot.png"
-              alt=""
-              aria-hidden
-              width={560}
-              height={680}
-              priority
-              className="w-[min(440px,78vw)] max-w-none select-none drop-shadow-[0_30px_80px_rgba(255,82,14,0.25)]"
-            />
+            <div className="relative flex w-full max-w-[460px] justify-center">
+              {/* God head — atmospheric backdrop behind the phone */}
+              <Image
+                src="/mascot.png"
+                alt=""
+                aria-hidden
+                width={560}
+                height={680}
+                priority
+                className="pointer-events-none absolute right-0 top-0 z-0 w-[min(340px,68vw)] max-w-none -translate-y-10 translate-x-2 select-none opacity-90 drop-shadow-[0_30px_80px_rgba(255,82,14,0.28)] sm:translate-x-8"
+              />
+              {/* Dashboard app preview — front and centre */}
+              <Phone tab="home" glow={false} className="relative z-10 w-[min(248px,64vw)] translate-y-6">
+                <ScreenDashboard />
+              </Phone>
+            </div>
           </Reveal>
         </div>
       </Section>

@@ -77,7 +77,7 @@ export function Phone({
               <span className="ml-0.5 inline-block h-2.5 w-4 rounded-[3px] border border-white/50" />
             </span>
           </div>
-          <div className="flex-1 overflow-hidden px-4 pt-3">{children}</div>
+          <div className="min-h-0 flex-1 overflow-hidden px-4 pt-3">{children}</div>
           {nav && <BottomNav active={tab} />}
         </div>
       </div>
@@ -87,7 +87,7 @@ export function Phone({
 
 function BottomNav({ active }: { active?: Tab }) {
   return (
-    <div className="flex items-center justify-around border-t border-white/8 bg-[#111]/90 px-2 pb-3 pt-2 backdrop-blur">
+    <div className="flex shrink-0 items-center justify-around border-t border-white/8 bg-[#111]/90 px-2 pb-3 pt-2 backdrop-blur">
       {TABS.map((t) => {
         const on = t.id === active;
         const Icon = t.icon;
