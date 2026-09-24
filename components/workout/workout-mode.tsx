@@ -778,8 +778,8 @@ export function WorkoutMode({
               className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-elevated)]"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="relative aspect-video w-full bg-black">
-                <ExerciseImage path={a.coverPath} alt={a.name} />
+              <div className="relative aspect-square w-full bg-white">
+                <ExerciseImage path={a.coverPath} alt={a.name} fit="contain" />
                 <button
                   onClick={() => setEnlargeFor(null)}
                   aria-label="Close"
