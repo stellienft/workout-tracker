@@ -85,7 +85,7 @@ export default async function WorkoutPreviewPage({
                   <p className="truncate font-semibold">{ex.exercise.name}</p>
                 </div>
                 <p className="text-xs capitalize text-[var(--text-muted)]">
-                  {ex.exercise.primary_muscles.join(", ")}
+                  {(ex.exercise.primary_muscles ?? []).join(", ")}
                 </p>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   <span className="rounded-md bg-[var(--surface-secondary)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-secondary)]">
