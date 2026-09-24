@@ -9,8 +9,6 @@ import { AppleLogo } from "./apple-logo";
 
 const LINKS = [
   { label: "Features", href: "#features" },
-  { label: "Everything", href: "#bento" },
-  { label: "For Trainers", href: "#trainers" },
   { label: "Pricing", href: "#pricing" },
   { label: "FAQ", href: "#faq" },
 ];
@@ -41,11 +39,8 @@ export function SiteNav() {
       }`}
     >
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link href="/" className="flex items-center gap-2.5">
-          <Image src="/logo.png" alt="Ares Fitness" width={34} height={34} className="h-8 w-auto" />
-          <span className="font-display text-lg font-extrabold tracking-tight text-white">
-            ARES <span className="text-accent">FITNESS</span>
-          </span>
+        <Link href="/" aria-label="Ares Fitness" className="flex items-center">
+          <Image src="/logo.png" alt="Ares Fitness" width={40} height={40} className="h-9 w-auto" />
         </Link>
 
         <div className="hidden items-center gap-8 md:flex">
