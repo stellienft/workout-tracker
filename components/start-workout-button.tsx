@@ -9,8 +9,7 @@ import { Play } from "lucide-react";
 
 /**
  * Starts (or resumes) a workout. Before a fresh start it collects a quick
- * pre-workout check-in — shoulder pain 0–10, energy and readiness — which
- * drives the in-session safety alerts.
+ * pre-workout check-in — energy and readiness.
  */
 export function StartWorkoutButton({
   workoutTemplateId,
