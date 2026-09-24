@@ -113,6 +113,10 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   }
 
   async function signInWithGoogle() {
+    return signInWithProvider("google");
+  }
+
+  async function signInWithProvider(provider: "google" | "apple") {
     setError(null);
     setOauthLoading(true);
     const supabase = createClient();
@@ -129,7 +133,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       mode === "signup" ? signupNext : loginNext
     }${refCode ? `&ref=${encodeURIComponent(refCode)}` : ""}`;
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
+      provider,
       options: {
         redirectTo,
         queryParams: mode === "signup" ? { "account_type": accountType } : {},
@@ -156,6 +160,16 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
         </svg>
         {oauthLoading ? "Connecting…" : mode === "signup" ? "Sign up with Google" : "Continue with Google"}
+      </button>
+
+      {/* Apple OAuth. On the web a plain button is fine; the native iOS app
+          should use Apple's official Sign in with Apple button component. */}
+      <button
+        onClick={() => signInWithProvider("apple")}
+        disabled={oauthLoading}
+        className="flex h-12 items-center justify-center gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-primary)] text-sm font-medium text-white transition-colors hover:border-[var(--border-active)] disabled:opacity-50"
+      >
+        {oauthLoading ? "Connecting…" : mode === "signup" ? "Sign up with Apple" : "Continue with Apple"}
       </button>
 
       <div className="flex items-center gap-3">
