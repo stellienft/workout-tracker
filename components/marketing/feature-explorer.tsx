@@ -170,15 +170,11 @@ export function FeatureExplorer() {
                       {f.title}
                     </h3>
                   </div>
-                  {/* Expanding detail on the active item */}
-                  <div
-                    className="grid transition-all duration-300"
-                    style={{
-                      gridTemplateRows: on ? "1fr" : "0fr",
-                      opacity: on ? 1 : 0,
-                    }}
-                  >
-                    <div className="overflow-hidden">
+                  {/* Detail on the active item only — rendered conditionally so
+                      inactive items reserve no space (grid 0fr won't collapse on
+                      iOS Safari). */}
+                  {on && (
+                    <div className="ares-screen-in">
                       <p className="pt-3 text-sm leading-relaxed text-text-2">{f.blurb}</p>
                       <div className="mt-3 flex flex-wrap gap-2">
                         {f.points.map((p) => (
@@ -191,7 +187,7 @@ export function FeatureExplorer() {
                         ))}
                       </div>
                     </div>
-                  </div>
+                  )}
                 </button>
               </li>
             );

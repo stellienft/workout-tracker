@@ -18,6 +18,7 @@ import {
   HeartPulse,
   Calendar,
   Gift,
+  Watch,
   Library,
   Sparkles,
   UtensilsCrossed,
@@ -33,7 +34,7 @@ import { FeatureExplorer } from "./feature-explorer";
 import { Faq } from "./faq";
 import { Reveal } from "./reveal";
 import { AppStoreButton } from "./app-store-button";
-import { Phone, ScreenWorkout } from "./screens";
+import { Phone, ScreenDashboard } from "./screens";
 import {
   Waveform,
   BodyCompChart,
@@ -47,6 +48,7 @@ import {
   GoalsViz,
   ScheduleViz,
   ReferViz,
+  WatchViz,
   ShareCard,
 } from "./bento-viz";
 import { AppleLogo } from "./apple-logo";
@@ -104,8 +106,8 @@ export function Landing() {
       <SiteNav />
 
       {/* ============ HERO ============ */}
-      <Section className="relative pt-28 pb-16 sm:pt-36 sm:pb-24">
-        {/* mascot behind */}
+      <Section className="relative pt-28 pb-16 sm:pt-32 sm:pb-24">
+        {/* mascot behind — centered, faint */}
         <Image
           src="/mascot.png"
           alt=""
@@ -113,79 +115,75 @@ export function Landing() {
           width={560}
           height={680}
           priority
-          className="pointer-events-none absolute -right-16 top-10 -z-0 w-[320px] max-w-none opacity-[0.12] blur-[1px] sm:w-[440px] lg:right-0 lg:w-[520px] lg:opacity-20"
+          className="pointer-events-none absolute left-1/2 top-2 -z-0 w-[420px] max-w-none -translate-x-1/2 opacity-[0.07] blur-[1px] sm:w-[560px] sm:opacity-[0.1]"
         />
-        <div className="relative grid items-center gap-12 lg:grid-cols-2">
-          <div>
-            <Reveal>
-              <div className="mb-5 flex flex-wrap items-center gap-3">
-                <Eyebrow>
-                  <AppleLogo className="h-3.5 w-3.5" /> Exclusively on iOS
-                </Eyebrow>
-              </div>
-            </Reveal>
-            <Reveal delay={60}>
-              <h1 className="font-display text-5xl font-extrabold leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl">
-                Train like
-                <br />a <span className="text-accent">god.</span>
-              </h1>
-            </Reveal>
-            <Reveal delay={120}>
-              <p className="mt-6 max-w-md text-lg leading-relaxed text-text-2">
-                Ares is your all-in-one strength coach — programs, logging, nutrition, AI coaching
-                and progress that actually motivates. Forged for iPhone.
-              </p>
-            </Reveal>
-            <Reveal delay={180}>
-              <div className="mt-8 flex flex-wrap items-center gap-4">
-                <AppStoreButton />
-                <a
-                  href="#features"
-                  className="inline-flex items-center gap-2 rounded-2xl border border-border-subtle px-5 py-3 font-semibold text-white transition-colors hover:border-white/25"
-                >
-                  See the features <ArrowRight className="h-4 w-4" />
-                </a>
-              </div>
-            </Reveal>
-            <Reveal delay={240}>
-              <p className="mt-5 flex items-center gap-2 text-sm text-text-3">
-                <Download className="h-4 w-4" /> iPhone &amp; Apple Watch · Free to start
-              </p>
-            </Reveal>
-          </div>
+        <div className="relative mx-auto flex max-w-3xl flex-col items-center text-center">
+          <Reveal>
+            <Eyebrow>
+              <AppleLogo className="h-3.5 w-3.5" /> Exclusively on iOS
+            </Eyebrow>
+          </Reveal>
+          <Reveal delay={60}>
+            <h1 className="mt-6 font-display text-5xl font-extrabold leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl">
+              Train like
+              <br />a <span className="text-accent">god.</span>
+            </h1>
+          </Reveal>
+          <Reveal delay={120}>
+            <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-text-2">
+              Ares is your all-in-one strength coach — programs, logging, nutrition, AI coaching
+              and progress that actually motivates. Forged for iPhone.
+            </p>
+          </Reveal>
+          <Reveal delay={180}>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+              <AppStoreButton />
+              <a
+                href="#features"
+                className="inline-flex items-center gap-2 rounded-2xl border border-border-subtle px-5 py-3 font-semibold text-white transition-colors hover:border-white/25"
+              >
+                See the features <ArrowRight className="h-4 w-4" />
+              </a>
+            </div>
+          </Reveal>
+          <Reveal delay={240}>
+            <p className="mt-5 flex items-center justify-center gap-2 text-sm text-text-3">
+              <Download className="h-4 w-4" /> iPhone &amp; Apple Watch · Free to start
+            </p>
+          </Reveal>
+        </div>
 
-          {/* hero phone with floating cards */}
-          <Reveal delay={120} className="relative flex justify-center">
-            <div className="relative">
-              <Phone tab="workouts">
-                <ScreenWorkout />
-              </Phone>
-              {/* floating stat cards — sit outside the phone edges (desktop only) */}
-              <div className="absolute right-full top-24 mr-3 hidden rotate-[-6deg] rounded-2xl border border-border-subtle bg-surface/90 p-3 shadow-xl backdrop-blur lg:block">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-muted">
-                    <Flame className="h-4 w-4 text-accent" />
-                  </span>
-                  <div className="whitespace-nowrap">
-                    <div className="font-display text-sm font-extrabold leading-none">18 days</div>
-                    <div className="text-[10px] text-text-2">current streak</div>
-                  </div>
-                </div>
-              </div>
-              <div className="absolute bottom-28 left-full ml-3 hidden rotate-[5deg] rounded-2xl border border-border-subtle bg-surface/90 p-3 shadow-xl backdrop-blur lg:block">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-muted">
-                    <TrendingUp className="h-4 w-4 text-accent" />
-                  </span>
-                  <div className="whitespace-nowrap">
-                    <div className="font-display text-sm font-extrabold leading-none">+14% 1RM</div>
-                    <div className="text-[10px] text-text-2">this block</div>
-                  </div>
+        {/* dashboard phone below, centered, with floating cards */}
+        <Reveal delay={140} className="relative mt-16 flex justify-center">
+          <div className="relative">
+            <Phone tab="home">
+              <ScreenDashboard />
+            </Phone>
+            {/* floating stat cards — sit outside the phone edges (desktop only) */}
+            <div className="absolute right-full top-24 mr-4 hidden rotate-[-6deg] rounded-2xl border border-border-subtle bg-surface/90 p-3 shadow-xl backdrop-blur lg:block">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-muted">
+                  <Flame className="h-4 w-4 text-accent" />
+                </span>
+                <div className="whitespace-nowrap">
+                  <div className="font-display text-sm font-extrabold leading-none">18 days</div>
+                  <div className="text-[10px] text-text-2">current streak</div>
                 </div>
               </div>
             </div>
-          </Reveal>
-        </div>
+            <div className="absolute bottom-28 left-full ml-4 hidden rotate-[5deg] rounded-2xl border border-border-subtle bg-surface/90 p-3 shadow-xl backdrop-blur lg:block">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-muted">
+                  <TrendingUp className="h-4 w-4 text-accent" />
+                </span>
+                <div className="whitespace-nowrap">
+                  <div className="font-display text-sm font-extrabold leading-none">+14% 1RM</div>
+                  <div className="text-[10px] text-text-2">this block</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Reveal>
       </Section>
 
       {/* ============ STAT MARQUEE ============ */}
@@ -235,23 +233,23 @@ export function Landing() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {/* Featured wide tile — Achievements */}
           <Reveal className="sm:col-span-2">
-            <div className="relative flex h-full flex-col justify-between gap-8 overflow-hidden rounded-card border border-border-subtle bg-gradient-to-br from-surface via-surface to-bg-2 p-6 sm:flex-row sm:items-center sm:p-8">
+            <div className="relative flex h-full flex-row items-center gap-4 overflow-hidden rounded-card border border-border-subtle bg-gradient-to-br from-surface via-surface to-bg-2 p-5 sm:gap-8 sm:p-8">
               <div
                 aria-hidden
                 className="pointer-events-none absolute -right-10 top-1/2 h-64 w-64 -translate-y-1/2 rounded-full opacity-60 blur-3xl"
                 style={{ background: "radial-gradient(circle, rgba(255,82,14,.22), transparent 70%)" }}
               />
-              <div className="relative max-w-sm">
+              <div className="relative flex-1">
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-muted">
                   <Medal className="h-6 w-6 text-accent" />
                 </span>
-                <h3 className="mt-4 font-display text-2xl font-extrabold">Shareable milestones</h3>
-                <p className="mt-2 text-text-2">
+                <h3 className="mt-4 font-display text-xl font-extrabold sm:text-2xl">Shareable milestones</h3>
+                <p className="mt-2 text-sm text-text-2 sm:text-base">
                   Hit a PR, streak or volume milestone and Ares mints a share card with a god-voice
                   line to match — made to look good on your story.
                 </p>
               </div>
-              <div className="relative flex shrink-0 justify-center sm:pr-2">
+              <div className="relative w-32 shrink-0 sm:w-48">
                 <ShareCard />
               </div>
             </div>
@@ -290,6 +288,7 @@ export function Landing() {
             { icon: FlaskConical, t: "Supplements", d: "Build a stack and get reminders to stay consistent.", viz: SupplementsViz },
             { icon: HeartPulse, t: "Recovery", d: "Mobility and therapy routines to keep you training.", viz: RecoveryViz },
             { icon: Target, t: "Goals", d: "Set targets and watch every session close the gap.", viz: GoalsViz },
+            { icon: Watch, t: "Apple Watch", d: "Log sets and start rest timers from your wrist.", viz: WatchViz },
             { icon: Calendar, t: "Schedule", d: "Plan your training week and never miss a session.", viz: ScheduleViz },
             { icon: Gift, t: "Refer a friend", d: "Invite mates and earn Pro when they join.", viz: ReferViz },
           ].map((b, i) => (

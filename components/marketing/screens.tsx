@@ -9,6 +9,7 @@ import {
   Share2,
   ChevronLeft,
   Plus,
+  Play,
   Home,
   TrendingUp,
   Users,
@@ -398,6 +399,75 @@ export function ScreenCoach() {
         <span className="ml-auto flex h-6 w-6 items-center justify-center rounded-full bg-accent">
           <Flame className="h-3 w-3 text-white" />
         </span>
+      </div>
+    </div>
+  );
+}
+
+/* ---- 0. Home dashboard ---- */
+export function ScreenDashboard() {
+  const week = [42, 0, 68, 0, 55, 80, 0];
+  const labels = ["M", "T", "W", "T", "F", "S", "S"];
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <p className="text-[11px] text-text-2">Good morning</p>
+          <h4 className="font-display text-[18px] font-extrabold leading-tight text-white">Alex</h4>
+        </div>
+        <span className="flex items-center gap-1 rounded-full bg-accent-muted px-2.5 py-1 text-[11px] font-bold text-accent">
+          <Flame className="h-3.5 w-3.5" /> 18
+        </span>
+      </div>
+
+      {/* Next workout */}
+      <div className="relative overflow-hidden rounded-card border border-accent/30 p-3.5" style={{ background: "linear-gradient(135deg,#ff520e,#7a1f05)" }}>
+        <div aria-hidden className="absolute inset-0 opacity-15" style={{ backgroundImage: "radial-gradient(#000 1px, transparent 1.4px)", backgroundSize: "10px 10px" }} />
+        <div className="relative">
+          <span className="text-[9px] font-semibold uppercase tracking-wide text-white/80">Today</span>
+          <div className="font-display text-[16px] font-extrabold text-white">Push Day</div>
+          <div className="mt-0.5 text-[11px] text-white/80">5 exercises · ~45 min</div>
+          <div className="mt-2.5 flex items-center gap-2">
+            <span className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-[#7a1f05]">
+              <Play className="h-3 w-3" fill="currentColor" /> Start
+            </span>
+            <span className="text-[10px] text-white/70">Week 3 of 8</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        {[
+          { k: "Workouts", v: "4" },
+          { k: "Volume", v: "12.4t" },
+          { k: "PRs", v: "3" },
+        ].map((s) => (
+          <div key={s.k} className="rounded-card-sm border border-border-subtle bg-surface p-2.5 text-center">
+            <div className="font-display text-[15px] font-extrabold text-white">{s.v}</div>
+            <div className="text-[9px] uppercase tracking-wide text-text-3">{s.k}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Week activity */}
+      <div className="mt-3 rounded-card border border-border-subtle bg-surface p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[11px] font-semibold text-white">This week</span>
+          <span className="flex items-center gap-1 text-[10px] font-semibold text-[color:var(--success)]">
+            <TrendingUp className="h-3 w-3" /> On track
+          </span>
+        </div>
+        <div className="flex h-12 items-end gap-1.5">
+          {week.map((v, i) => (
+            <span key={i} className="flex-1 rounded-sm" style={{ height: `${Math.max(v, 6)}%`, background: v > 0 ? "#ff520e" : "rgba(255,255,255,.08)" }} />
+          ))}
+        </div>
+        <div className="mt-1 flex gap-1.5">
+          {labels.map((l, i) => (
+            <span key={i} className="flex-1 text-center text-[8px] text-text-3">{l}</span>
+          ))}
+        </div>
       </div>
     </div>
   );

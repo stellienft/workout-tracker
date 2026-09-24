@@ -9,11 +9,11 @@ import { Play, Heart, Trophy } from "lucide-react";
 
 /* Animated equaliser — Voice journal */
 export function Waveform() {
-  const bars = [7, 13, 21, 15, 27, 18, 31, 16, 23, 11, 29, 15, 9, 19, 25, 13];
+  const bars = [7, 13, 21, 15, 27, 18, 31, 16, 23, 11, 29, 15, 9, 19, 25, 13, 20, 28, 14, 24, 10, 26, 17, 30, 12, 22, 16, 8];
   return (
-    <div className="mt-5 flex h-9 items-end gap-[3px]">
+    <div className="mt-5 flex h-10 w-full items-end gap-[2px]">
       {bars.map((h, i) => (
-        <span key={i} className="ares-eq w-1.5 rounded-full bg-accent/70" style={{ height: h + 8, animationDelay: `${i * 90}ms` }} />
+        <span key={i} className="ares-eq flex-1 rounded-full bg-accent/70" style={{ height: h + 8, animationDelay: `${(i % 12) * 90}ms` }} />
       ))}
     </div>
   );
@@ -273,6 +273,46 @@ export function ScheduleViz() {
   );
 }
 
+/* Activity rings — Apple Watch */
+export function WatchViz() {
+  const rings = [
+    { r: 26, pct: 0.78, c: "#ff520e" },
+    { r: 19, pct: 0.62, c: "#4d9de0" },
+    { r: 12, pct: 0.9, c: "#22c55e" },
+  ];
+  const size = 64;
+  return (
+    <div className="mt-5 flex items-center gap-4">
+      <svg width={size} height={size} className="-rotate-90">
+        {rings.map((rg, i) => {
+          const circ = 2 * Math.PI * rg.r;
+          const off = circ * (1 - rg.pct);
+          return (
+            <g key={i}>
+              <circle cx={size / 2} cy={size / 2} r={rg.r} fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="5" />
+              <circle
+                cx={size / 2}
+                cy={size / 2}
+                r={rg.r}
+                fill="none"
+                stroke={rg.c}
+                strokeWidth="5"
+                strokeLinecap="round"
+                strokeDasharray={circ}
+                style={{ ["--off" as string]: off, strokeDashoffset: circ, animation: `ares-draw 1.4s ease ${i * 150}ms forwards` } as CSSProperties}
+              />
+            </g>
+          );
+        })}
+      </svg>
+      <div className="text-[11px] leading-tight text-text-2">
+        <div className="font-semibold text-white">Wrist controls</div>
+        <div>Log sets &amp; rest, hands-free</div>
+      </div>
+    </div>
+  );
+}
+
 /* Referral progress — Refer a friend */
 export function ReferViz() {
   const av = ["#ff520e", "#4d9de0", "#3a3a3a"];
@@ -303,22 +343,22 @@ export function ReferViz() {
 /* Premium milestone share card — the featured tile */
 export function ShareCard() {
   return (
-    <div className="relative w-full max-w-[190px] shrink-0 overflow-hidden rounded-[26px] border border-accent/25 bg-gradient-to-b from-[#1f0f06] via-[#150b05] to-[#0b0705] p-5 text-center shadow-[0_30px_70px_-30px_rgba(255,82,14,.7)]">
+    <div className="relative w-full overflow-hidden rounded-[22px] border border-accent/25 bg-gradient-to-b from-[#1f0f06] via-[#150b05] to-[#0b0705] p-4 text-center shadow-[0_30px_70px_-30px_rgba(255,82,14,.7)] sm:rounded-[26px] sm:p-5">
       <div aria-hidden className="absolute inset-0 opacity-[0.14]" style={{ backgroundImage: "radial-gradient(#ff520e 1px, transparent 1.5px)", backgroundSize: "11px 11px" }} />
       <div className="relative">
-        <span className="text-[9px] font-bold uppercase tracking-[0.28em] text-accent">Milestone</span>
-        <div className="relative mx-auto mt-4 flex h-24 w-24 items-center justify-center">
+        <span className="text-[8px] font-bold uppercase tracking-[0.24em] text-accent sm:text-[9px] sm:tracking-[0.28em]">Milestone</span>
+        <div className="relative mx-auto mt-3 flex h-16 w-16 items-center justify-center sm:mt-4 sm:h-24 sm:w-24">
           <span aria-hidden className="ares-pulse absolute inset-0 rounded-full" style={{ background: "radial-gradient(circle, rgba(255,82,14,.55), transparent 68%)" }} />
-          <span className="ares-float relative flex h-24 w-24 items-center justify-center rounded-full border border-accent/50 bg-black/40 backdrop-blur">
-            <Trophy className="h-11 w-11 text-accent" />
+          <span className="ares-float relative flex h-16 w-16 items-center justify-center rounded-full border border-accent/50 bg-black/40 backdrop-blur sm:h-24 sm:w-24">
+            <Trophy className="h-7 w-7 text-accent sm:h-11 sm:w-11" />
           </span>
         </div>
-        <div className="mt-4 font-display text-[26px] font-extrabold leading-none text-white">25</div>
-        <div className="mt-1 font-display text-[13px] font-bold uppercase tracking-wide text-white">Workouts</div>
-        <p className="mx-auto mt-3 max-w-[150px] text-[9.5px] italic leading-snug text-text-2">
+        <div className="mt-3 font-display text-[22px] font-extrabold leading-none text-white sm:mt-4 sm:text-[26px]">25</div>
+        <div className="mt-1 font-display text-[11px] font-bold uppercase tracking-wide text-white sm:text-[13px]">Workouts</div>
+        <p className="mx-auto mt-2.5 max-w-[150px] text-[9px] italic leading-snug text-text-2 sm:mt-3 sm:text-[9.5px]">
           &ldquo;The iron does not lie — you have earned this ground.&rdquo;
         </p>
-        <div className="mt-4 flex items-center justify-center gap-1.5">
+        <div className="mt-3 flex items-center justify-center gap-1.5 sm:mt-4">
           <span className="h-1 w-1 rounded-full bg-white/25" />
           <span className="h-1 w-6 rounded-full bg-accent" />
           <span className="h-1 w-1 rounded-full bg-white/25" />
