@@ -192,9 +192,15 @@ export async function loadWorkoutTemplate(
     .eq("workout_template_id", templateId)
     .order("position");
 
-  const templateExercises = (rows ?? []) as (WorkoutTemplateExercise & {
-    exercise: Exercise;
-  })[];
+  // Drop slots whose exercise didn't resolve. This happens when a template
+  // references an exercise the viewer can't read (e.g. an archived/unpublished
+  // row hidden by RLS) — the embedded `exercise` comes back null. Rendering
+  // such a slot would crash on `exercise.name` / `primary_muscles`.
+  const templateExercises = (
+    (rows ?? []) as (WorkoutTemplateExercise & { exercise: Exercise | null })[]
+  ).filter(
+    (r): r is WorkoutTemplateExercise & { exercise: Exercise } => Boolean(r.exercise)
+  );
 
   const enrichment = await enrichExercises(
     supabase,
@@ -394,10 +400,12 @@ export async function loadCustomSplitDay(
       split_id: day.split_id,
       split_name: splitName,
     },
-    exercises: items.map((r) => ({
-      ...r,
-      superset_group: r.superset_group ?? null,
-      ...(enrichment.get(r.exercise_id) ?? empty),
-    })),
+    exercises: items
+      .filter((r) => r.exercise)
+      .map((r) => ({
+        ...r,
+        superset_group: r.superset_group ?? null,
+        ...(enrichment.get(r.exercise_id) ?? empty),
+      })),
   };
 }
