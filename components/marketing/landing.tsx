@@ -106,8 +106,8 @@ export function Landing() {
       <SiteNav />
 
       {/* ============ HERO ============ */}
-      <Section className="relative pt-28 pb-16 sm:pt-32 sm:pb-24">
-        {/* mascot behind — centered, faint */}
+      <Section className="relative pt-28 pb-16 sm:pt-32 sm:pb-24 lg:pt-36">
+        {/* mascot behind — centered on mobile, to the right on desktop */}
         <Image
           src="/mascot.png"
           alt=""
@@ -115,75 +115,78 @@ export function Landing() {
           width={560}
           height={680}
           priority
-          className="pointer-events-none absolute left-1/2 top-2 -z-0 w-[420px] max-w-none -translate-x-1/2 opacity-[0.07] blur-[1px] sm:w-[560px] sm:opacity-[0.1]"
+          className="pointer-events-none absolute left-1/2 top-2 -z-0 w-[420px] max-w-none -translate-x-1/2 opacity-[0.07] blur-[1px] sm:w-[520px] sm:opacity-[0.1] lg:left-auto lg:right-0 lg:top-8 lg:translate-x-0 lg:opacity-[0.16]"
         />
-        <div className="relative mx-auto flex max-w-3xl flex-col items-center text-center">
-          <Reveal>
-            <Eyebrow>
-              <AppleLogo className="h-3.5 w-3.5" /> Exclusively on iOS
-            </Eyebrow>
-          </Reveal>
-          <Reveal delay={60}>
-            <h1 className="mt-6 font-display text-5xl font-extrabold leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl">
-              Train like
-              <br />a <span className="text-accent">god.</span>
-            </h1>
-          </Reveal>
-          <Reveal delay={120}>
-            <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-text-2">
-              Ares is your all-in-one strength coach — programs, logging, nutrition, AI coaching
-              and progress that actually motivates. Forged for iPhone.
-            </p>
-          </Reveal>
-          <Reveal delay={180}>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-              <AppStoreButton />
-              <a
-                href="#features"
-                className="inline-flex items-center gap-2 rounded-2xl border border-border-subtle px-5 py-3 font-semibold text-white transition-colors hover:border-white/25"
-              >
-                See the features <ArrowRight className="h-4 w-4" />
-              </a>
+        <div className="relative grid items-center gap-12 lg:grid-cols-2 lg:gap-8">
+          {/* text — centred on mobile, left-aligned on desktop */}
+          <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+            <Reveal>
+              <Eyebrow>
+                <AppleLogo className="h-3.5 w-3.5" /> Exclusively on iOS
+              </Eyebrow>
+            </Reveal>
+            <Reveal delay={60}>
+              <h1 className="mt-6 font-display text-5xl font-extrabold leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl">
+                Train like
+                <br />a <span className="text-accent">god.</span>
+              </h1>
+            </Reveal>
+            <Reveal delay={120}>
+              <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-text-2 lg:mx-0 lg:max-w-md">
+                Ares is your all-in-one strength coach — programs, logging, nutrition, AI coaching
+                and progress that actually motivates. Forged for iPhone.
+              </p>
+            </Reveal>
+            <Reveal delay={180}>
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-4 lg:justify-start">
+                <AppStoreButton />
+                <a
+                  href="#features"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-border-subtle px-5 py-3 font-semibold text-white transition-colors hover:border-white/25"
+                >
+                  See the features <ArrowRight className="h-4 w-4" />
+                </a>
+              </div>
+            </Reveal>
+            <Reveal delay={240}>
+              <p className="mt-5 flex items-center justify-center gap-2 text-sm text-text-3 lg:justify-start">
+                <Download className="h-4 w-4" /> iPhone &amp; Apple Watch · Free to start
+              </p>
+            </Reveal>
+          </div>
+
+          {/* dashboard phone with floating cards */}
+          <Reveal delay={140} className="relative flex justify-center">
+            <div className="relative">
+              <Phone tab="home">
+                <ScreenDashboard />
+              </Phone>
+              {/* floating stat cards — sit outside the phone edges (desktop only) */}
+              <div className="absolute right-full top-24 mr-4 hidden rotate-[-6deg] rounded-2xl border border-border-subtle bg-surface/90 p-3 shadow-xl backdrop-blur lg:block">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-muted">
+                    <Flame className="h-4 w-4 text-accent" />
+                  </span>
+                  <div className="whitespace-nowrap">
+                    <div className="font-display text-sm font-extrabold leading-none">18 days</div>
+                    <div className="text-[10px] text-text-2">current streak</div>
+                  </div>
+                </div>
+              </div>
+              <div className="absolute bottom-28 left-full ml-4 hidden rotate-[5deg] rounded-2xl border border-border-subtle bg-surface/90 p-3 shadow-xl backdrop-blur lg:block">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-muted">
+                    <TrendingUp className="h-4 w-4 text-accent" />
+                  </span>
+                  <div className="whitespace-nowrap">
+                    <div className="font-display text-sm font-extrabold leading-none">+14% 1RM</div>
+                    <div className="text-[10px] text-text-2">this block</div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </Reveal>
-          <Reveal delay={240}>
-            <p className="mt-5 flex items-center justify-center gap-2 text-sm text-text-3">
-              <Download className="h-4 w-4" /> iPhone &amp; Apple Watch · Free to start
-            </p>
           </Reveal>
         </div>
-
-        {/* dashboard phone below, centered, with floating cards */}
-        <Reveal delay={140} className="relative mt-16 flex justify-center">
-          <div className="relative">
-            <Phone tab="home">
-              <ScreenDashboard />
-            </Phone>
-            {/* floating stat cards — sit outside the phone edges (desktop only) */}
-            <div className="absolute right-full top-24 mr-4 hidden rotate-[-6deg] rounded-2xl border border-border-subtle bg-surface/90 p-3 shadow-xl backdrop-blur lg:block">
-              <div className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-muted">
-                  <Flame className="h-4 w-4 text-accent" />
-                </span>
-                <div className="whitespace-nowrap">
-                  <div className="font-display text-sm font-extrabold leading-none">18 days</div>
-                  <div className="text-[10px] text-text-2">current streak</div>
-                </div>
-              </div>
-            </div>
-            <div className="absolute bottom-28 left-full ml-4 hidden rotate-[5deg] rounded-2xl border border-border-subtle bg-surface/90 p-3 shadow-xl backdrop-blur lg:block">
-              <div className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-muted">
-                  <TrendingUp className="h-4 w-4 text-accent" />
-                </span>
-                <div className="whitespace-nowrap">
-                  <div className="font-display text-sm font-extrabold leading-none">+14% 1RM</div>
-                  <div className="text-[10px] text-text-2">this block</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Reveal>
       </Section>
 
       {/* ============ STAT MARQUEE ============ */}
