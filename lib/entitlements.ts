@@ -40,6 +40,25 @@ export const getUserPlan = cache(async (): Promise<Entitlement> => {
     };
   }
 
+  // An in-app purchase (iOS/Android via RevenueCat) unlocks Pro just the same.
+  const { data: iap } = await supabase
+    .from("app_store_entitlements")
+    .select("entitlement, is_active, expires_at")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const iapActive =
+    iap?.is_active === true &&
+    iap?.entitlement === "pro" &&
+    (!iap.expires_at || new Date(iap.expires_at as string).getTime() > Date.now());
+  if (iapActive) {
+    return {
+      plan: "pro",
+      isPro: true,
+      source: "subscription",
+      currentPeriodEnd: (iap?.expires_at as string | null) ?? null,
+    };
+  }
+
   // An active coaching package from a trainer also unlocks Pro.
   const { data: pkg } = await supabase
     .from("trainer_client_packages")
