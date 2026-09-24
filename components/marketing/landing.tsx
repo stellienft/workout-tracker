@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ComponentType, ReactNode } from "react";
-import { Apple, Check, ArrowRight } from "lucide-react";
+import { Check, ArrowRight } from "lucide-react";
 import { PRO_PRICE_LABEL, TRAINER_PRICE_LABEL } from "@/lib/plan";
 import { SiteNav } from "./site-nav";
 import { Reveal } from "./reveal";
@@ -115,7 +115,7 @@ export function Landing() {
         <Reveal>
           <div className="rounded-[28px] border border-white/8 bg-bg-2/50 px-6 py-14 text-center sm:px-12">
             <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10">
-              <Apple className="h-7 w-7 text-white" />
+              <AppleLogo className="h-7 w-7 text-white" />
             </span>
             <h2 className="mx-auto mt-6 max-w-xl font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
               Made for iPhone. Only.
@@ -157,17 +157,44 @@ export function Landing() {
         <Faq />
       </Section>
 
-      {/* ============ CTA ============ */}
-      <Section id="get" className="py-20 text-center sm:py-28">
+      {/* ============ FINAL CTA ============ */}
+      <Section id="get" className="py-20 sm:py-28">
         <Reveal>
-          <Image src="/icons/apple-touch-icon.png" alt="Ares Fitness" width={72} height={72} className="mx-auto h-16 w-16 rounded-2xl shadow-[0_18px_50px_rgba(255,82,14,0.28)]" />
-          <h2 className="mx-auto mt-6 max-w-xl font-display text-4xl font-extrabold tracking-tight sm:text-5xl">
-            Ready to train like a god?
-          </h2>
-          <div className="mt-8 flex justify-center">
-            <AppStoreButton />
+          <div className="relative overflow-hidden rounded-[32px] border border-accent/30 bg-gradient-to-br from-accent/20 via-surface to-bg p-10 text-center sm:p-16">
+            <div
+              aria-hidden
+              className="absolute inset-0 opacity-[0.08]"
+              style={{
+                backgroundImage: "radial-gradient(#ff520e 1px, transparent 1.6px)",
+                backgroundSize: "14px 14px",
+              }}
+            />
+            <div className="relative">
+              <Image
+                src="/icons/apple-touch-icon.png"
+                alt="Ares Fitness"
+                width={72}
+                height={72}
+                className="mx-auto mb-6 h-16 w-16 rounded-2xl shadow-[0_18px_50px_rgba(255,82,14,0.28)]"
+              />
+              <h2 className="font-display text-4xl font-extrabold tracking-tight sm:text-6xl">
+                Ready to train like a god?
+              </h2>
+              <p className="mx-auto mt-4 max-w-xl text-lg text-text-2">
+                Download Ares Fitness on iOS and turn showing up into the best physique of your life.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+                <AppStoreButton />
+                <a
+                  href={APP_STORE_URL}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-white/20 px-5 py-3 font-semibold text-white transition-colors hover:border-white/40"
+                >
+                  <AppleLogo className="h-4 w-4" /> iPhone &amp; Apple Watch
+                </a>
+              </div>
+              <p className="mt-5 text-sm text-text-3">Free to start · Coming soon to the App Store</p>
+            </div>
           </div>
-          <p className="mt-5 text-sm text-text-3">Free to start · iPhone &amp; Apple Watch</p>
         </Reveal>
       </Section>
 
