@@ -31,60 +31,43 @@ export function Landing() {
       <SiteNav />
 
       {/* ============ HERO ============ */}
-      <Section className="relative pt-32 pb-16 sm:pt-40 sm:pb-24">
+      <Section className="relative pt-32 pb-20 text-center sm:pt-40 sm:pb-24">
         <div
           aria-hidden
-          className="pointer-events-none absolute right-0 top-8 -z-10 h-[520px] w-[560px] max-w-full rounded-full opacity-40 blur-[120px]"
+          className="pointer-events-none absolute left-1/2 top-0 -z-10 h-[520px] w-[520px] -translate-x-1/2 rounded-full opacity-40 blur-[120px]"
           style={{ background: "radial-gradient(circle, rgba(255,82,14,.28), transparent 70%)" }}
         />
-        <div className="grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8">
-          <div>
-            <Reveal>
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3.5 py-1.5 text-xs font-medium text-text-2">
-                <AppleLogo className="h-3.5 w-3.5 text-white" /> Exclusively on iOS
-              </span>
-            </Reveal>
-            <Reveal delay={60}>
-              <h1 className="mt-7 font-display text-5xl font-extrabold leading-[0.98] tracking-tight sm:text-6xl lg:text-7xl">
-                Train like
-                <br />a <span className="text-accent">god.</span>
-              </h1>
-            </Reveal>
-            <Reveal delay={120}>
-              <p className="mt-6 max-w-md text-lg leading-relaxed text-text-2">
-                The all-in-one strength coach — programs, logging, coaching and progress that
-                actually motivates. Built for iPhone.
-              </p>
-            </Reveal>
-            <Reveal delay={180}>
-              <div className="mt-9 flex flex-wrap items-center gap-4">
-                <AppStoreButton />
-                <a href="#features" className="inline-flex items-center gap-2 text-sm font-semibold text-text-2 transition-colors hover:text-white">
-                  See how it works <ArrowRight className="h-4 w-4" />
-                </a>
-              </div>
-            </Reveal>
+        <Reveal>
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3.5 py-1.5 text-xs font-medium text-text-2">
+            <AppleLogo className="h-3.5 w-3.5 text-white" /> Exclusively on iOS
+          </span>
+        </Reveal>
+        <Reveal delay={60}>
+          <h1 className="mx-auto mt-7 max-w-3xl font-display text-5xl font-extrabold leading-[0.98] tracking-tight sm:text-7xl">
+            Train like a <span className="text-accent">god.</span>
+          </h1>
+        </Reveal>
+        <Reveal delay={120}>
+          <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-text-2">
+            The all-in-one strength coach — programs, logging, coaching and progress that actually
+            motivates. Built for iPhone.
+          </p>
+        </Reveal>
+        <Reveal delay={180}>
+          <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
+            <AppStoreButton />
+            <a href="#features" className="inline-flex items-center gap-2 text-sm font-semibold text-text-2 transition-colors hover:text-white">
+              See how it works <ArrowRight className="h-4 w-4" />
+            </a>
           </div>
-
-          <Reveal delay={120} className="relative order-first flex justify-center lg:order-none lg:justify-end">
-            <div className="relative flex w-full max-w-[460px] justify-center">
-              {/* God head — atmospheric backdrop behind the phone */}
-              <Image
-                src="/mascot.png"
-                alt=""
-                aria-hidden
-                width={560}
-                height={680}
-                priority
-                className="pointer-events-none absolute right-0 top-0 z-0 w-[min(340px,68vw)] max-w-none -translate-y-10 translate-x-2 select-none opacity-90 drop-shadow-[0_30px_80px_rgba(255,82,14,0.28)] sm:translate-x-8"
-              />
-              {/* Dashboard app preview — front and centre */}
-              <Phone tab="home" glow={false} className="relative z-10 w-[min(248px,64vw)] translate-y-6">
-                <ScreenDashboard />
-              </Phone>
-            </div>
-          </Reveal>
-        </div>
+        </Reveal>
+        <Reveal delay={140}>
+          <div className="relative mt-16 flex justify-center">
+            <Phone tab="home" className="w-full max-w-[280px]">
+              <ScreenDashboard />
+            </Phone>
+          </div>
+        </Reveal>
       </Section>
 
       {/* ============ FEATURE ROWS ============ */}
