@@ -105,6 +105,37 @@ export default async function WorkoutSessionPage({
   if (!session) notFound();
   if (session.status === "completed") redirect(`/workout/${sessionId}/summary`);
 
+  // Existing set logs power two things on resume: restoring completed sets, and
+  // recovering any mid-workout exercise substitutions. Each set_log records the
+  // exercise it was swapped in for (substituted_from_exercise_id), so we can
+  // re-apply substitutions even though the frozen snapshot still lists the
+  // original exercise — otherwise a resumed session reverts swaps and hides the
+  // sets logged against the substitute.
+  const { data: existingLogs } = await supabase
+    .from("set_logs")
+    .select("*")
+    .eq("session_id", sessionId)
+    .order("set_number");
+
+  // template_exercise_id → substitute exercise_id (precise, handles the same
+  // exercise appearing in two slots), with a fallback keyed by the original id.
+  const subByTemplateEx = new Map<string, string>();
+  const subByOriginal = new Map<string, string>();
+  for (const l of existingLogs ?? []) {
+    if (!l.substituted_from_exercise_id) continue;
+    if (l.template_exercise_id) subByTemplateEx.set(l.template_exercise_id, l.exercise_id);
+    subByOriginal.set(l.substituted_from_exercise_id, l.exercise_id);
+  }
+  const applySubs = (slots: SnapshotSlot[]): SnapshotSlot[] =>
+    subByTemplateEx.size || subByOriginal.size
+      ? slots.map((s) => {
+          const sub =
+            (s.template_exercise_id && subByTemplateEx.get(s.template_exercise_id)) ||
+            subByOriginal.get(s.exercise_id);
+          return sub && sub !== s.exercise_id ? { ...s, exercise_id: sub } : s;
+        })
+      : slots;
+
   let vmExercises: WorkoutExerciseVM[] = [];
   let workoutName = "";
   let programName =
@@ -117,8 +148,9 @@ export default async function WorkoutSessionPage({
     const templateName =
       (session.template as unknown as { name: string } | null)?.name ?? "";
     if (snap?.exercises?.length) {
-      // Frozen at start — immune to later edits of the shared template.
-      const exs = await loadWorkoutFromSnapshot(snap.exercises, user.id);
+      // Frozen at start — immune to later edits of the shared template — with
+      // any mid-workout substitutions re-applied from the logged sets.
+      const exs = await loadWorkoutFromSnapshot(applySubs(snap.exercises), user.id);
       workoutName = templateName;
       vmExercises = exs.map(mapToVM);
     } else {
@@ -139,15 +171,10 @@ export default async function WorkoutSessionPage({
     notFound();
   }
 
-  // Existing set logs so a resumed session restores its state, plus the
-  // member's injury/considerations note to surface during the workout.
-  const [{ data: existingLogs }, { data: profile }, { data: weightRow }] =
+  // The member's injury/considerations note to surface during the workout,
+  // plus their latest bodyweight. (Set logs were loaded above.)
+  const [{ data: profile }, { data: weightRow }] =
     await Promise.all([
-      supabase
-        .from("set_logs")
-        .select("*")
-        .eq("session_id", sessionId)
-        .order("set_number"),
       supabase
         .from("profiles")
         .select("considerations, injury_areas")
