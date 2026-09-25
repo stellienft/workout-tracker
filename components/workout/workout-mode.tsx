@@ -305,9 +305,33 @@ export function WorkoutMode({
     };
     doFlush();
     setPending(pendingCount());
-    window.addEventListener("online", doFlush);
-    return () => window.removeEventListener("online", doFlush);
+
+    // Self-heal the offline queue. Retrying only on the browser's "online"
+    // event strands sets on flaky mobile networks, where that event often
+    // never fires. Also retry on a short interval (while anything is pending)
+    // and whenever the app regains focus / becomes visible.
+    const onFocus = () => void doFlush();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void doFlush();
+    };
+    const interval = setInterval(() => {
+      if (pendingCount() > 0) void doFlush();
+    }, 15000);
+    window.addEventListener("online", onFocus);
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("online", onFocus);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
+
+  const retryFlush = async () => {
+    const res = await flush(logSet);
+    setPending(res.remaining);
+  };
 
   const totalSets = useMemo(
     () => workingExercises.reduce((a, e) => a + (state[e.exerciseId]?.length ?? 0), 0),
@@ -670,9 +694,13 @@ export function WorkoutMode({
           />
         </div>
         {pending > 0 && (
-          <p className="mt-1 text-center text-[11px] text-[var(--warning)]">
-            {pending} set{pending === 1 ? "" : "s"} saved offline — will sync when back online
-          </p>
+          <button
+            type="button"
+            onClick={retryFlush}
+            className="mt-1 block w-full text-center text-[11px] text-[var(--warning)] underline decoration-dotted underline-offset-2"
+          >
+            {pending} set{pending === 1 ? "" : "s"} saved offline — tap to retry sync
+          </button>
         )}
         {showRest && (
           <div className="mx-auto mt-3 w-full max-w-xl">
