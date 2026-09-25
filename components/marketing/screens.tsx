@@ -59,11 +59,13 @@ export function Phone({
         />
       )}
       <div
-        className="relative mx-auto w-full max-w-[300px] overflow-hidden rounded-[46px] border border-white/12 bg-[#0a0a0a] p-2.5 shadow-2xl"
+        className="relative mx-auto w-full max-w-[300px] overflow-hidden rounded-[46px] border border-white/12 bg-[#0a0a0a] shadow-2xl"
         style={{ aspectRatio: "9 / 19.3", boxShadow: "0 40px 90px -30px rgba(0,0,0,.9)" }}
       >
         <div className="absolute left-1/2 top-3 z-20 h-6 w-24 -translate-x-1/2 rounded-full bg-black" />
-        <div className="relative flex h-full w-full flex-col overflow-hidden rounded-[36px] bg-bg">
+        {/* Screen fills the frame with a definite height (absolute inset), so the
+            bottom nav's position resolves the same in every browser. */}
+        <div className="absolute inset-2.5 flex flex-col overflow-hidden rounded-[36px] bg-bg">
           {/* status bar */}
           <div className="flex items-center justify-between px-6 pt-3 text-[11px] font-semibold text-white">
             <span>9:41</span>
