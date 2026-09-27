@@ -2,7 +2,8 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { getAuthContext } from "@/lib/auth";
 import { getDashboardData } from "@/lib/dashboard";
-import { getPrimaryGoal, getRecentSessions } from "@/lib/queries";
+import { getPrimaryGoal, getRecentSessions, getInProgressPrograms } from "@/lib/queries";
+import { ProgramSwiper } from "@/components/dashboard/program-swiper";
 import { createClient } from "@/lib/supabase/server";
 import { PageShell } from "@/components/ui/page-header";
 import { TodayHeroCard } from "@/components/dashboard/today-hero";
@@ -29,11 +30,14 @@ export default async function DashboardPage() {
   const { profile } = await getAuthContext();
   const supabase = await createClient();
 
-  const [dash, primaryGoal, recent] = await Promise.all([
+  const [dash, primaryGoal, recent, inProgressPrograms] = await Promise.all([
     getDashboardData(user.id),
     getPrimaryGoal(user.id),
     getRecentSessions(user.id, 5),
+    getInProgressPrograms(user.id),
   ]);
+  // Programs the member holds besides the active one — the swipe-to-switch set.
+  const otherPrograms = inProgressPrograms.filter((p) => !p.isActive);
 
   // Body-weight trend + workout count stats + split count (for new-user nudge).
   const [{ data: metrics }, { count: totalWorkouts }, { count: splitCount }, { data: scanWeights }] =
@@ -224,13 +228,15 @@ export default async function DashboardPage() {
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {dash.enrolment && dash.next ? (
-            <TodayHeroCard
-              programName={dash.enrolment.program.name}
-              workout={dash.next}
-              sessionId={dash.inProgressSession?.id ?? null}
-              week={dash.enrolment.current_week}
-              programCoverPath={dash.enrolment.program.cover_image_path}
-            />
+            <ProgramSwiper others={otherPrograms}>
+              <TodayHeroCard
+                programName={dash.enrolment.program.name}
+                workout={dash.next}
+                sessionId={dash.inProgressSession?.id ?? null}
+                week={dash.enrolment.current_week}
+                programCoverPath={dash.enrolment.program.cover_image_path}
+              />
+            </ProgramSwiper>
           ) : (
             <NoProgramHero />
           )}

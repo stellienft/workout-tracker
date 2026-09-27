@@ -34,13 +34,13 @@ export function EnrolButton({
   const [days, setDays] = useState(Math.min(3, maxDays));
   const [saved, setSaved] = useState(initiallySaved);
 
-  function doEnrol(switchMode: "immediate" | "pause_only") {
+  function doEnrol() {
     startTransition(async () => {
-      const res = await enrolInProgram({ programId, daysPerWeek: days, switchMode });
+      const res = await enrolInProgram({ programId, daysPerWeek: days });
       if (res.ok) {
         toast(
-          switchMode === "pause_only"
-            ? "Program saved as pending."
+          hasOtherActive && !isCurrent
+            ? "Added. Swipe on your dashboard to switch programs."
             : "You're enrolled. Let's go!",
           "success"
         );
@@ -57,7 +57,7 @@ export function EnrolButton({
     if (hasOtherActive && !isCurrent) {
       setShowSwitch(true);
     } else {
-      doEnrol("immediate");
+      doEnrol();
     }
   }
 
@@ -106,23 +106,17 @@ export function EnrolButton({
       {showSwitch && (
         <div className="fixed inset-0 z-[150] flex items-end justify-center bg-black/60 p-4 sm:items-center">
           <div className="w-full max-w-md rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-6">
-            <h3 className="text-lg font-bold">Switch programs?</h3>
+            <h3 className="text-lg font-bold">Run a second program?</h3>
             <p className="mt-1 text-sm text-[var(--text-secondary)]">
               You&apos;re currently on{" "}
               <span className="text-[var(--text-primary)]">{otherProgramName ?? "another program"}</span>
-              . Starting this one will end your current program — but all your
-              workout history and progress are kept.
+              . This starts as your active program and{" "}
+              {otherProgramName ?? "your current one"} is parked — swipe between
+              them on your dashboard anytime. Progress on both is kept.
             </p>
             <div className="mt-5 flex flex-col gap-2">
-              <Button onClick={() => doEnrol("immediate")} disabled={pending}>
-                {pending ? "Switching…" : "End current & start this"}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => doEnrol("pause_only")}
-                disabled={pending}
-              >
-                Pause current, save this for later
+              <Button onClick={() => doEnrol()} disabled={pending}>
+                {pending ? "Starting…" : "Start & keep both"}
               </Button>
               <Button variant="ghost" onClick={() => setShowSwitch(false)}>
                 Cancel
