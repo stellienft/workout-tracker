@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
 const PUBLIC_PATHS = [
+  "/", // marketing landing page — public to every visitor
   "/login",
   "/signup",
   "/forgot-password",
