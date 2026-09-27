@@ -71,6 +71,7 @@ async function notifyFollowersOfActivity(opts: {
   title: string;
   body: string;
   excludeIds?: string[];
+  link?: string;
 }) {
   try {
     const { serviceSupabase } = await import("@/lib/push");
@@ -101,7 +102,7 @@ async function notifyFollowersOfActivity(opts: {
           type: "feed_activity",
           title: opts.title,
           body: opts.body,
-          link: "/feed",
+          link: opts.link ?? "/feed",
         })
       )
     );
@@ -246,6 +247,7 @@ export async function createPost(input: {
       actorId: user.id,
       title: `${profile?.full_name ?? "Someone"} shared a post`,
       body: (caption || "New post").slice(0, 100),
+      link: `/feed/${postId}`,
     });
   }
 
@@ -314,7 +316,7 @@ export async function addComment(postId: string, body: string) {
       type: "post_comment",
       title: `${name} commented on your post`,
       body: preview,
-      link: "/feed",
+      link: `/feed/${parsed.data.postId}`,
     });
   }
 
@@ -324,6 +326,7 @@ export async function addComment(postId: string, body: string) {
     title: `${name} commented`,
     body: preview,
     excludeIds: postOwnerId ? [postOwnerId] : [],
+    link: `/feed/${parsed.data.postId}`,
   });
 
   revalidatePath("/feed");
@@ -750,6 +753,102 @@ export async function getFeed(
       canManage,
     } as FeedPost;
   });
+}
+
+/** Fetch a single post assembled as a FeedPost (for the /feed/[postId] deep
+ *  link a notification opens). Returns null if missing or blocked. */
+export async function getPost(postId: string): Promise<FeedPost | null> {
+  const { supabase, user } = await getAuthContext();
+  if (!user) return null;
+  const idParse = z.string().uuid().safeParse(postId);
+  if (!idParse.success) return null;
+
+  const { data: p } = await supabase
+    .from("social_posts")
+    .select(
+      `id, caption, media_url, media_type, created_at, user_id,
+       workout_session_id, ai_moderation_status, is_anonymous`
+    )
+    .eq("id", idParse.data)
+    .maybeSingle();
+  if (!p) return null;
+
+  const authorId = p.user_id as string;
+
+  // Respect blocks in either direction.
+  const [{ data: b1 }, { data: b2 }] = await Promise.all([
+    supabase
+      .from("social_blocks")
+      .select("id")
+      .eq("blocker_id", user.id)
+      .eq("blocked_id", authorId)
+      .maybeSingle(),
+    supabase
+      .from("social_blocks")
+      .select("id")
+      .eq("blocker_id", authorId)
+      .eq("blocked_id", user.id)
+      .maybeSingle(),
+  ]);
+  if (b1 || b2) return null;
+
+  const { data: profileRows } = await supabase.rpc("feed_author_profiles", {
+    p_ids: [authorId],
+  });
+  const prof = ((profileRows ?? []) as {
+    id: string;
+    full_name: string | null;
+    avatar_url: string | null;
+  }[])[0];
+
+  const [reactions, commentRows, myReactions, follow] = await Promise.all([
+    supabase.from("social_reactions").select("emoji").eq("post_id", p.id),
+    supabase.from("social_comments").select("id").eq("post_id", p.id),
+    supabase
+      .from("social_reactions")
+      .select("emoji")
+      .eq("post_id", p.id)
+      .eq("user_id", user.id),
+    supabase
+      .from("social_follows")
+      .select("following_id")
+      .eq("follower_id", user.id)
+      .eq("following_id", authorId)
+      .maybeSingle(),
+  ]);
+
+  const reactionCounts: Record<string, number> = {};
+  (reactions.data ?? []).forEach((r) => {
+    const e = r.emoji as string;
+    reactionCounts[e] = (reactionCounts[e] ?? 0) + 1;
+  });
+
+  const anonymous = (p.is_anonymous as boolean | null) ?? false;
+  const author = anonymous
+    ? { id: "", name: "Anonymous", avatarUrl: null, isFollowing: false }
+    : {
+        id: authorId,
+        name: prof?.full_name ?? null,
+        avatarUrl: prof?.avatar_url ?? null,
+        isFollowing: !!follow.data,
+      };
+
+  return {
+    id: p.id as string,
+    caption: p.caption as string | null,
+    mediaUrl: p.media_url as string | null,
+    mediaType: (p.media_type ?? "none") as "image" | "video" | "none",
+    createdAt: p.created_at as string,
+    author,
+    reactionCounts,
+    commentCount: (commentRows.data ?? []).length,
+    currentUserReactions: (myReactions.data ?? []).map((r) => r.emoji as string),
+    workoutSessionId: p.workout_session_id as string | null,
+    aiModerationStatus: (p.ai_moderation_status ??
+      "pending") as FeedPost["aiModerationStatus"],
+    anonymous,
+    canManage: authorId === user.id,
+  };
 }
 
 // ---------------------------------------------------------------------------
