@@ -58,7 +58,7 @@ export function ProgramSwiper({
       <div
         ref={ref}
         onScroll={onScroll}
-        className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-[5%]"
+        className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-smooth px-[5%]"
       >
         <div data-slide className="w-[90%] shrink-0 snap-center">
           {children}
