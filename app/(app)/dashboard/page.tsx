@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { getAuthContext } from "@/lib/auth";
 import { getDashboardData } from "@/lib/dashboard";
 import { getPrimaryGoal, getRecentSessions, getInProgressPrograms } from "@/lib/queries";
-import { ProgramSwiper } from "@/components/dashboard/program-swiper";
+import { ProgramGrid } from "@/components/dashboard/program-grid";
 import { createClient } from "@/lib/supabase/server";
 import { PageShell } from "@/components/ui/page-header";
 import { TodayHeroCard } from "@/components/dashboard/today-hero";
@@ -228,7 +228,21 @@ export default async function DashboardPage() {
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {dash.enrolment && dash.next ? (
-            <ProgramSwiper others={otherPrograms}>
+            otherPrograms.length > 0 ? (
+              <ProgramGrid
+                active={{
+                  programName: dash.enrolment.program.name,
+                  workoutName: dash.next.name,
+                  workoutId: dash.next.id,
+                  sessionId: dash.inProgressSession?.id ?? null,
+                  week: dash.enrolment.current_week,
+                  coverPath:
+                    dash.next.cover_image_path ??
+                    dash.enrolment.program.cover_image_path,
+                }}
+                others={otherPrograms}
+              />
+            ) : (
               <TodayHeroCard
                 programName={dash.enrolment.program.name}
                 workout={dash.next}
@@ -236,7 +250,7 @@ export default async function DashboardPage() {
                 week={dash.enrolment.current_week}
                 programCoverPath={dash.enrolment.program.cover_image_path}
               />
-            </ProgramSwiper>
+            )
           ) : (
             <NoProgramHero />
           )}
