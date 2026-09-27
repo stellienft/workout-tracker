@@ -106,7 +106,7 @@ export default async function AppLayout({
           email={email}
           avatarUrl={avatarUrl}
         />
-        <div className="flex-1 min-w-0 pb-24 md:pb-0">
+        <div className="flex-1 min-w-0 overflow-x-clip pb-24 md:pb-0">
           {/* Mobile: top bar with menu (clients/trainers reach their areas here)
               + notification bell — replaces the old floating bell that overlapped
               page content. */}
