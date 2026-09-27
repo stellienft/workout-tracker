@@ -14,10 +14,14 @@ export function ExerciseImage({
   path,
   alt,
   className,
+  fit = "cover",
 }: {
   path: string | null | undefined;
   alt: string;
   className?: string;
+  /** How the image fills its container. Use "contain" to show the whole
+   *  graphic (e.g. an enlarged preview) without cropping. */
+  fit?: "cover" | "contain";
 }) {
   const url = mediaUrl(path);
   const [failed, setFailed] = useState(false);
@@ -44,7 +48,11 @@ export function ExerciseImage({
       alt={alt}
       loading="lazy"
       onError={() => setFailed(true)}
-      className={cn("absolute inset-0 h-full w-full object-cover", className)}
+      className={cn(
+        "absolute inset-0 h-full w-full",
+        fit === "contain" ? "object-contain" : "object-cover",
+        className
+      )}
     />
   );
 }

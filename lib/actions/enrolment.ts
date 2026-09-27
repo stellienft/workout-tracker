@@ -52,43 +52,55 @@ export async function enrolInProgram(input: {
     program.maximum_days_per_week
   );
 
-  // Find any existing active/paused enrolment.
-  const { data: existing } = await supabase
+  const nowIso = new Date().toISOString();
+
+  // Every program the member currently holds (active + parked), newest first.
+  const { data: existingRows } = await supabase
     .from("program_enrolments")
     .select("id, program_id, status")
-    .in("status", ["active", "paused"])
+    .in("status", ["active", "paused", "pending"])
     .eq("user_id", user.id)
-    .maybeSingle();
+    .order("enrolled_at", { ascending: false });
+  const existing = existingRows ?? [];
 
-  // Re-enrolling in the same program just re-activates it.
-  if (existing && existing.program_id === parsed.data.programId) {
+  // Already holding this program → just make it the active one (progress kept).
+  const same = existing.find((e) => e.program_id === parsed.data.programId);
+  if (same) {
+    await supabase
+      .from("program_enrolments")
+      .update({ status: "paused", paused_at: nowIso })
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .neq("id", same.id);
     await supabase
       .from("program_enrolments")
       .update({ status: "active", paused_at: null })
-      .eq("id", existing.id);
+      .eq("id", same.id)
+      .eq("user_id", user.id);
     revalidatePath("/dashboard");
+    revalidatePath("/programs/current");
     return { ok: true, reactivated: true };
   }
 
-  let previousId: string | null = null;
-  if (existing) {
-    previousId = existing.id;
-    // The partial unique index `program_enrolments_one_active` allows only one
-    // row per user with status active OR paused. So the outgoing program must
-    // leave that set before we insert the new one:
-    //  - immediate switch  → abandon it (removes the program, keeps history)
-    //  - pause_only        → pause it (new program starts pending)
-    const outgoingStatus =
-      parsed.data.switchMode === "pause_only" ? "paused" : "abandoned";
+  // Keep two programs at most: park the most-recent existing one and leave any
+  // older ones behind. The new program becomes the active one, and switching
+  // between the two (below) never loses either one's progress.
+  const [keep, ...drop] = existing;
+  if (drop.length) {
     await supabase
       .from("program_enrolments")
-      .update({
-        status: outgoingStatus,
-        ...(outgoingStatus === "paused"
-          ? { paused_at: new Date().toISOString() }
-          : {}),
-      })
-      .eq("id", existing.id)
+      .update({ status: "abandoned" })
+      .in(
+        "id",
+        drop.map((d) => d.id)
+      )
+      .eq("user_id", user.id);
+  }
+  if (keep) {
+    await supabase
+      .from("program_enrolments")
+      .update({ status: "paused", paused_at: nowIso })
+      .eq("id", keep.id)
       .eq("user_id", user.id);
   }
 
@@ -97,8 +109,8 @@ export async function enrolInProgram(input: {
     program_id: parsed.data.programId,
     program_version: program.version,
     selected_days_per_week: days,
-    status: parsed.data.switchMode === "pause_only" && existing ? "pending" : "active",
-    previous_enrolment_id: previousId,
+    status: "active",
+    previous_enrolment_id: keep?.id ?? null,
   });
   if (error) return { ok: false, error: error.message };
 
@@ -106,6 +118,15 @@ export async function enrolInProgram(input: {
   revalidatePath("/programs");
   revalidatePath("/programs/current");
   return { ok: true };
+}
+
+/**
+ * Make one of the member's held programs the active one, parking whichever was
+ * active. Progress (week + next workout) is preserved on both — this is the
+ * dashboard's swipe-to-switch between two concurrent programs.
+ */
+export async function switchActiveProgram(enrolmentId: string) {
+  return resumeEnrolment(enrolmentId);
 }
 
 export async function pauseEnrolment(enrolmentId: string) {
