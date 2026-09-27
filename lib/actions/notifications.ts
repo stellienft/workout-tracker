@@ -42,3 +42,42 @@ export async function markNotificationRead(id: string) {
   revalidatePath("/", "layout");
   return { ok: true as const };
 }
+
+/** Delete (dismiss) a single notification. */
+export async function clearNotification(id: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("notifications")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath("/notifications");
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/** Delete every notification for the current user. */
+export async function clearAllNotifications() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("notifications")
+    .delete()
+    .eq("user_id", user.id);
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath("/notifications");
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
