@@ -33,7 +33,18 @@ export function ProgramSwiper({
   const onScroll = () => {
     const el = ref.current;
     if (!el) return;
-    setIdx(Math.round(el.scrollLeft / el.clientWidth));
+    const center = el.scrollLeft + el.clientWidth / 2;
+    const kids = Array.from(el.querySelectorAll<HTMLElement>("[data-slide]"));
+    let best = 0;
+    let bestDist = Infinity;
+    kids.forEach((k, i) => {
+      const dist = Math.abs(k.offsetLeft + k.offsetWidth / 2 - center);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = i;
+      }
+    });
+    setIdx(best);
   };
 
   const switchTo = (enrolmentId: string) =>
@@ -47,12 +58,14 @@ export function ProgramSwiper({
       <div
         ref={ref}
         onScroll={onScroll}
-        className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto scroll-smooth"
+        className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-[5%]"
       >
-        <div className="w-full shrink-0 snap-center">{children}</div>
+        <div data-slide className="w-[90%] shrink-0 snap-center">
+          {children}
+        </div>
 
         {others.map((p) => (
-          <div key={p.enrolmentId} className="w-full shrink-0 snap-center">
+          <div key={p.enrolmentId} data-slide className="w-[90%] shrink-0 snap-center">
             <div className="relative min-h-[18rem] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] sm:min-h-[20rem]">
               <CoverImage
                 path={p.coverPath}

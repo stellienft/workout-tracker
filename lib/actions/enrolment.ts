@@ -82,10 +82,12 @@ export async function enrolInProgram(input: {
     return { ok: true, reactivated: true };
   }
 
-  // Keep two programs at most: park the most-recent existing one and leave any
-  // older ones behind. The new program becomes the active one, and switching
+  // Only two programs may be registered at a time. Park the program you're
+  // currently on (or the most recent, if none is active) and retire any others,
+  // so after this you hold exactly the new one (active) plus one parked. Switching
   // between the two (below) never loses either one's progress.
-  const [keep, ...drop] = existing;
+  const keep = existing.find((e) => e.status === "active") ?? existing[0];
+  const drop = existing.filter((e) => e.id !== keep?.id);
   if (drop.length) {
     await supabase
       .from("program_enrolments")
