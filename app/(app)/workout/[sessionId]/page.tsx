@@ -13,6 +13,11 @@ import {
   WorkoutMode,
   type WorkoutExerciseVM,
 } from "@/components/workout/workout-mode";
+import type { StretchVM } from "@/components/workout/stretch-section";
+import {
+  recommendStretchSlugs,
+  muscleLabel,
+} from "@/lib/stretch-recommendations";
 
 // Full-screen workout mode lives outside the normal app chrome.
 export const metadata = { title: "Workout" };
@@ -190,6 +195,43 @@ export default async function WorkoutSessionPage({
         .maybeSingle(),
     ]);
 
+  // Pre-workout stretches matched to the muscles this session actually trains
+  // (derived from the loaded exercises, so substitutions are reflected too).
+  const muscleSequence = vmExercises.flatMap((ex) => ex.primaryMuscles);
+  const stretchRefs = recommendStretchSlugs(muscleSequence);
+  let recommendedStretches: StretchVM[] = [];
+  if (stretchRefs.length) {
+    const { data: stretchRows } = await supabase
+      .from("exercises")
+      .select("slug, name, cover_image_path, instructions")
+      .in(
+        "slug",
+        stretchRefs.map((r) => r.slug),
+      );
+    const bySlug = new Map(
+      (stretchRows ?? []).map((r) => [r.slug as string, r]),
+    );
+    recommendedStretches = stretchRefs
+      .map((ref) => {
+        const row = bySlug.get(ref.slug);
+        if (!row) return null;
+        return {
+          slug: ref.slug,
+          name: row.name as string,
+          muscle: muscleLabel(ref.muscle),
+          coverPath: (row.cover_image_path as string | null) ?? null,
+          instructions: (row.instructions as string | null) ?? null,
+        } satisfies StretchVM;
+      })
+      .filter((s): s is StretchVM => s !== null);
+  }
+
+  const initialStretches = Array.isArray(session.warmup_stretches)
+    ? (session.warmup_stretches as { slug?: string }[])
+        .map((s) => s?.slug)
+        .filter((s): s is string => typeof s === "string")
+    : [];
+
   return (
     <WorkoutMode
       sessionId={sessionId}
@@ -206,6 +248,8 @@ export default async function WorkoutSessionPage({
         type: (session.warmup_type as string | null) ?? null,
         seconds: (session.warmup_seconds as number | null) ?? null,
       }}
+      recommendedStretches={recommendedStretches}
+      initialStretches={initialStretches}
       exercises={vmExercises}
       initialLogs={(existingLogs ?? []).map((l) => ({
         exerciseId: l.exercise_id,

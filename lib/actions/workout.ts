@@ -354,6 +354,37 @@ export async function logWarmup(input: {
   return { ok: true as const };
 }
 
+/** Record which pre-workout stretches the member completed on the session. */
+export async function logStretches(input: {
+  sessionId: string;
+  stretches: { slug: string; name: string; muscle: string }[];
+}) {
+  const { supabase, user } = await auth();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+  const parsed = z
+    .object({
+      sessionId: z.string().uuid(),
+      stretches: z
+        .array(
+          z.object({
+            slug: z.string().min(1).max(120),
+            name: z.string().min(1).max(120),
+            muscle: z.string().min(1).max(40),
+          }),
+        )
+        .max(12),
+    })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false as const, error: "Invalid input" };
+  const { error } = await supabase
+    .from("workout_sessions")
+    .update({ warmup_stretches: parsed.data.stretches })
+    .eq("id", parsed.data.sessionId)
+    .eq("user_id", user.id);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const };
+}
+
 /**
  * Complete a workout: mark the session done and advance the enrolment's
  * program state via the engine (sequential pointer + weekly progression).
