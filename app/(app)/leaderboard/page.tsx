@@ -1,10 +1,12 @@
 import { requireUser } from "@/lib/auth";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { OptInToggle } from "@/components/leaderboard/opt-in-toggle";
+import { NameToggle } from "@/components/leaderboard/name-toggle";
 import {
   getLeaderboardTop,
   getMyStanding,
   getLeaderboardOptIn,
+  getLeaderboardNameHidden,
 } from "@/lib/leaderboard";
 import { Trophy, Flame, CalendarCheck, Dumbbell } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -28,10 +30,11 @@ const MEDAL = ["🥇", "🥈", "🥉"] as const;
 export default async function LeaderboardPage() {
   await requireUser();
 
-  const [rows, me, optedIn] = await Promise.all([
+  const [rows, me, optedIn, nameHidden] = await Promise.all([
     getLeaderboardTop(50),
     getMyStanding(),
     getLeaderboardOptIn(),
+    getLeaderboardNameHidden(),
   ]);
 
   const segmentNote = me?.isMinor
@@ -43,7 +46,12 @@ export default async function LeaderboardPage() {
       <PageHeader
         title="Leaderboard"
         subtitle={`This week · ${segmentNote}`}
-        action={<OptInToggle optedIn={optedIn} />}
+        action={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <NameToggle hidden={nameHidden} />
+            <OptInToggle optedIn={optedIn} />
+          </div>
+        }
       />
 
       {/* Your standing */}
@@ -174,7 +182,8 @@ export default async function LeaderboardPage() {
         </ul>
         <p className="mt-3 text-xs text-[var(--text-muted)]">
           Scores reset every Monday. Under-18s are ranked only against other
-          under-18s. You can hide yourself any time from the toggle up top.
+          under-18s. Use the toggles up top to hide yourself from the board, or
+          to show a masked name (e.g. I*** H***) instead of your full name.
         </p>
       </details>
     </PageShell>
