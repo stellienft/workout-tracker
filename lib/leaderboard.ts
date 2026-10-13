@@ -81,3 +81,18 @@ export async function getLeaderboardOptIn(): Promise<boolean> {
     .maybeSingle();
   return (data?.leaderboard_opt_in as boolean | undefined) ?? true;
 }
+
+/** Whether the viewer's name is masked on the board (profile flag). */
+export async function getLeaderboardNameHidden(): Promise<boolean> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { data } = await supabase
+    .from("profiles")
+    .select("leaderboard_name_hidden")
+    .eq("id", user.id)
+    .maybeSingle();
+  return (data?.leaderboard_name_hidden as boolean | undefined) ?? false;
+}

@@ -20,3 +20,21 @@ export async function setLeaderboardOptIn(optIn: boolean) {
   revalidatePath("/leaderboard");
   return { ok: true as const };
 }
+
+/** Toggle whether the member's name is masked (e.g. "I*** H***") on the board. */
+export async function setLeaderboardNameHidden(hidden: boolean) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ leaderboard_name_hidden: hidden })
+    .eq("id", user.id);
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath("/leaderboard");
+  return { ok: true as const };
+}
