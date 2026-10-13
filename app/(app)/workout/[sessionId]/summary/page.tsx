@@ -310,12 +310,24 @@ export default async function WorkoutSummaryPage({
         />
       </div>
 
-      {session.warmup_seconds ? (
-        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-secondary)] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
-          🔥 Warm-up · {session.warmup_type} ·{" "}
-          {formatDuration(session.warmup_seconds as number)}
-        </p>
-      ) : null}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {session.warmup_seconds ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-secondary)] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
+            🔥 Warm-up · {session.warmup_type} ·{" "}
+            {formatDuration(session.warmup_seconds as number)}
+          </span>
+        ) : null}
+        {Array.isArray(session.warmup_stretches) &&
+        session.warmup_stretches.length > 0 ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-secondary)] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
+            🧘 Stretches ·{" "}
+            {(session.warmup_stretches as { name?: string }[])
+              .map((s) => s?.name)
+              .filter(Boolean)
+              .join(", ")}
+          </span>
+        ) : null}
+      </div>
 
       {/* Improvement delta vs the previous session. */}
       {volumeDelta !== null && (

@@ -39,6 +39,10 @@ import {
   searchReplacementExercises,
 } from "@/lib/actions/workout";
 import { WarmupSheet } from "@/components/workout/warmup-sheet";
+import {
+  StretchSection,
+  type StretchVM,
+} from "@/components/workout/stretch-section";
 import { SpotifyNowPlaying } from "@/components/spotify/now-playing";
 import { enqueue, flush, pendingCount } from "@/lib/offline-queue";
 import { useWakeLock } from "@/lib/use-wake-lock";
@@ -125,6 +129,8 @@ export function WorkoutMode({
   exercises,
   initialLogs,
   initialWarmup,
+  recommendedStretches,
+  initialStretches,
 }: {
   sessionId: string;
   initialSeconds: number;
@@ -134,6 +140,8 @@ export function WorkoutMode({
   injuryAreas?: string[] | null;
   bodyweightKg?: number | null;
   initialWarmup?: { type: string | null; seconds: number | null };
+  recommendedStretches?: StretchVM[];
+  initialStretches?: string[];
   exercises: WorkoutExerciseVM[];
   initialLogs: {
     exerciseId: string;
@@ -719,6 +727,15 @@ export function WorkoutMode({
         <div className="mx-auto w-full max-w-xl space-y-3">
           {/* Now playing (Spotify) */}
           <SpotifyNowPlaying />
+
+          {/* Pre-workout stretches, matched to the muscles this session trains */}
+          {recommendedStretches && recommendedStretches.length > 0 && (
+            <StretchSection
+              sessionId={sessionId}
+              stretches={recommendedStretches}
+              initialDone={initialStretches ?? []}
+            />
+          )}
 
           {/* Warm-up chip */}
           {warmup ? (
