@@ -118,6 +118,42 @@ function fmtNum(n: number): string {
   return Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10);
 }
 
+// Self-ticking clocks, isolated as leaf components so the once-a-second (and
+// 250ms stopwatch) updates re-render ONLY the clock text — not the entire
+// workout screen (every exercise card, modal and image). That whole-tree
+// re-render was causing jank/freezing on phones.
+function ElapsedClock({ baseRef }: { baseRef: { current: number } }) {
+  const [s, setS] = useState(() =>
+    Math.max(0, Math.floor((Date.now() - baseRef.current) / 1000)),
+  );
+  useEffect(() => {
+    const compute = () =>
+      setS(Math.max(0, Math.floor((Date.now() - baseRef.current) / 1000)));
+    compute();
+    const t = setInterval(compute, 1000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") compute();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, [baseRef]);
+  return <>{formatDuration(s)}</>;
+}
+
+function LiveSeconds({ base, startedAt }: { base: number; startedAt: number }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => tick((t) => t + 1), 250);
+    return () => clearInterval(id);
+  }, []);
+  return <>{fmtSecs(base + Math.floor((Date.now() - startedAt) / 1000))}</>;
+}
+
 export function WorkoutMode({
   sessionId,
   initialSeconds,
@@ -158,7 +194,8 @@ export function WorkoutMode({
   // Keep the screen awake for the whole workout so it never sleeps mid-set.
   useWakeLock(true);
   const resumeBaseRef = useRef(Date.now() - Math.max(0, initialSeconds) * 1000);
-  const [elapsed, setElapsed] = useState(Math.max(0, initialSeconds));
+  const elapsedNow = () =>
+    Math.max(0, Math.floor((Date.now() - resumeBaseRef.current) / 1000));
 
   const [showRest, setShowRest] = useState(false);
   const [restSeconds, setRestSeconds] = useState(90);
@@ -201,12 +238,6 @@ export function WorkoutMode({
   const [timer, setTimer] = useState<
     { exerciseId: string; setIdx: number; base: number; startedAt: number } | null
   >(null);
-  const [, forceTick] = useState(0);
-  useEffect(() => {
-    if (!timer) return;
-    const id = setInterval(() => forceTick((t) => t + 1), 250);
-    return () => clearInterval(id);
-  }, [timer]);
 
   const [state, setState] = useState<Record<string, SetState[]>>(() => {
     const initial: Record<string, SetState[]> = {};
@@ -287,24 +318,6 @@ export function WorkoutMode({
       substituted: !!sub,
     };
   }
-
-  // Elapsed timer, background-accurate.
-  useEffect(() => {
-    const compute = () =>
-      setElapsed(Math.max(0, Math.floor((Date.now() - resumeBaseRef.current) / 1000)));
-    compute();
-    const t = setInterval(compute, 1000);
-    const onVisible = () => {
-      if (document.visibilityState === "visible") compute();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", onVisible);
-    return () => {
-      clearInterval(t);
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", onVisible);
-    };
-  }, []);
 
   useEffect(() => {
     const doFlush = async () => {
@@ -472,7 +485,7 @@ export function WorkoutMode({
         setFinishing(false);
         return;
       }
-      const res = await completeWorkout({ sessionId, totalSeconds: elapsed });
+      const res = await completeWorkout({ sessionId, totalSeconds: elapsedNow() });
       if (res.ok) {
         router.push(`/workout/${sessionId}/summary`);
         router.refresh();
@@ -487,7 +500,7 @@ export function WorkoutMode({
 
   async function onSaveExit() {
     await flush(logSet);
-    await saveAndExit(sessionId, elapsed);
+    await saveAndExit(sessionId, elapsedNow());
     router.push("/dashboard");
     router.refresh();
   }
@@ -692,7 +705,7 @@ export function WorkoutMode({
             </p>
           </div>
           <span className="shrink-0 rounded-full bg-[var(--surface-secondary)] px-3 py-1.5 text-sm font-mono font-semibold tabular-nums">
-            {formatDuration(elapsed)}
+            <ElapsedClock baseRef={resumeBaseRef} />
           </span>
         </div>
         <div className="mx-auto mt-2 h-1 w-full max-w-xl overflow-hidden rounded-full bg-[var(--surface-secondary)]">
@@ -1059,7 +1072,7 @@ export function WorkoutMode({
                 : `You've logged ${completedSets} of ${totalSets} sets. Finish now and we'll save what you've done, or keep going.`}
             </p>
             <p className="mt-2 text-xs text-[var(--text-muted)]">
-              Time: {formatDuration(elapsed)}
+              Time: <ElapsedClock baseRef={resumeBaseRef} />
             </p>
             {finishError && (
               <p className="mt-3 rounded-xl bg-[var(--surface-secondary)] px-3 py-2 text-xs text-[var(--warning)]">
@@ -1302,7 +1315,11 @@ export function WorkoutMode({
                       )}
                     >
                       {timerActive(ex.exerciseId, i) ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                      {fmtSecs(timerSecs(ex.exerciseId, rows, i))}
+                      {timerActive(ex.exerciseId, i) && timer ? (
+                        <LiveSeconds base={timer.base} startedAt={timer.startedAt} />
+                      ) : (
+                        fmtSecs(Number(rows[i]?.seconds || 0))
+                      )}
                     </button>
                     <SetInput
                       value={row.seconds}
