@@ -5,7 +5,7 @@
 //  - Static assets (_next/static, icons, images): cache-first.
 //  - Never cache Supabase API calls or auth — always network.
 
-const CACHE = "stellio-fit-v11";
+const CACHE = "stellio-fit-v12";
 const SHELL = ["/offline", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {

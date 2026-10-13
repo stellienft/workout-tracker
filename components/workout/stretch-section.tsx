@@ -104,8 +104,8 @@ export function StretchSection({
                     <Check className="h-4 w-4" />
                   </button>
 
-                  {/* Thumbnail */}
-                  <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-white">
+                  {/* Thumbnail (relative: ExerciseImage fills via absolute inset-0) */}
+                  <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-white">
                     <ExerciseImage path={s.coverPath} alt={s.name} fit="contain" />
                   </div>
 
