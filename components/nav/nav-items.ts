@@ -12,7 +12,6 @@ import {
   Settings,
   ShieldCheck,
   Home,
-  User,
   Users,
   UsersRound,
   MessageSquare,
@@ -125,7 +124,7 @@ export const sidebarItems: NavItem[] = navSections.flatMap((s) => s.items);
 export const bottomNavItems: NavItem[] = [
   { label: "Home", href: "/dashboard", icon: Home },
   { label: "Workouts", href: "/workouts", icon: Dumbbell },
+  { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
   { label: "Progress", href: "/progress", icon: TrendingUp },
   { label: "Feed", href: "/feed", icon: Users },
-  { label: "Profile", href: "/profile", icon: User },
 ];
