@@ -90,7 +90,28 @@ export function MobileTopBar({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="Ares Fitness" className="h-6 w-auto" />
         </Link>
-        <NotificationBell unread={unread} className="h-10 w-10" />
+        <div className="flex items-center gap-0.5">
+          <NotificationBell unread={unread} className="h-10 w-10" />
+          <Link
+            href="/profile"
+            aria-label="Profile"
+            aria-current={pathname === "/profile" ? "page" : undefined}
+            className="inline-flex h-10 w-10 items-center justify-center"
+          >
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarUrl}
+                alt={name || "Profile"}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+            ) : (
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent-muted)] text-sm font-bold text-[var(--accent-primary)]">
+                {(name || email).charAt(0).toUpperCase()}
+              </span>
+            )}
+          </Link>
+        </div>
       </div>
 
       {open && (
