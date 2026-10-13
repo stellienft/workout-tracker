@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/leaderboard",
-      "schedule": "*/30 * * * *"
+      "schedule": "0 3 * * *"
     }
   ]
 }

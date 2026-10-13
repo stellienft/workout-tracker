@@ -529,9 +529,20 @@ export async function completeWorkout(input: {
     }
   }
 
+  // Refresh the leaderboard so the member's points/rank update right away
+  // (the daily cron is a backstop). Best-effort via the service client so a
+  // failure never blocks workout completion.
+  try {
+    const { serviceSupabase } = await import("@/lib/push");
+    await serviceSupabase().rpc("refresh_leaderboard_current");
+  } catch {
+    // ignore — the scheduled refresh will catch up
+  }
+
   revalidatePath("/dashboard");
   revalidatePath("/schedule");
   revalidatePath("/progress");
+  revalidatePath("/leaderboard");
   return { ok: true as const };
 }
 
