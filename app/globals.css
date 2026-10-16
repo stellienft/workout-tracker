@@ -313,4 +313,98 @@ svg.lucide {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* ---- Marketing site ---- */
+/* Smooth anchor scrolling for the landing page's in-page nav. */
+html {
+  scroll-behavior: smooth;
+}
+/* Cross-fade when the interactive feature preview swaps screens. */
+@keyframes ares-screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.ares-screen-in {
+  animation: ares-screen-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+/* Infinite ticker for the stats / value marquee. */
+@keyframes ares-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.ares-marquee {
+  animation: ares-marquee 34s linear infinite;
+}
+/* Animated equaliser bars for the voice-journal bento tile. */
+@keyframes ares-eq {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+.ares-eq {
+  transform-origin: bottom;
+  animation: ares-eq 1.15s ease-in-out infinite;
+}
+/* Soft looping opacity pulse (live dots, hearts, glows). */
+@keyframes ares-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.ares-pulse {
+  animation: ares-pulse 1.8s ease-in-out infinite;
+}
+/* Looping fill for scrub / progress bars. */
+@keyframes ares-progress {
+  0% {
+    width: 6%;
+  }
+  85%,
+  100% {
+    width: 100%;
+  }
+}
+.ares-progress {
+  animation: ares-progress 2.8s ease-in-out infinite;
+}
+/* Gentle bob for a hero element. */
+@keyframes ares-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+.ares-float {
+  animation: ares-float 3.2s ease-in-out infinite;
+}
+/* One-shot stroke draw to a per-element target (--off). */
+@keyframes ares-draw {
+  to {
+    stroke-dashoffset: var(--off, 0);
+  }
 }
