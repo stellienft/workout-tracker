@@ -41,23 +41,29 @@ export async function GET(req: Request) {
 
   const userIds = Array.from(new Set(subs.map((s) => s.user_id as string)));
 
-  const [{ data: profiles }, { data: sessions }, { data: doses }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, timezone, medication_tracking_enabled")
-      .in("id", userIds),
-    supabase
-      .from("workout_sessions")
-      .select("user_id, completed_at")
-      .eq("status", "completed")
-      .in("user_id", userIds)
-      .gte("completed_at", new Date(Date.now() - 8 * DAY).toISOString()),
-    supabase
-      .from("medication_logs")
-      .select("user_id, medication_name, taken_on")
-      .in("user_id", userIds)
-      .order("taken_on", { ascending: false }),
-  ]);
+  const [{ data: profiles }, { data: sessions }, { data: doses }, { data: markers }] =
+    await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, timezone, medication_tracking_enabled, metabolic_reminders_enabled")
+        .in("id", userIds),
+      supabase
+        .from("workout_sessions")
+        .select("user_id, completed_at")
+        .eq("status", "completed")
+        .in("user_id", userIds)
+        .gte("completed_at", new Date(Date.now() - 8 * DAY).toISOString()),
+      supabase
+        .from("medication_logs")
+        .select("user_id, medication_name, taken_on")
+        .in("user_id", userIds)
+        .order("taken_on", { ascending: false }),
+      supabase
+        .from("metabolic_markers")
+        .select("user_id, recorded_on")
+        .in("user_id", userIds)
+        .order("recorded_on", { ascending: false }),
+    ]);
 
   const tzByUser = new Map<string, string>(
     (profiles ?? []).map((p) => [p.id as string, (p.timezone as string) || DEFAULT_TZ])
@@ -65,6 +71,15 @@ export async function GET(req: Request) {
   const medEnabledByUser = new Map<string, boolean>(
     (profiles ?? []).map((p) => [p.id as string, !!p.medication_tracking_enabled])
   );
+  const metabolicEnabledByUser = new Map<string, boolean>(
+    (profiles ?? []).map((p) => [p.id as string, !!p.metabolic_reminders_enabled])
+  );
+  // Most recent metabolic-marker entry date per user (ordered newest-first).
+  const lastMarkerByUser = new Map<string, string>();
+  for (const m of markers ?? []) {
+    const uid = m.user_id as string;
+    if (!lastMarkerByUser.has(uid)) lastMarkerByUser.set(uid, m.recorded_on as string);
+  }
   // Most recent GLP-1 dose date per user (doses are ordered newest-first).
   const lastGlp1DoseByUser = new Map<string, string>();
   for (const d of doses ?? []) {
@@ -108,6 +123,36 @@ export async function GET(req: Request) {
             body: "Time for your GLP-1 injection — remember to rotate your site.",
             url: "/health",
             tag: "dose-reminder",
+          });
+          sent += r.sent;
+        }
+      }
+    }
+
+    // Optional metabolic nudges (opt-in): a post-meal walk tip on Mon/Wed/Fri,
+    // and a "re-check your markers" reminder ~90 days after the last entry.
+    if (metabolicEnabledByUser.get(uid)) {
+      const subsFor = subsByUser.get(uid) ?? [];
+      const last = lastMarkerByUser.get(uid);
+      const recheckOn = last
+        ? localDate(new Date(new Date(`${last}T12:00:00`).getTime() + 90 * DAY), tz)
+        : null;
+      if (recheckOn && recheckOn === today) {
+        const r = await sendToSubscriptions(supabase, subsFor, {
+          title: "Time to re-check your markers 🩸",
+          body: "It's been about 3 months — consider re-testing your fasting glucose, insulin and HbA1c.",
+          url: "/metabolic",
+          tag: "metabolic-recheck",
+        });
+        sent += r.sent;
+      } else {
+        const weekday = new Date(`${today}T12:00:00`).getUTCDay(); // 0=Sun..6=Sat
+        if (weekday === 1 || weekday === 3 || weekday === 5) {
+          const r = await sendToSubscriptions(supabase, subsFor, {
+            title: "Walk after your biggest meal 🚶",
+            body: "A 10–15 min walk after eating blunts the blood-sugar spike — great for insulin sensitivity.",
+            url: "/metabolic",
+            tag: "metabolic-walk",
           });
           sent += r.sent;
         }
