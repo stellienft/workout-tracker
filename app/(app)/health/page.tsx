@@ -82,6 +82,20 @@ export default async function HealthPage() {
         subtitle="Track the symptoms, vitals and medications that matter to you. This is a personal log, not medical advice."
       />
 
+      <Link
+        href="/metabolic"
+        className="mt-6 flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-4 hover:border-[var(--border-active)]"
+      >
+        <span className="text-xl">🩸</span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold">Metabolic Health</span>
+          <span className="block text-xs text-[var(--text-secondary)]">
+            Track insulin-resistance markers — HOMA-IR, HbA1c, TG:HDL — and how to improve them.
+          </span>
+        </span>
+        <span className="shrink-0 text-[var(--text-muted)]">→</span>
+      </Link>
+
       <div className="mt-6">
         {health.catalog.length === 0 ? (
           <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)] p-6 text-sm text-[var(--text-secondary)]">
