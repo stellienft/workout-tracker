@@ -374,6 +374,13 @@ export default async function WorkoutSummaryPage({
           }${totalVolume > 0 ? ` · ${Math.round(totalVolume).toLocaleString()}kg volume` : ""} 💪`}
         />
 
+        <Link
+          href={`/workout/${sessionId}/edit`}
+          className="rounded-2xl border border-[var(--border-subtle)] py-3.5 text-center text-sm font-medium hover:border-[var(--border-active)]"
+        >
+          Edit sets
+        </Link>
+
         {programComplete ? (
           <>
             <Link

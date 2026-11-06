@@ -499,7 +499,18 @@ export function WorkoutMode({
   }
 
   async function onSaveExit() {
-    await flush(logSet);
+    // Don't leave with sets still queued on the device — that's how unsynced
+    // sets get lost when the app is later closed. Flush first and block the
+    // exit (surfacing the retry banner) if anything hasn't reached the server.
+    const flushed = await flush(logSet);
+    setPending(flushed.remaining);
+    if (flushed.remaining > 0) {
+      setShowExit(false);
+      setFinishError(
+        `${flushed.remaining} set${flushed.remaining === 1 ? "" : "s"} haven't synced yet — reconnect before leaving so nothing is lost.`
+      );
+      return;
+    }
     await saveAndExit(sessionId, elapsedNow());
     router.push("/dashboard");
     router.refresh();
