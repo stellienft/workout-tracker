@@ -107,3 +107,65 @@ export async function getRecentSessions(userId: string, limit = 30) {
     .limit(limit);
   return data ?? [];
 }
+
+export interface RecentWorkout {
+  id: string;
+  status: string;
+  startedAt: string;
+  completedAt: string | null;
+  totalSeconds: number | null;
+  name: string;
+  setCount: number;
+}
+
+/**
+ * Recent completed / in-progress workouts with their name and logged-set count,
+ * for the dashboard list. Each is tappable through to its session so members
+ * can review or edit past workouts.
+ */
+export async function getRecentWorkouts(
+  userId: string,
+  limit = 10,
+): Promise<RecentWorkout[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("workout_sessions")
+    .select(
+      "id, status, started_at, completed_at, total_seconds, template:workout_templates(name), split_day:custom_split_days(name)",
+    )
+    .eq("user_id", userId)
+    .in("status", ["completed", "in_progress"])
+    .order("started_at", { ascending: false })
+    .limit(limit);
+
+  const rows = data ?? [];
+  const ids = rows.map((r) => r.id as string);
+  const counts = new Map<string, number>();
+  if (ids.length) {
+    const { data: logs } = await supabase
+      .from("set_logs")
+      .select("session_id")
+      .in("session_id", ids)
+      .eq("completed", true);
+    for (const l of logs ?? [])
+      counts.set(l.session_id as string, (counts.get(l.session_id as string) ?? 0) + 1);
+  }
+
+  return rows.map((r) => {
+    const tpl = (Array.isArray(r.template) ? r.template[0] : r.template) as
+      | { name: string }
+      | null;
+    const sd = (Array.isArray(r.split_day) ? r.split_day[0] : r.split_day) as
+      | { name: string }
+      | null;
+    return {
+      id: r.id as string,
+      status: r.status as string,
+      startedAt: r.started_at as string,
+      completedAt: (r.completed_at as string | null) ?? null,
+      totalSeconds: (r.total_seconds as number | null) ?? null,
+      name: tpl?.name ?? sd?.name ?? "Workout",
+      setCount: counts.get(r.id as string) ?? 0,
+    };
+  });
+}

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { getAuthContext } from "@/lib/auth";
 import { getDashboardData } from "@/lib/dashboard";
-import { getPrimaryGoal, getRecentSessions, getInProgressPrograms } from "@/lib/queries";
+import { getPrimaryGoal, getRecentWorkouts, getInProgressPrograms } from "@/lib/queries";
 import { ProgramGrid } from "@/components/dashboard/program-grid";
 import { createClient } from "@/lib/supabase/server";
 import { PageShell } from "@/components/ui/page-header";
@@ -20,7 +20,7 @@ import { quoteForDate } from "@/lib/quotes";
 import { mythicGreetingForDate } from "@/lib/mythic-quotes";
 import { StatCard } from "@/components/ui/card";
 import { CoverImage } from "@/components/ui/cover-image";
-import { formatDuration, sessionSeconds } from "@/lib/utils";
+import { formatDuration } from "@/lib/utils";
 import { todayInTz, DEFAULT_TZ } from "@/lib/timezone";
 
 export const metadata = { title: "Dashboard" };
@@ -33,7 +33,7 @@ export default async function DashboardPage() {
   const [dash, primaryGoal, recent, inProgressPrograms] = await Promise.all([
     getDashboardData(user.id),
     getPrimaryGoal(user.id),
-    getRecentSessions(user.id, 5),
+    getRecentWorkouts(user.id, 8),
     getInProgressPrograms(user.id),
   ]);
   // Programs the member holds besides the active one — the swipe-to-switch set.
@@ -356,39 +356,46 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* Recent activity */}
+      {/* Recent workouts — tap any one to review or edit its sets */}
       {recent.length > 0 && (
         <section className="mt-8">
-          <h2 className="text-lg font-bold">Recent activity</h2>
-          <div className="mt-3 divide-y divide-[var(--border-subtle)] rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)]">
-            {recent.map((s) => (
-              <div
-                key={s.id}
-                className="flex items-center justify-between p-4 text-sm"
-              >
-                <div>
-                  <p className="font-medium capitalize">
-                    {s.status === "completed"
-                      ? "Completed workout"
-                      : s.status === "in_progress"
-                        ? "In progress"
-                        : "Abandoned"}
-                  </p>
-                  <p className="text-xs text-[var(--text-muted)]">
-                    {new Date(s.started_at).toLocaleDateString(undefined, {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </p>
-                </div>
-                {sessionSeconds(s) > 0 ? (
-                  <span className="text-[var(--text-secondary)]">
-                    {formatDuration(sessionSeconds(s))}
-                  </span>
-                ) : null}
-              </div>
-            ))}
+          <h2 className="text-lg font-bold">Recent workouts</h2>
+          <div className="mt-3 divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-primary)]">
+            {recent.map((s) => {
+              const href =
+                s.status === "in_progress"
+                  ? `/workout/${s.id}`
+                  : `/workout/${s.id}/summary`;
+              const secs = s.totalSeconds ?? 0;
+              return (
+                <Link
+                  key={s.id}
+                  href={href}
+                  className="flex items-center justify-between gap-3 p-4 text-sm hover:bg-[var(--surface-secondary)]"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">
+                      {s.name}
+                      {s.status === "in_progress" && (
+                        <span className="ml-2 text-xs font-normal text-[var(--accent-primary)]">
+                          In progress
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      {new Date(s.completedAt ?? s.startedAt).toLocaleDateString(undefined, {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                      {s.setCount > 0 ? ` · ${s.setCount} set${s.setCount === 1 ? "" : "s"}` : ""}
+                      {secs > 0 ? ` · ${formatDuration(secs)}` : ""}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-[var(--text-muted)]">›</span>
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}
